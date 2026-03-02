@@ -1,0 +1,504 @@
+// src/components/Inicio.jsx
+import { useState } from "react";
+import { supabase } from "../supabase";
+// NUEVO: Importamos BarChart, Bar, XAxis, YAxis, CartesianGrid para los gráficos nuevos
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
+
+export default function Inicio({
+  usuarioActual,
+  otroUsuario,
+  usuarios,
+  gastos,
+  ingresos,
+  monedaGlobal,
+  setMonedaGlobal,
+  obtenerDatos,
+}) {
+  const [concepto, setConcepto] = useState("");
+  const [monto, setMonto] = useState("");
+  const [categoria, setCategoria] = useState("Casa");
+  const [paraQuien, setParaQuien] = useState("Ambos");
+  const [porcentajePagador, setPorcentajePagador] = useState(50);
+
+  function formatearNumero(num, mon) {
+    if (!num) return "0";
+    const formato = Number(num).toLocaleString("es-PY");
+    return mon === "BRL" ? `R$ ${formato}` : `${formato} Gs.`;
+  }
+
+  async function guardarGasto(e) {
+    e.preventDefault();
+    if (!usuarioActual) return;
+
+    const { error } = await supabase.from("gastos").insert([
+      {
+        concepto,
+        monto: parseFloat(monto),
+        categoria,
+        pagador_id: usuarioActual.id,
+        para_quien: paraQuien,
+        moneda: monedaGlobal,
+        porcentaje_pagador: paraQuien === "Ambos" ? porcentajePagador : 100,
+      },
+    ]);
+
+    if (error) alert("Error: " + error.message);
+    else {
+      setConcepto("");
+      setMonto("");
+      setPorcentajePagador(50);
+      alert("¡Gasto guardado con éxito!");
+      obtenerDatos();
+    }
+  }
+
+  // --- MATEMÁTICA Y PREPARACIÓN DE GRÁFICOS ---
+  let saldoBilleteraYo = 0;
+  let saldoBilleteraOtro = 0;
+  let balanceDeudas = 0;
+
+  let totalGastadoYo = 0;
+  let totalGastadoOtro = 0;
+
+  const gastosPorCategoria = {};
+  const gastosPorPersonaCategoria = {}; // NUEVO: Para el gráfico de barras comparativo
+
+  if (usuarioActual && otroUsuario) {
+    ingresos.forEach((i) => {
+      if (i.moneda === monedaGlobal) {
+        if (i.usuario_id === usuarioActual.id)
+          saldoBilleteraYo += Number(i.monto);
+        else if (i.usuario_id === otroUsuario.id)
+          saldoBilleteraOtro += Number(i.monto);
+      }
+    });
+
+    gastos.forEach((g) => {
+      const montoGasto = Number(g.monto);
+
+      if (g.moneda === monedaGlobal) {
+        // 1. Descuento de billeteras y suma de "Total Gastado" por persona
+        if (g.pagador_id === usuarioActual.id) {
+          saldoBilleteraYo -= montoGasto;
+          totalGastadoYo += montoGasto;
+        } else if (g.pagador_id === otroUsuario.id) {
+          saldoBilleteraOtro -= montoGasto;
+          totalGastadoOtro += montoGasto;
+        }
+
+        // 2. Balance de deudas (Sliders)
+        if (g.para_quien === "Ambos") {
+          const porcPagador = Number(g.porcentaje_pagador || 50);
+          const porcOtro = 100 - porcPagador;
+
+          if (g.pagador_id === usuarioActual.id)
+            balanceDeudas += montoGasto * (porcOtro / 100);
+          else if (g.pagador_id === otroUsuario.id)
+            balanceDeudas -= montoGasto * (porcOtro / 100);
+        } else {
+          if (
+            g.pagador_id === usuarioActual.id &&
+            g.para_quien === otroUsuario.nombre
+          )
+            balanceDeudas += montoGasto;
+          else if (
+            g.pagador_id === otroUsuario.id &&
+            g.para_quien === usuarioActual.nombre
+          )
+            balanceDeudas -= montoGasto;
+        }
+
+        // 3. Agrupar para el Gráfico de Torta 1 (Total por categoría)
+        if (gastosPorCategoria[g.categoria])
+          gastosPorCategoria[g.categoria] += montoGasto;
+        else gastosPorCategoria[g.categoria] = montoGasto;
+
+        // 4. Agrupar para el Gráfico de Barras (Categoría separada por persona)
+        if (!gastosPorPersonaCategoria[g.categoria]) {
+          gastosPorPersonaCategoria[g.categoria] = {
+            name: g.categoria,
+            Yo: 0,
+            Pareja: 0,
+          };
+        }
+        if (g.pagador_id === usuarioActual.id)
+          gastosPorPersonaCategoria[g.categoria].Yo += montoGasto;
+        else if (g.pagador_id === otroUsuario.id)
+          gastosPorPersonaCategoria[g.categoria].Pareja += montoGasto;
+      }
+    });
+  }
+
+  // Estructuramos los datos para pasárselos a Recharts
+  const datosGraficoCategorias = Object.keys(gastosPorCategoria).map((key) => ({
+    name: key,
+    value: gastosPorCategoria[key],
+  }));
+  const datosGraficoBarras = Object.values(gastosPorPersonaCategoria);
+
+  const datosQuienGastoMas = [
+    { name: "Yo", value: totalGastadoYo },
+    { name: otroUsuario?.nombre || "Pareja", value: totalGastadoOtro },
+  ].filter((d) => d.value > 0); // Solo mostramos si gastaron algo
+
+  const COLORES = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+
+  return (
+    <>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: "15px",
+          gap: "10px",
+        }}
+      >
+        <button
+          onClick={() => setMonedaGlobal("PYG")}
+          style={{
+            padding: "5px 15px",
+            borderRadius: "20px",
+            border:
+              monedaGlobal === "PYG" ? "2px solid #646cff" : "1px solid #444",
+            backgroundColor: monedaGlobal === "PYG" ? "#646cff" : "transparent",
+            color: "white",
+          }}
+        >
+          🇵🇾 Gs.
+        </button>
+        <button
+          onClick={() => setMonedaGlobal("BRL")}
+          style={{
+            padding: "5px 15px",
+            borderRadius: "20px",
+            border:
+              monedaGlobal === "BRL" ? "2px solid #28a745" : "1px solid #444",
+            backgroundColor: monedaGlobal === "BRL" ? "#28a745" : "transparent",
+            color: "white",
+          }}
+        >
+          🇧🇷 R$
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <div
+          className="card"
+          style={{
+            flex: 1,
+            margin: 0,
+            padding: "15px",
+            borderTop: "4px solid #646cff",
+          }}
+        >
+          <small style={{ color: "#aaa" }}>Mi Billetera</small>
+          <h3
+            style={{
+              margin: "5px 0 0 0",
+              color: saldoBilleteraYo < 0 ? "#dc3545" : "white",
+            }}
+          >
+            {formatearNumero(saldoBilleteraYo, monedaGlobal)}
+          </h3>
+        </div>
+        <div
+          className="card"
+          style={{
+            flex: 1,
+            margin: 0,
+            padding: "15px",
+            borderTop: "4px solid #888",
+          }}
+        >
+          <small style={{ color: "#aaa" }}>
+            Billetera {otroUsuario?.nombre}
+          </small>
+          <h3
+            style={{
+              margin: "5px 0 0 0",
+              color: saldoBilleteraOtro < 0 ? "#dc3545" : "white",
+            }}
+          >
+            {formatearNumero(saldoBilleteraOtro, monedaGlobal)}
+          </h3>
+        </div>
+      </div>
+
+      <div
+        className="card"
+        style={{
+          borderLeft: `5px solid ${balanceDeudas === 0 ? "#28a745" : balanceDeudas > 0 ? "#dc3545" : "#ffc107"}`,
+        }}
+      >
+        <h3>Ajuste de Cuentas ⚖️</h3>
+        <h3 style={{ margin: 0 }}>
+          {balanceDeudas === 0
+            ? "¡Están al día! 🍻"
+            : balanceDeudas > 0
+              ? `${otroUsuario?.nombre} te debe: ${formatearNumero(balanceDeudas, monedaGlobal)}`
+              : `Le debés a ${otroUsuario?.nombre}: ${formatearNumero(Math.abs(balanceDeudas), monedaGlobal)}`}
+        </h3>
+      </div>
+
+      <div className="card">
+        <h3>🛒 Cargar Gasto ({monedaGlobal})</h3>
+        <form onSubmit={guardarGasto}>
+          <input
+            type="text"
+            placeholder="Ej: Supermercado..."
+            value={concepto}
+            onChange={(e) => setConcepto(e.target.value)}
+            required
+          />
+          <input
+            type="number"
+            placeholder={`Monto`}
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            required
+          />
+          <div
+            style={{
+              fontSize: "12px",
+              color: "#aaa",
+              marginTop: "-10px",
+              marginBottom: "15px",
+              textAlign: "right",
+            }}
+          >
+            Visualización: {formatearNumero(monto, monedaGlobal)}
+          </div>
+
+          <select
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+          >
+            <option value="Casa">🏡 Casa</option>
+            <option value="Supermercado">🛒 Supermercado</option>
+            <option value="Viajes">✈️ Viajes</option>
+            <option value="Salidas">🍕 Salidas</option>
+            <option value="Ahorro">🐷 Ahorro</option>
+          </select>
+
+          <select
+            value={paraQuien}
+            onChange={(e) => setParaQuien(e.target.value)}
+          >
+            <option value="Ambos">Para: Ambos</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.nombre}>
+                Para: {u.nombre}
+              </option>
+            ))}
+          </select>
+
+          {paraQuien === "Ambos" && (
+            <div
+              style={{
+                marginBottom: "15px",
+                backgroundColor: "#2a2a2a",
+                padding: "15px",
+                borderRadius: "8px",
+                border: "1px solid #444",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "13px",
+                  color: "#ddd",
+                  display: "block",
+                  marginBottom: "10px",
+                  fontWeight: "bold",
+                }}
+              >
+                ¿Cómo dividimos este gasto?
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={porcentajePagador}
+                onChange={(e) => setPorcentajePagador(e.target.value)}
+                style={{
+                  width: "100%",
+                  cursor: "pointer",
+                  accentColor: "#646cff",
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "13px",
+                  color: "#aaa",
+                  marginTop: "8px",
+                }}
+              >
+                <span>
+                  Yo pago:{" "}
+                  <strong style={{ color: "white" }}>
+                    {porcentajePagador}%
+                  </strong>
+                </span>
+                <span>
+                  {otroUsuario?.nombre}:{" "}
+                  <strong style={{ color: "white" }}>
+                    {100 - porcentajePagador}%
+                  </strong>
+                </span>
+              </div>
+            </div>
+          )}
+          <button type="submit" className="btn-primary">
+            Registrar Gasto
+          </button>
+        </form>
+      </div>
+
+      {/* =========================================
+          📊 SECCIÓN DE ANALYTICS (NUEVOS GRÁFICOS)
+      ========================================= */}
+      {datosGraficoCategorias.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* GRÁFICO 1: TORTA DE CATEGORÍAS */}
+          <div
+            className="card"
+            style={{
+              height: "300px",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <h3 style={{ marginBottom: 0 }}>📊 Total por Categoría</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={datosGraficoCategorias}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {datosGraficoCategorias.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORES[index % COLORES.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value) => formatearNumero(value, monedaGlobal)}
+                  contentStyle={{
+                    backgroundColor: "#1e1e1e",
+                    borderColor: "#444",
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* GRÁFICO 2: TORTA DE QUIÉN GASTÓ MÁS */}
+          <div
+            className="card"
+            style={{
+              height: "300px",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <h3 style={{ marginBottom: 0 }}>⚖️ ¿Quién puso más plata?</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={datosQuienGastoMas}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  dataKey="value"
+                  label
+                >
+                  <Cell fill="#646cff" />
+                  <Cell fill="#28a745" />
+                </Pie>
+                <Tooltip
+                  formatter={(value) => formatearNumero(value, monedaGlobal)}
+                  contentStyle={{
+                    backgroundColor: "#1e1e1e",
+                    borderColor: "#444",
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* GRÁFICO 3: BARRAS COMPARATIVAS POR CATEGORÍA */}
+          <div
+            className="card"
+            style={{
+              height: "350px",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <h3 style={{ marginBottom: 15 }}>🔎 Qué pagó cada uno</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={datosGraficoBarras}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <XAxis dataKey="name" stroke="#aaa" fontSize={12} />
+                <YAxis
+                  stroke="#aaa"
+                  fontSize={12}
+                  tickFormatter={(val) =>
+                    val >= 1000000
+                      ? `${(val / 1000000).toFixed(1)}M`
+                      : val >= 1000
+                        ? `${(val / 1000).toFixed(0)}k`
+                        : val
+                  }
+                />
+                <Tooltip
+                  cursor={{ fill: "#333" }}
+                  contentStyle={{
+                    backgroundColor: "#1e1e1e",
+                    borderColor: "#444",
+                  }}
+                  formatter={(value) => formatearNumero(value, monedaGlobal)}
+                />
+                <Legend />
+                <Bar
+                  dataKey="Yo"
+                  fill="#646cff"
+                  radius={[4, 4, 0, 0]}
+                  name="Yo pagué"
+                />
+                <Bar
+                  dataKey="Pareja"
+                  fill="#28a745"
+                  radius={[4, 4, 0, 0]}
+                  name={`${otroUsuario?.nombre} pagó`}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
