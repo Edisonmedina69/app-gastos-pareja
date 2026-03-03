@@ -144,3 +144,147 @@ select:focus {
 .nav-icon {
   font-size: 20px;
 }
+
+/* Login profesional */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0a0a0a;
+  padding: 1.5rem;
+}
+
+.login-card {
+  background: #1a1a1a;
+  border-radius: 1rem;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid #2a2a2a;
+}
+
+.login-header {
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.login-header h1 {
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 500;
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.02em;
+}
+
+.login-header h1 span {
+  color: #646cff;
+  font-weight: 400;
+}
+
+.login-subtitle {
+  color: #8b8b8b;
+  font-size: 0.9rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.input-field label {
+  color: #ccc;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.input-field input {
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 0.5rem;
+  padding: 0.9rem 1rem;
+  color: #ffffff;
+  font-size: 1rem;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.input-field input:focus {
+  border-color: #646cff;
+  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.15);
+}
+
+.input-field input::placeholder {
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.login-btn {
+  background: #646cff;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3.5rem;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #7b83ff;
+}
+
+.login-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loader {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.login-footer {
+  margin-top: 2rem;
+  text-align: center;
+  color: #5a5a5a;
+  font-size: 0.8rem;
+  border-top: 1px solid #2a2a2a;
+  padding-top: 1.5rem;
+}

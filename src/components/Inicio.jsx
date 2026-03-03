@@ -1,7 +1,7 @@
 // src/components/Inicio.jsx
 import { useState } from "react";
 import { supabase } from "../supabase";
-// NUEVO: Importamos BarChart, Bar, XAxis, YAxis, CartesianGrid para los gráficos nuevos
+import { toast } from "react-hot-toast";
 import {
   PieChart,
   Pie,
@@ -22,6 +22,7 @@ export default function Inicio({
   usuarios,
   gastos,
   ingresos,
+  cuentas,
   monedaGlobal,
   setMonedaGlobal,
   obtenerDatos,
@@ -32,6 +33,9 @@ export default function Inicio({
   const [paraQuien, setParaQuien] = useState("Ambos");
   const [porcentajePagador, setPorcentajePagador] = useState(50);
 
+  // NUEVO ESTADO PARA CONTROLAR LA VENTANA EMERGENTE
+  const [mostrarModal, setMostrarModal] = useState(false);
+
   function formatearNumero(num, mon) {
     if (!num) return "0";
     const formato = Number(num).toLocaleString("es-PY");
@@ -41,6 +45,8 @@ export default function Inicio({
   async function guardarGasto(e) {
     e.preventDefault();
     if (!usuarioActual) return;
+
+    const toastId = toast.loading("Guardando gasto...");
 
     const { error } = await supabase.from("gastos").insert([
       {
@@ -54,12 +60,14 @@ export default function Inicio({
       },
     ]);
 
-    if (error) alert("Error: " + error.message);
-    else {
+    if (error) {
+      toast.error("Error: " + error.message, { id: toastId });
+    } else {
       setConcepto("");
       setMonto("");
       setPorcentajePagador(50);
-      alert("¡Gasto guardado con éxito!");
+      setMostrarModal(false); // CERRAMOS EL MODAL AL GUARDAR
+      toast.success("¡Gasto guardado con éxito! 🛒", { id: toastId });
       obtenerDatos();
     }
   }
@@ -68,12 +76,11 @@ export default function Inicio({
   let saldoBilleteraYo = 0;
   let saldoBilleteraOtro = 0;
   let balanceDeudas = 0;
-
   let totalGastadoYo = 0;
   let totalGastadoOtro = 0;
 
   const gastosPorCategoria = {};
-  const gastosPorPersonaCategoria = {}; // NUEVO: Para el gráfico de barras comparativo
+  const gastosPorPersonaCategoria = {};
 
   if (usuarioActual && otroUsuario) {
     ingresos.forEach((i) => {
@@ -89,7 +96,6 @@ export default function Inicio({
       const montoGasto = Number(g.monto);
 
       if (g.moneda === monedaGlobal) {
-        // 1. Descuento de billeteras y suma de "Total Gastado" por persona
         if (g.pagador_id === usuarioActual.id) {
           saldoBilleteraYo -= montoGasto;
           totalGastadoYo += montoGasto;
@@ -98,7 +104,6 @@ export default function Inicio({
           totalGastadoOtro += montoGasto;
         }
 
-        // 2. Balance de deudas (Sliders)
         if (g.para_quien === "Ambos") {
           const porcPagador = Number(g.porcentaje_pagador || 50);
           const porcOtro = 100 - porcPagador;
@@ -120,12 +125,10 @@ export default function Inicio({
             balanceDeudas -= montoGasto;
         }
 
-        // 3. Agrupar para el Gráfico de Torta 1 (Total por categoría)
         if (gastosPorCategoria[g.categoria])
           gastosPorCategoria[g.categoria] += montoGasto;
         else gastosPorCategoria[g.categoria] = montoGasto;
 
-        // 4. Agrupar para el Gráfico de Barras (Categoría separada por persona)
         if (!gastosPorPersonaCategoria[g.categoria]) {
           gastosPorPersonaCategoria[g.categoria] = {
             name: g.categoria,
@@ -141,17 +144,40 @@ export default function Inicio({
     });
   }
 
-  // Estructuramos los datos para pasárselos a Recharts
+  // --- MODO SUPERVIVENCIA (CÁLCULO DE FALTANTE) ---
+  let totalCuentasPendientes = 0;
+  if (cuentas) {
+    cuentas.forEach((c) => {
+      if (c.estado !== "Pagado" && c.moneda === monedaGlobal) {
+        const hoy = new Date();
+        const fPago = c.fecha_ultimo_pago
+          ? new Date(c.fecha_ultimo_pago)
+          : null;
+        const pagadoMes =
+          fPago &&
+          fPago.getMonth() === hoy.getMonth() &&
+          fPago.getFullYear() === hoy.getFullYear();
+
+        if (!pagadoMes) {
+          totalCuentasPendientes += Number(c.monto);
+        }
+      }
+    });
+  }
+
+  const saldoTotalFamiliar = saldoBilleteraYo + saldoBilleteraOtro;
+  const faltante = totalCuentasPendientes - saldoTotalFamiliar;
+  const necesitaPlata = faltante > 0;
+
   const datosGraficoCategorias = Object.keys(gastosPorCategoria).map((key) => ({
     name: key,
     value: gastosPorCategoria[key],
   }));
   const datosGraficoBarras = Object.values(gastosPorPersonaCategoria);
-
   const datosQuienGastoMas = [
     { name: "Yo", value: totalGastadoYo },
     { name: otroUsuario?.nombre || "Pareja", value: totalGastadoOtro },
-  ].filter((d) => d.value > 0); // Solo mostramos si gastaron algo
+  ].filter((d) => d.value > 0);
 
   const COLORES = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -192,6 +218,26 @@ export default function Inicio({
           🇧🇷 R$
         </button>
       </div>
+
+      {/* BOTÓN GIGANTE PARA ABRIR EL CADASTRO */}
+      <button
+        onClick={() => setMostrarModal(true)}
+        style={{
+          width: "100%",
+          padding: "15px",
+          backgroundColor: "#646cff",
+          color: "white",
+          border: "none",
+          borderRadius: "10px",
+          fontSize: "16px",
+          fontWeight: "bold",
+          marginBottom: "20px",
+          cursor: "pointer",
+          boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
+        }}
+      >
+        ➕ Registrar Nuevo Gasto
+      </button>
 
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         <div
@@ -236,6 +282,83 @@ export default function Inicio({
         </div>
       </div>
 
+      {/* TARJETA MODO SUPERVIVENCIA S.O.S */}
+      <div
+        className="card"
+        style={{
+          borderLeft: necesitaPlata ? "5px solid #dc3545" : "5px solid #28a745",
+          backgroundColor: necesitaPlata
+            ? "rgba(220, 53, 69, 0.1)"
+            : "rgba(40, 167, 69, 0.1)",
+        }}
+      >
+        <h3
+          style={{
+            margin: "0 0 10px 0",
+            color: necesitaPlata ? "#ff6b6b" : "#4ade80",
+          }}
+        >
+          {necesitaPlata
+            ? "🚨 Alerta: Nos faltan fondos"
+            : "✅ Cuentas del mes aseguradas"}
+        </h3>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "14px",
+            color: "#ccc",
+            marginBottom: "5px",
+          }}
+        >
+          <span>Deudas pendientes del mes:</span>
+          <strong style={{ color: "white" }}>
+            {formatearNumero(totalCuentasPendientes, monedaGlobal)}
+          </strong>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "14px",
+            color: "#ccc",
+            marginBottom: "15px",
+          }}
+        >
+          <span>Plata en las billeteras (Suma):</span>
+          <strong style={{ color: "white" }}>
+            {formatearNumero(saldoTotalFamiliar, monedaGlobal)}
+          </strong>
+        </div>
+        {necesitaPlata ? (
+          <div
+            style={{
+              backgroundColor: "#dc3545",
+              padding: "10px",
+              borderRadius: "5px",
+              textAlign: "center",
+              color: "white",
+              fontWeight: "bold",
+            }}
+          >
+            Falta conseguir: {formatearNumero(faltante, monedaGlobal)}
+          </div>
+        ) : (
+          <div
+            style={{
+              backgroundColor: "#28a745",
+              padding: "10px",
+              borderRadius: "5px",
+              textAlign: "center",
+              color: "white",
+              fontWeight: "bold",
+            }}
+          >
+            Nos sobra: {formatearNumero(Math.abs(faltante), monedaGlobal)} 🎉
+          </div>
+        )}
+      </div>
+
       <div
         className="card"
         style={{
@@ -252,128 +375,181 @@ export default function Inicio({
         </h3>
       </div>
 
-      <div className="card">
-        <h3>🛒 Cargar Gasto ({monedaGlobal})</h3>
-        <form onSubmit={guardarGasto}>
-          <input
-            type="text"
-            placeholder="Ej: Supermercado..."
-            value={concepto}
-            onChange={(e) => setConcepto(e.target.value)}
-            required
-          />
-          <input
-            type="number"
-            placeholder={`Monto`}
-            value={monto}
-            onChange={(e) => setMonto(e.target.value)}
-            required
-          />
+      {/* MODAL DE CADASTRO (Ventana Emergente Oculta) */}
+      {mostrarModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.85)",
+            zIndex: 999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
           <div
+            className="card"
             style={{
-              fontSize: "12px",
-              color: "#aaa",
-              marginTop: "-10px",
-              marginBottom: "15px",
-              textAlign: "right",
+              width: "100%",
+              maxWidth: "400px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              position: "relative",
+              margin: 0,
+              borderTop: "4px solid #646cff",
             }}
           >
-            Visualización: {formatearNumero(monto, monedaGlobal)}
-          </div>
-
-          <select
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
-          >
-            <option value="Casa">🏡 Casa</option>
-            <option value="Supermercado">🛒 Supermercado</option>
-            <option value="Viajes">✈️ Viajes</option>
-            <option value="Salidas">🍕 Salidas</option>
-            <option value="Ahorro">🐷 Ahorro</option>
-          </select>
-
-          <select
-            value={paraQuien}
-            onChange={(e) => setParaQuien(e.target.value)}
-          >
-            <option value="Ambos">Para: Ambos</option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.nombre}>
-                Para: {u.nombre}
-              </option>
-            ))}
-          </select>
-
-          {paraQuien === "Ambos" && (
-            <div
+            <button
+              onClick={() => setMostrarModal(false)}
               style={{
-                marginBottom: "15px",
-                backgroundColor: "#2a2a2a",
-                padding: "15px",
-                borderRadius: "8px",
-                border: "1px solid #444",
+                position: "absolute",
+                top: "15px",
+                right: "15px",
+                background: "transparent",
+                border: "none",
+                fontSize: "20px",
+                color: "#aaa",
+                cursor: "pointer",
               }}
             >
-              <label
-                style={{
-                  fontSize: "13px",
-                  color: "#ddd",
-                  display: "block",
-                  marginBottom: "10px",
-                  fontWeight: "bold",
-                }}
-              >
-                ¿Cómo dividimos este gasto?
-              </label>
+              ✖
+            </button>
+
+            <h3 style={{ marginTop: 0 }}>🛒 Cargar Gasto</h3>
+
+            <form onSubmit={guardarGasto}>
               <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={porcentajePagador}
-                onChange={(e) => setPorcentajePagador(e.target.value)}
-                style={{
-                  width: "100%",
-                  cursor: "pointer",
-                  accentColor: "#646cff",
-                }}
+                type="text"
+                placeholder="Ej: Supermercado..."
+                value={concepto}
+                onChange={(e) => setConcepto(e.target.value)}
+                required
+              />
+              <input
+                type="number"
+                placeholder={`Monto`}
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+                required
               />
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "13px",
+                  fontSize: "12px",
                   color: "#aaa",
-                  marginTop: "8px",
+                  marginTop: "-10px",
+                  marginBottom: "15px",
+                  textAlign: "right",
                 }}
               >
-                <span>
-                  Yo pago:{" "}
-                  <strong style={{ color: "white" }}>
-                    {porcentajePagador}%
-                  </strong>
-                </span>
-                <span>
-                  {otroUsuario?.nombre}:{" "}
-                  <strong style={{ color: "white" }}>
-                    {100 - porcentajePagador}%
-                  </strong>
-                </span>
+                Visualización: {formatearNumero(monto, monedaGlobal)}
               </div>
-            </div>
-          )}
-          <button type="submit" className="btn-primary">
-            Registrar Gasto
-          </button>
-        </form>
-      </div>
+
+              <select
+                value={categoria}
+                onChange={(e) => setCategoria(e.target.value)}
+              >
+                <option value="Casa">🏡 Casa</option>
+                <option value="Supermercado">🛒 Supermercado</option>
+                <option value="Combustible">⛽ Combustible</option>
+                <option value="Viajes">✈️ Viajes</option>
+                <option value="Salidas">🍕 Salidas</option>
+                <option value="Ahorro">🐷 Ahorro</option>
+                <option value="Cuidado Personal">🧴 Cuidado Personal</option>
+                <option value="Salud">💊 Salud</option>
+              </select>
+
+              <select
+                value={paraQuien}
+                onChange={(e) => setParaQuien(e.target.value)}
+              >
+                <option value="Ambos">Para: Ambos</option>
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.nombre}>
+                    Para: {u.nombre}
+                  </option>
+                ))}
+              </select>
+
+              {paraQuien === "Ambos" && (
+                <div
+                  style={{
+                    marginBottom: "15px",
+                    backgroundColor: "#2a2a2a",
+                    padding: "15px",
+                    borderRadius: "8px",
+                    border: "1px solid #444",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "13px",
+                      color: "#ddd",
+                      display: "block",
+                      marginBottom: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ¿Cómo dividimos este gasto?
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={porcentajePagador}
+                    onChange={(e) => setPorcentajePagador(e.target.value)}
+                    style={{
+                      width: "100%",
+                      cursor: "pointer",
+                      accentColor: "#646cff",
+                    }}
+                  />
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "13px",
+                      color: "#aaa",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <span>
+                      Yo pago:{" "}
+                      <strong style={{ color: "white" }}>
+                        {porcentajePagador}%
+                      </strong>
+                    </span>
+                    <span>
+                      {otroUsuario?.nombre}:{" "}
+                      <strong style={{ color: "white" }}>
+                        {100 - porcentajePagador}%
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+              )}
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ width: "100%", marginTop: "10px", padding: "12px" }}
+              >
+                Registrar y Cerrar
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* =========================================
           📊 SECCIÓN DE ANALYTICS (NUEVOS GRÁFICOS)
       ========================================= */}
       {datosGraficoCategorias.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {/* GRÁFICO 1: TORTA DE CATEGORÍAS */}
           <div
             className="card"
             style={{
@@ -413,7 +589,6 @@ export default function Inicio({
             </ResponsiveContainer>
           </div>
 
-          {/* GRÁFICO 2: TORTA DE QUIÉN GASTÓ MÁS */}
           <div
             className="card"
             style={{
@@ -448,7 +623,6 @@ export default function Inicio({
             </ResponsiveContainer>
           </div>
 
-          {/* GRÁFICO 3: BARRAS COMPARATIVAS POR CATEGORÍA */}
           <div
             className="card"
             style={{
