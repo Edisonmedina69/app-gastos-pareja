@@ -1,5 +1,5 @@
 // src/components/Cuentas.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
 
@@ -59,9 +59,15 @@ export default function Cuentas({
     );
   }
 
+  const usuariosMap = useMemo(() => {
+    return usuarios.reduce((acc, user) => {
+      acc[user.id] = user.nombre;
+      return acc;
+    }, {});
+  }, [usuarios]);
+
   function getNombreUsuario(id) {
-    const user = usuarios.find((u) => u.id == id);
-    return user ? user.nombre : "Desconocido";
+    return usuariosMap[id] ?? "Desconocido";
   }
 
   async function guardarCuenta(e) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "./supabase";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
@@ -99,9 +99,15 @@ function App() {
       f.toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit" })
     );
   }
+  const usuariosMap = useMemo(() => {
+    return usuarios.reduce((acc, user) => {
+      acc[user.id] = user.nombre;
+      return acc;
+    }, {});
+  }, [usuarios]);
+
   function getNombreUsuario(id) {
-    const user = usuarios.find((u) => u.id == id);
-    return user ? user.nombre : "Desconocido";
+    return usuariosMap[id] ?? "Desconocido";
   }
 
   if (!session) return <Login />;
