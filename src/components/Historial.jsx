@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
+import { formatearNumero, formatearFecha } from "../utils/formatters";
 
 export default function Historial({
   gastos,
@@ -10,8 +11,6 @@ export default function Historial({
   usuarios,
   obtenerDatos,
   getNombreUsuario,
-  formatearFecha,
-  formatearNumero,
 }) {
   // ESTADOS PARA FILTROS Y PAGINACIÓN
   const [filtroUsuario, setFiltroUsuario] = useState("todos");

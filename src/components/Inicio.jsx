@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
+import { formatearNumero } from "../utils/formatters";
 import {
   PieChart,
   Pie,
@@ -35,12 +36,6 @@ export default function Inicio({
 
   // NUEVO ESTADO PARA CONTROLAR LA VENTANA EMERGENTE
   const [mostrarModal, setMostrarModal] = useState(false);
-
-  function formatearNumero(num, mon) {
-    if (!num) return "0";
-    const formato = Number(num).toLocaleString("es-PY");
-    return mon === "BRL" ? `R$ ${formato}` : `${formato} Gs.`;
-  }
 
   async function guardarGasto(e) {
     e.preventDefault();

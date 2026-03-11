@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
+import { formatearNumero } from "../utils/formatters";
 
 export default function Ingresos({
   usuarioActual,
@@ -9,7 +10,6 @@ export default function Ingresos({
   monedaGlobal,
   obtenerDatos,
   getNombreUsuario,
-  formatearNumero,
 }) {
   const [conceptoIngreso, setConceptoIngreso] = useState("Salario Mensual");
   const [montoIngreso, setMontoIngreso] = useState("");
