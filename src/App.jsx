@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { Toaster } from "react-hot-toast";
+import { formatearNumero, formatearFecha } from "./utils/formatters";
 import "./App.css";
 
 // COMPONENTES EXTRAÍDOS (¡Todos listos!)
@@ -85,20 +86,6 @@ function App() {
     if (session) obtenerDatos();
   }, [session]);
 
-  function formatearNumero(num, mon = "PYG") {
-    if (!num) return "0";
-    const formato = Number(num).toLocaleString("es-PY");
-    return mon === "BRL" ? `R$ ${formato}` : `${formato} Gs.`;
-  }
-  function formatearFecha(fechaStr) {
-    if (!fechaStr) return "";
-    const f = new Date(fechaStr);
-    return (
-      f.toLocaleDateString("es-PY") +
-      " " +
-      f.toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit" })
-    );
-  }
   function getNombreUsuario(id) {
     const user = usuarios.find((u) => u.id == id);
     return user ? user.nombre : "Desconocido";
@@ -167,7 +154,6 @@ function App() {
             monedaGlobal={monedaGlobal}
             obtenerDatos={obtenerDatos}
             getNombreUsuario={getNombreUsuario}
-            formatearNumero={formatearNumero}
           />
         )}
 
@@ -177,7 +163,6 @@ function App() {
             metas={metas}
             monedaGlobal={monedaGlobal}
             obtenerDatos={obtenerDatos}
-            formatearNumero={formatearNumero}
           />
         )}
 
@@ -188,8 +173,6 @@ function App() {
             usuarios={usuarios}
             obtenerDatos={obtenerDatos}
             getNombreUsuario={getNombreUsuario}
-            formatearFecha={formatearFecha}
-            formatearNumero={formatearNumero}
           />
         )}
       </div>

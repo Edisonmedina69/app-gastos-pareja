@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
+import { formatearNumero } from "../utils/formatters";
 
 export default function Metas({
   usuarioActual,
   metas,
   monedaGlobal,
   obtenerDatos,
-  formatearNumero,
 }) {
   const [tituloMeta, setTituloMeta] = useState("");
   const [montoObjetivoMeta, setMontoObjetivoMeta] = useState("");
