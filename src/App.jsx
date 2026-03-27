@@ -4,9 +4,10 @@ import { Toaster } from "react-hot-toast";
 import { formatearNumero, formatearFecha } from "./utils/formatters";
 import "./App.css";
 
-// COMPONENTES EXTRAÍDOS (¡Todos listos!)
+// IMPORTACIÓN DE COMPONENTES
 import Login from "./components/Login";
-import Navegacion from "./components/Navegacion";
+import Sidebar from "./components/Sidebar";
+import BottomNav from "./components/BottomNav";
 import Inicio from "./components/Inicio";
 import Cuentas from "./components/Cuentas";
 import Ingresos from "./components/Ingresos";
@@ -45,6 +46,9 @@ function App() {
   }
 
   async function obtenerDatos() {
+    if (!session) return;
+
+    // 1. Obtener Usuarios
     const resUsuarios = await supabase.from("usuarios").select("*");
     if (resUsuarios.data) {
       setUsuarios(resUsuarios.data);
@@ -59,22 +63,30 @@ function App() {
         }
       }
     }
+
+    // 2. Obtener Gastos
     const resGastos = await supabase
       .from("gastos")
       .select("*")
       .order("fecha", { ascending: false });
     if (resGastos.data) setGastos(resGastos.data);
+
+    // 3. Obtener Ingresos
     const resIngresos = await supabase
       .from("ingresos_mensuales")
       .select("*")
       .order("id", { ascending: false });
     if (resIngresos.data) setIngresos(resIngresos.data);
+
+    // 4. Obtener Cuentas
     const resCuentas = await supabase
       .from("cuentas_pendientes")
       .select("*")
       .order("estado", { ascending: false })
       .order("dia_vencimiento", { ascending: true });
     if (resCuentas.data) setCuentas(resCuentas.data);
+
+    // 5. Obtener Metas
     const resMetas = await supabase
       .from("metas_ahorro")
       .select("*")
@@ -86,98 +98,53 @@ function App() {
     if (session) obtenerDatos();
   }, [session]);
 
-  function getNombreUsuario(id) {
-    const user = usuarios.find((u) => u.id == id);
-    return user ? user.nombre : "Desconocido";
-  }
-
   if (!session) return <Login />;
+
+  // Propiedades compartidas para todos los componentes
+  const sharedProps = {
+    usuarioActual,
+    otroUsuario,
+    usuarios,
+    gastos,
+    ingresos,
+    cuentas,
+    metas,
+    monedaGlobal,
+    setMonedaGlobal,
+    obtenerDatos,
+    formatearNumero,
+    formatearFecha,
+    getNombreUsuario: (id) =>
+      usuarios.find((u) => u.id == id)?.nombre || "Desconocido",
+  };
 
   return (
     <div className="app-container">
-      <Toaster position="top-center" reverseOrder={false} />
+      <Toaster position="top-right" />
 
-      <div
-        className="header"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span>Mis Finanzas 💸</span>
-        <button
-          onClick={handleLogout}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#ff6b6b",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Salir
-        </button>
-      </div>
+      {/* HEADER: Solo visible en móviles (controlado por CSS) */}
+      <header className="header">Mis Finanzas 💸</header>
 
-      <div className="content">
-        {/* ENRUTAMIENTO DE COMPONENTES */}
-        {activeTab === "inicio" && (
-          <Inicio
-            usuarioActual={usuarioActual}
-            otroUsuario={otroUsuario}
-            usuarios={usuarios}
-            gastos={gastos}
-            ingresos={ingresos}
-            cuentas={cuentas}
-            monedaGlobal={monedaGlobal}
-            setMonedaGlobal={setMonedaGlobal}
-            obtenerDatos={obtenerDatos}
-          />
-        )}
+      {/* SIDEBAR: Solo visible en Escritorio (controlado por CSS) */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        handleLogout={handleLogout}
+      />
 
-        {activeTab === "cuentas" && (
-          <Cuentas
-            usuarioActual={usuarioActual}
-            otroUsuario={otroUsuario}
-            usuarios={usuarios}
-            cuentas={cuentas}
-            monedaGlobal={monedaGlobal}
-            obtenerDatos={obtenerDatos}
-          />
-        )}
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="content">
+        <div className="content-inner">
+          {activeTab === "inicio" && <Inicio {...sharedProps} />}
+          {activeTab === "cuentas" && <Cuentas {...sharedProps} />}
+          {activeTab === "ingresos" && <Ingresos {...sharedProps} />}
+          {activeTab === "metas" && <Metas {...sharedProps} />}
+          {activeTab === "historial" && <Historial {...sharedProps} />}
+        </div>
+      </main>
 
-        {activeTab === "ingresos" && (
-          <Ingresos
-            usuarioActual={usuarioActual}
-            ingresos={ingresos}
-            monedaGlobal={monedaGlobal}
-            obtenerDatos={obtenerDatos}
-            getNombreUsuario={getNombreUsuario}
-          />
-        )}
-
-        {activeTab === "metas" && (
-          <Metas
-            usuarioActual={usuarioActual}
-            metas={metas}
-            monedaGlobal={monedaGlobal}
-            obtenerDatos={obtenerDatos}
-          />
-        )}
-
-        {activeTab === "historial" && (
-          <Historial
-            gastos={gastos}
-            ingresos={ingresos}
-            usuarios={usuarios}
-            obtenerDatos={obtenerDatos}
-            getNombreUsuario={getNombreUsuario}
-          />
-        )}
-      </div>
-
-      <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* BOTTOM NAV: Solo visible en celulares (controlado por CSS) */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }

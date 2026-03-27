@@ -150,8 +150,8 @@ export default function Inicio({
           : null;
         const pagadoMes =
           fPago &&
-          fPago.getMonth() === hoy.getMonth() &&
-          fPago.getFullYear() === hoy.getFullYear();
+          fPago.getFullYear() * 12 + fPago.getMonth() >=
+            hoy.getFullYear() * 12 + hoy.getMonth();
 
         if (!pagadoMes) {
           totalCuentasPendientes += Number(c.monto);

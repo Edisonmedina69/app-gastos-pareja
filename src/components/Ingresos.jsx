@@ -1,53 +1,82 @@
-// src/components/Ingresos.jsx
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
-import { formatearNumero } from "../utils/formatters";
 
 export default function Ingresos({
   usuarioActual,
   ingresos,
   monedaGlobal,
   obtenerDatos,
-  getNombreUsuario,
+  usuarios,
 }) {
+  const hoy = new Date();
   const [conceptoIngreso, setConceptoIngreso] = useState("Salario Mensual");
   const [montoIngreso, setMontoIngreso] = useState("");
+  const [mesIngreso, setMesIngreso] = useState(hoy.getMonth() + 1);
+  const [anioIngreso, setAnioIngreso] = useState(hoy.getFullYear());
+
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const nombresMeses = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+
+  // Función interna para que nunca de error
+  function formatearNum(num, mon) {
+    if (!num) return "0";
+    const formato = Number(num).toLocaleString("es-PY");
+    return mon === "BRL" ? `R$ ${formato}` : `${formato} Gs.`;
+  }
+
+  function getNombreUser(id) {
+    if (!usuarios) return "Desconocido";
+    const user = usuarios.find((u) => u.id == id);
+    return user ? user.nombre : "Desconocido";
+  }
 
   async function guardarIngreso(e) {
     e.preventDefault();
-    if (!usuarioActual) return;
+    if (!usuarioActual || isSubmitting) return;
 
+    setIsSubmitting(true);
     const toastId = toast.loading("Guardando ingreso...");
-    const fecha = new Date();
 
     const { error } = await supabase.from("ingresos_mensuales").insert([
       {
         usuario_id: usuarioActual.id,
         concepto: conceptoIngreso,
         monto: parseFloat(montoIngreso),
-        mes: fecha.getMonth() + 1,
-        anio: fecha.getFullYear(),
+        mes: parseInt(mesIngreso),
+        anio: parseInt(anioIngreso),
         moneda: monedaGlobal,
       },
     ]);
 
     if (error) {
-      toast.error("Error al guardar ingreso: " + error.message, {
-        id: toastId,
-      });
+      toast.error("Error al guardar: " + error.message, { id: toastId });
     } else {
       setMontoIngreso("");
-      setMostrarModal(false); // Cierra la ventana
+      setMostrarModal(false);
       toast.success("¡Ingreso registrado! 💰", { id: toastId });
       obtenerDatos();
     }
+    setIsSubmitting(false);
   }
 
   return (
     <>
-      {/* BOTÓN GIGANTE PARA NUEVO INGRESO */}
       <button
         onClick={() => setMostrarModal(true)}
         style={{
@@ -67,39 +96,52 @@ export default function Ingresos({
         ➕ Registrar Nuevo Ingreso
       </button>
 
-      {/* EXTRACTO (INDEX) DE INGRESOS */}
       <div className="card" style={{ borderTop: "4px solid #28a745" }}>
         <h3 style={{ margin: "0 0 15px 0" }}>📥 Historial de Ingresos</h3>
         <div>
-          {ingresos.map((i) => (
-            <div
-              key={i.id}
-              className="movimiento-item"
-              style={{ borderLeft: "4px solid #28a745", paddingLeft: "10px" }}
-            >
+          {ingresos &&
+            ingresos.map((i) => (
               <div
+                key={i.id}
+                className="movimiento-item"
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  borderLeft: "4px solid #28a745",
+                  paddingLeft: "10px",
+                  marginBottom: "10px",
+                  backgroundColor: "#2a2a2a",
+                  padding: "10px",
+                  borderRadius: "8px",
                 }}
               >
-                <div>
-                  <strong>{getNombreUsuario(i.usuario_id)}</strong>
-                  <div style={{ fontSize: "12px", color: "#888" }}>
-                    {i.concepto}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    <strong>{getNombreUser(i.usuario_id)}</strong>
+                    <div style={{ fontSize: "12px", color: "#888" }}>
+                      {i.concepto}{" "}
+                      <strong style={{ color: "#aaa" }}>
+                        ({nombresMeses[i.mes - 1]} {i.anio})
+                      </strong>
+                    </div>
+                  </div>
+                  <div
+                    className="movimiento-monto"
+                    style={{ color: "#28a745", fontWeight: "bold" }}
+                  >
+                    + {formatearNum(i.monto, i.moneda)}
                   </div>
                 </div>
-                <div className="movimiento-monto" style={{ color: "#28a745" }}>
-                  + {formatearNumero(i.monto, i.moneda)}
-                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
-      {/* MODAL DE CADASTRO (Ventana Emergente Oculta) */}
+      {/* MODAL */}
       {mostrarModal && (
         <div
           style={{
@@ -141,48 +183,55 @@ export default function Ingresos({
             >
               ✖
             </button>
-
             <h3 style={{ marginTop: 0 }}>📥 Registrar Ingreso</h3>
-
             <form onSubmit={guardarIngreso}>
+              <div
+                style={{ display: "flex", gap: "10px", marginBottom: "10px" }}
+              >
+                <select
+                  value={mesIngreso}
+                  onChange={(e) => setMesIngreso(e.target.value)}
+                  style={{ flex: 2 }}
+                >
+                  {nombresMeses.map((m, idx) => (
+                    <option key={m} value={idx + 1}>
+                      Mes: {m}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={anioIngreso}
+                  onChange={(e) => setAnioIngreso(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+              </div>
               <input
                 type="text"
-                placeholder="Ej: Salario Fijo, Venta..."
+                placeholder="Ej: Salario Fijo..."
                 value={conceptoIngreso}
                 onChange={(e) => setConceptoIngreso(e.target.value)}
                 required
               />
               <input
                 type="number"
-                placeholder={`Monto en ${monedaGlobal}`}
+                placeholder={`Monto`}
                 value={montoIngreso}
                 onChange={(e) => setMontoIngreso(e.target.value)}
                 required
               />
 
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#aaa",
-                  marginTop: "-10px",
-                  marginBottom: "15px",
-                  textAlign: "right",
-                }}
-              >
-                Visualización: {formatearNumero(montoIngreso, monedaGlobal)}
-              </div>
-
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="btn-primary"
                 style={{
-                  backgroundColor: "#28a745",
+                  backgroundColor: isSubmitting ? "#555" : "#28a745",
                   width: "100%",
                   marginTop: "10px",
-                  padding: "12px",
                 }}
               >
-                Guardar y Cerrar
+                {isSubmitting ? "Guardando..." : "Guardar y Cerrar"}
               </button>
             </form>
           </div>

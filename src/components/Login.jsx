@@ -1,114 +1,117 @@
-// src/components/Login.jsx
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
+import { User, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function handleLogin(e) {
     e.preventDefault();
-    const toastId = toast.loading("Buscando usuario...");
+    if (loading) return;
 
-    // PASO 1: Buscar el correo del usuario en la tabla "usuarios"
-    // Usamos .ilike() para que no importe si escribís "edison", "Edison" o "EDISON"
-    const { data: usuarioDb, error: errorBusqueda } = await supabase
-      .from("usuarios")
-      .select("email")
-      .ilike("nombre", username.trim())
-      .single();
+    setLoading(true);
+    const toastId = toast.loading("Verificando credenciales...");
 
-    if (errorBusqueda || !usuarioDb) {
-      toast.error(`No encontramos a nadie llamado "${username}"`, {
-        id: toastId,
+    try {
+      // 1. Buscamos el email por el nombre (ilike para ignorar mayúsculas)
+      const { data: userDb, error: fetchError } = await supabase
+        .from("usuarios")
+        .select("email")
+        .ilike("nombre", username.trim())
+        .maybeSingle();
+
+      if (fetchError || !userDb) {
+        throw new Error("El usuario no existe en el sistema.");
+      }
+
+      // 2. Intentamos el login oficial
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: userDb.email,
+        password,
       });
-      return;
-    }
 
-    // PASO 2: Si lo encontramos, iniciamos sesión con su correo oculto
-    toast.loading("Iniciando sesión...", { id: toastId });
+      if (loginError) throw new Error("La contraseña es incorrecta.");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: usuarioDb.email,
-      password: password,
-    });
-
-    if (error) {
-      toast.error("Contraseña incorrecta ❌", { id: toastId });
-    } else {
-      toast.success(`¡Bienvenido de vuelta, ${username}! 🚀`, { id: toastId });
+      toast.success("¡Bienvenido, eju poytáva! 🚀", { id: toastId });
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        backgroundColor: "#121212",
-      }}
-    >
-      <div
-        className="card"
-        style={{
-          width: "100%",
-          maxWidth: "350px",
-          borderTop: "4px solid #646cff",
-          textAlign: "center",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Mis Finanzas 💸</h2>
-        <p style={{ color: "#aaa", fontSize: "14px", marginBottom: "20px" }}>
-          Ingresá tu nombre y contraseña
-        </p>
+    <div className="login-container">
+      <div className="login-card">
+        <header style={{ marginBottom: "2rem" }}>
+          <div className="logo-icon">💸</div>
+          <h1 className="login-title">ÑandeFinanza</h1>
+          <p className="login-subtitle">Gestión inteligente para parejas</p>
+        </header>
 
-        <form
-          onSubmit={handleLogin}
-          style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-        >
-          <div style={{ textAlign: "left" }}>
-            <label
-              style={{ fontSize: "12px", color: "#888", fontWeight: "bold" }}
-            >
-              👤 Nombre de Usuario
-            </label>
-            <input
-              type="text"
-              placeholder="Ej: Edison..."
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              style={{ width: "100%", marginTop: "5px" }}
-            />
+        <form onSubmit={handleLogin} className="login-form">
+          {/* Campo de Usuario */}
+          <div className="form-group">
+            <label>Usuario</label>
+            <div className="input-wrapper">
+              <User className="input-icon" size={18} />
+              <input
+                type="text"
+                placeholder="Ej: Edison"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
-          <div style={{ textAlign: "left" }}>
-            <label
-              style={{ fontSize: "12px", color: "#888", fontWeight: "bold" }}
-            >
-              🔑 Contraseña
-            </label>
-            <input
-              type="password"
-              placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ width: "100%", marginTop: "5px" }}
-            />
+          {/* Campo de Contraseña */}
+          <div className="form-group">
+            <label>Contraseña</label>
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
-          <button
-            type="submit"
-            className="btn-primary"
-            style={{ marginTop: "10px", padding: "12px", fontSize: "16px" }}
-          >
-            Entrar
+          <button type="submit" className="login-btn-pro" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="spinner" size={20} />
+                <span>Ingresando...</span>
+              </>
+            ) : (
+              "Iniciar Sesión"
+            )}
           </button>
         </form>
+
+        <footer className="login-footer">
+          <div className="py-badge">
+            <span className="flag">🇵🇾</span>
+            <span className="badge-text">100% PARAGUAYO</span>
+          </div>
+          <p className="credits">
+            Desarrollado en <strong>Katuete</strong> por Canindevs
+          </p>
+        </footer>
       </div>
     </div>
   );
