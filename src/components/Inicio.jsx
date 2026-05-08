@@ -1,4 +1,3 @@
-// src/components/Inicio.jsx
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
@@ -27,6 +26,7 @@ export default function Inicio({
   monedaGlobal,
   setMonedaGlobal,
   obtenerDatos,
+  datosHogar // NUEVO PROP RECIBIDO
 }) {
   const [concepto, setConcepto] = useState("");
   const [monto, setMonto] = useState("");
@@ -34,12 +34,11 @@ export default function Inicio({
   const [paraQuien, setParaQuien] = useState("Ambos");
   const [porcentajePagador, setPorcentajePagador] = useState(50);
 
-  // NUEVO ESTADO PARA CONTROLAR LA VENTANA EMERGENTE
   const [mostrarModal, setMostrarModal] = useState(false);
 
   async function guardarGasto(e) {
     e.preventDefault();
-    if (!usuarioActual) return;
+    if (!usuarioActual || !datosHogar) return;
 
     const toastId = toast.loading("Guardando gasto...");
 
@@ -52,6 +51,7 @@ export default function Inicio({
         para_quien: paraQuien,
         moneda: monedaGlobal,
         porcentaje_pagador: paraQuien === "Ambos" ? porcentajePagador : 100,
+        espacio_id: datosHogar.espacios.id // INYECTAMOS EL HOGAR ACÁ
       },
     ]);
 
@@ -61,7 +61,7 @@ export default function Inicio({
       setConcepto("");
       setMonto("");
       setPorcentajePagador(50);
-      setMostrarModal(false); // CERRAMOS EL MODAL AL GUARDAR
+      setMostrarModal(false);
       toast.success("¡Gasto guardado con éxito! 🛒", { id: toastId });
       obtenerDatos();
     }
@@ -214,7 +214,6 @@ export default function Inicio({
         </button>
       </div>
 
-      {/* BOTÓN GIGANTE PARA ABRIR EL CADASTRO */}
       <button
         onClick={() => setMostrarModal(true)}
         style={{
@@ -277,7 +276,6 @@ export default function Inicio({
         </div>
       </div>
 
-      {/* TARJETA MODO SUPERVIVENCIA S.O.S */}
       <div
         className="card"
         style={{
@@ -370,7 +368,6 @@ export default function Inicio({
         </h3>
       </div>
 
-      {/* MODAL DE CADASTRO (Ventana Emergente Oculta) */}
       {mostrarModal && (
         <div
           style={{
@@ -540,9 +537,6 @@ export default function Inicio({
         </div>
       )}
 
-      {/* =========================================
-          📊 SECCIÓN DE ANALYTICS (NUEVOS GRÁFICOS)
-      ========================================= */}
       {datosGraficoCategorias.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div

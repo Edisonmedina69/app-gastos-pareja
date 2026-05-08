@@ -1,0 +1,234 @@
+/* ==========================================================================
+   BLINDAJE DE CSS PARA CUENTAS (SCOPING)
+   ========================================================================== */
+
+.pantalla-cuentas {
+    padding: 1.5rem;
+    color: #f8fafc;
+    min-height: 100vh;
+    background-color: #0f172a; /* Slate 900 */
+}
+
+.pantalla-cuentas .header-seccion {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.pantalla-cuentas h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(to right, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Botón Agregar */
+.pantalla-cuentas .btn-agregar {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+}
+
+.pantalla-cuentas .btn-agregar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+}
+
+/* Lista de Tarjetas */
+.pantalla-cuentas .lista-cuentas {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.pantalla-cuentas .tarjeta-cuenta {
+    background: rgba(30, 41, 59, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.3s;
+}
+
+.pantalla-cuentas .tarjeta-cuenta:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.pantalla-cuentas .tarjeta-cuenta.pagada {
+    opacity: 0.6;
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.pantalla-cuentas .info h4 {
+    margin: 0 0 0.4rem 0;
+    font-size: 1.1rem;
+}
+
+.pantalla-cuentas .info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.pantalla-cuentas .badge-cuota {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    background: rgba(129, 140, 248, 0.15);
+    color: #a5b4fc;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(129, 140, 248, 0.3);
+}
+
+/* Montos y Estados */
+.pantalla-cuentas .monto-status {
+    text-align: right;
+}
+
+.pantalla-cuentas .monto {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.pantalla-cuentas .status {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
+.pantalla-cuentas .status.pendiente { color: #f59e0b; }
+.pantalla-cuentas .status.pagado { color: #10b981; }
+
+/* MODAL GLASSMORPHISM */
+.pantalla-cuentas .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1.5rem;
+}
+
+.pantalla-cuentas .modal-content.glass {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Toggles de tipo de deuda */
+.pantalla-cuentas .toggle-group {
+    display: flex;
+    background: rgba(15, 23, 42, 0.5);
+    padding: 0.4rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.pantalla-cuentas .toggle-group button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 0.6rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.pantalla-cuentas .toggle-group button.active {
+    background: #4f46e5;
+    color: white;
+}
+
+/* Formulario */
+.pantalla-cuentas form input, 
+.pantalla-cuentas form select {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
+    color: white;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.pantalla-cuentas .fila-input {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.pantalla-cuentas .campo label {
+    display: block;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-bottom: 0.4rem;
+}
+
+/* Acciones */
+.pantalla-cuentas .acciones-modal {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.pantalla-cuentas .btn-cancelar {
+    flex: 1;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    padding: 0.8rem;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.pantalla-cuentas .btn-confirmar {
+    flex: 2;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pantalla-cuentas .vacio {
+    text-align: center;
+    padding: 3rem;
+    color: #64748b;
+    border: 2px dashed rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+}
