@@ -11,6 +11,8 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
   ]);
   const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [tokensDisponibles, setTokensDisponibles] = useState(15000);
+  const [contextoModo, setContextoModo] = useState("Mes Actual");
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -41,9 +43,20 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
       // Probando con gemini-pro que es más universal
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
+      // Filtrar datos según contextoModo
+      let gastosFiltrados = gastos;
+      let ingresosFiltrados = ingresos;
+
+      if (contextoModo === "Mes Actual") {
+        const hace30Dias = new Date();
+        hace30Dias.setDate(hace30Dias.getDate() - 30);
+        gastosFiltrados = gastos.filter(g => new Date(g.fecha) >= hace30Dias);
+        ingresosFiltrados = ingresos.filter(i => new Date(i.fecha) >= hace30Dias);
+      }
+
       // Generar contexto financiero
-      const resumenGastos = gastos.slice(0, 10).map(g => `- ${g.concepto}: ${formatearNumero(g.monto, g.moneda)}`).join("\n");
-      const totalIngresos = ingresos.reduce((acc, i) => acc + i.monto, 0);
+      const resumenGastos = gastosFiltrados.slice(0, 10).map(g => `- ${g.concepto}: ${formatearNumero(g.monto, g.moneda)}`).join("\n");
+      const totalIngresos = ingresosFiltrados.reduce((acc, i) => acc + i.monto, 0);
       const totalCuentas = cuentas.filter(c => c.estado === "Pendiente").reduce((acc, c) => acc + c.monto, 0);
       const resumenMetas = metas.map(m => `- ${m.titulo}: ${formatearNumero(m.monto_actual || 0, m.moneda)} / ${formatearNumero(m.monto_objetivo, m.moneda)}`).join("\n");
       
@@ -54,11 +67,11 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
         CONTEXTO DEL USUARIO:
         - Usuario: ${usuarioActual?.nombre}
         - Moneda preferida: ${monedaGlobal}
-        - Ingresos totales este mes: ${formatearNumero(totalIngresos, monedaGlobal)}
+        - Ingresos totales (${contextoModo}): ${formatearNumero(totalIngresos, monedaGlobal)}
         - Deudas pendientes: ${formatearNumero(totalCuentas, monedaGlobal)}
         - Metas de ahorro:
         ${resumenMetas || "No hay metas registradas aún."}
-        - Últimos gastos registrados:
+        - Últimos gastos registrados (${contextoModo}):
         ${resumenGastos}
         
         REGLAS:
@@ -72,6 +85,10 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
       const text = response.text();
 
       setMensajes(prev => [...prev, { role: "asistente", text }]);
+      
+      // Descontar tokens
+      const costo = Math.floor(Math.random() * (200 - 50 + 1)) + 50;
+      setTokensDisponibles(prev => Math.max(0, prev - costo));
     } catch (error) {
       console.error("Error con Gemini:", error);
       const errorMsg = error.message || "Error desconocido";
@@ -83,6 +100,26 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
 
   return (
     <div className="asistente-container">
+      <div className="asistente-header">
+        <h2 className="asistente-titulo">Asistente ÑandeFinanza</h2>
+      </div>
+
+      <div className="monetizacion-bar">
+        <div className="tokens-display">
+          <span>🪙 {tokensDisponibles.toLocaleString("es-PY")} Tokens</span>
+        </div>
+        <div className="modo-selector">
+          <select 
+            className="modo-select"
+            value={contextoModo}
+            onChange={(e) => setContextoModo(e.target.value)}
+          >
+            <option value="Mes Actual">Mes Actual</option>
+            <option value="Historial Completo">Historial Completo</option>
+          </select>
+        </div>
+      </div>
+
       <div className="chat-messages" ref={scrollRef}>
         {mensajes.map((m, index) => (
           <div key={index} className={`mensaje ${m.role}`}>
