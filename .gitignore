@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Secrets
+.env
+.env.*
+

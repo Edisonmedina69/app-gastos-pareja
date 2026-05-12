@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { Toaster } from "react-hot-toast";
-import { formatearNumero, formatearFecha } from "./utils/formatters";
 import "./App.css";
 
 // COMPONENTES
@@ -13,6 +12,7 @@ import Ingresos from "./components/Ingresos";
 import Metas from "./components/Metas";
 import Historial from "./components/Historial";
 import ConfiguracionHogar from "./components/ConfiguracionHogar";
+import AsistenteGemini from "./components/AsistenteGemini";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -150,6 +150,11 @@ function App() {
     if (session && !verificandoHogar && datosHogar) obtenerDatos();
   }, [session, verificandoHogar, datosHogar]);
 
+  const getNombreUsuario = (id) => {
+    const u = usuarios.find((u) => u.id === id);
+    return u ? u.nombre : "Desconocido";
+  };
+
   // --- RENDER ---
   if (verificandoHogar) {
     return (
@@ -178,7 +183,10 @@ function App() {
       <div className="content">
         {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} cuentas={cuentas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
         {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} cuentas={cuentas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
-        {/* Agregá acá los otros componentes igual que Inicio y Cuentas */}
+        {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
+        {activeTab === "metas" && <Metas usuarioActual={usuarioActual} metas={metas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} />}
+        {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} />}
+        {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} cuentas={cuentas} metas={metas} monedaGlobal={monedaGlobal} />}
       </div>
       <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>

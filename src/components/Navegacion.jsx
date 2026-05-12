@@ -32,6 +32,12 @@ export default function Navegacion({ activeTab, setActiveTab }) {
       >
         <span className="nav-icon">📋</span> Historial
       </button>
+      <button
+        className={`nav-btn ${activeTab === "asistente" ? "active" : ""}`}
+        onClick={() => setActiveTab("asistente")}
+      >
+        <span className="nav-icon">🤖</span> Asistente
+      </button>
     </div>
   );
 }

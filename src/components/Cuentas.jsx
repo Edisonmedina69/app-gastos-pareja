@@ -30,7 +30,6 @@ export default function Cuentas({
   const [bancoTarjeta, setBancoTarjeta] = useState("");
   const [numeroTarjeta, setNumeroTarjeta] = useState("");
   const [limiteCredito, setLimiteCredito] = useState("");
-  const [montoTotalTarjeta, setMontoTotalTarjeta] = useState("");
 
   // Préstamos
   const [deudorId, setDeudorId] = useState("");
@@ -173,68 +172,114 @@ export default function Cuentas({
     }
   }
 
+  // 🔥 HU-06: LÓGICA DE PAGO PARCIAL CON TRASPASO AUTOMÁTICO
   async function marcarPagado(cuenta) {
     if (!usuarioActual) return;
-    
-    let montoAPagar = cuenta.monto;
-    const esFlexible = cuenta.permite_pago_parcial;
 
-    if (esFlexible) {
-      const abonoStr = prompt(
-        `La cuota es de ${formatearNumero(cuenta.monto, cuenta.moneda)}. ¿Cuánto vas a entregar hoy?`,
-        cuenta.monto
-      );
-      if (!abonoStr || isNaN(abonoStr)) return;
-      montoAPagar = parseFloat(abonoStr);
-      if (montoAPagar <= 0) return toast.error("Monto inválido.");
+    const abonoStr = window.prompt(
+      `La cuota es de ${formatearNumero(cuenta.monto, cuenta.moneda)}.\n¿Cuánto vas a entregar hoy? (Solo números)`,
+      cuenta.monto
+    );
+    if (abonoStr === null) return;
+
+    const abono = parseFloat(abonoStr);
+    if (isNaN(abono) || abono <= 0) {
+      toast.error("Monto inválido");
+      return;
     }
 
-    const esUltima = (cuenta.cuotas_pagadas + 1 >= cuenta.total_cuotas) || !cuenta.maestra_id;
-    let mensaje = cuenta.descripcion.includes("💳")
-      ? "¿Confirmar el pago del resumen de esta Tarjeta?"
-      : `¿Confirmar pago de ${formatearNumero(montoAPagar, cuenta.moneda)}?`;
+    const toastId = toast.loading("Procesando pago...");
 
-    if (window.confirm(mensaje)) {
-      const esPagoTotal = montoAPagar >= cuenta.monto;
+    try {
+      if (abono < cuenta.monto) {
+        // Calculamos la diferencia que falta pagar
+        const saldoRestante = cuenta.monto - abono;
 
-      if (esPagoTotal) {
-        await supabase
+        // 1. Buscamos si existe una PRÓXIMA cuota de esta misma deuda
+        let proximaCuota = null;
+        if (cuenta.maestra_id) {
+          const { data } = await supabase
+            .from("cuentas_pendientes")
+            .select("*")
+            .eq("maestra_id", cuenta.maestra_id)
+            .eq("estado", "Pendiente")
+            .gt("fecha_vencimiento", cuenta.fecha_vencimiento) // Solo cuotas futuras
+            .order("fecha_vencimiento", { ascending: true }) // La más cercana
+            .limit(1)
+            .single();
+
+          if (data) proximaCuota = data;
+        }
+
+        if (proximaCuota) {
+          // HU-06: Hay próxima cuota. Traspasamos la deuda.
+          // Cerramos la actual por el monto que realmente pagó (para el historial)
+          await supabase
+            .from("cuentas_pendientes")
+            .update({
+              estado: "Pagado",
+              monto: abono,
+              fecha_ultimo_pago: new Date().toISOString(),
+              pagador_id: usuarioActual.id,
+              pago_solicitado_a: null,
+              cuotas_pagadas: (cuenta.cuotas_pagadas || 0) + 1
+            })
+            .eq("id", cuenta.id);
+
+          // Sumamos el saldo restante a la próxima cuota
+          const nuevoMontoProxima = proximaCuota.monto + saldoRestante;
+          await supabase
+            .from("cuentas_pendientes")
+            .update({ monto: nuevoMontoProxima })
+            .eq("id", proximaCuota.id);
+
+          toast.success(`Cuota cerrada. Saldo de ${formatearNumero(saldoRestante, cuenta.moneda)} sumado al mes siguiente. 🔄`, { id: toastId });
+        } else {
+          // No hay próxima cuota (es la última o de pago único). Dejamos esta pendiente con el saldo restante.
+          await supabase
+            .from("cuentas_pendientes")
+            .update({
+              monto: saldoRestante,
+              fecha_ultimo_pago: new Date().toISOString(),
+              pagador_id: usuarioActual.id,
+              pago_solicitado_a: null
+            })
+            .eq("id", cuenta.id);
+          toast.success(`Pago parcial registrado. Queda un saldo de ${formatearNumero(saldoRestante, cuenta.moneda)} en esta última cuota.`, { id: toastId });
+        }
+      } else {
+        // Pago Total o con excedente
+        const { error } = await supabase
           .from("cuentas_pendientes")
           .update({
-            cuotas_pagadas: (cuenta.cuotas_pagadas || 0) + 1,
             estado: "Pagado",
             fecha_ultimo_pago: new Date().toISOString(),
             pagador_id: usuarioActual.id,
             pago_solicitado_a: null,
+            cuotas_pagadas: (cuenta.cuotas_pagadas || 0) + 1
           })
           .eq("id", cuenta.id);
-      } else {
-        await supabase
-          .from("cuentas_pendientes")
-          .update({
-            monto: cuenta.monto - montoAPagar,
-            fecha_ultimo_pago: new Date().toISOString(),
-            pagador_id: usuarioActual.id,
-            pago_solicitado_a: null,
-          })
-          .eq("id", cuenta.id);
+
+        if (error) throw error;
+        toast.success("¡Cuota pagada por completo! 🎉", { id: toastId });
       }
 
-      await supabase
-        .from("gastos")
-        .insert([
-          {
-            concepto: `Pago: ${cuenta.descripcion.split("|")[0]}`,
-            monto: montoAPagar,
-            categoria: "Préstamo",
-            pagador_id: usuarioActual.id,
-            para_quien: cuenta.responsable,
-            moneda: cuenta.moneda,
-            espacio_id: datosHogar?.espacios?.id || datosHogar?.id
-          },
-        ]);
-      toast.success("¡Pago registrado! ✅");
+      // Insertar en el historial de gastos
+      await supabase.from("gastos").insert([
+        {
+          concepto: `Pago: ${cuenta.descripcion.split("|")[0]}`,
+          monto: abono,
+          categoria: "Préstamo",
+          pagador_id: usuarioActual.id,
+          para_quien: cuenta.responsable,
+          moneda: cuenta.moneda,
+          espacio_id: datosHogar?.espacios?.id || datosHogar?.id
+        },
+      ]);
+
       obtenerDatos();
+    } catch (error) {
+      toast.error("Error al procesar el pago: " + error.message, { id: toastId });
     }
   }
 
