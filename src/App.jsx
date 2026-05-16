@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { Toaster } from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 import "./App.css";
 
 // COMPONENTES
@@ -174,21 +175,54 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      <Toaster position="top-center" />
-      <div className="header" style={{ display: "flex", justifyContent: "space-between", padding: '15px', alignItems: 'center' }}>
-        <span style={{ fontWeight: 'bold' }}>{datosHogar.espacios.nombre} 💸</span>
-        <button onClick={() => supabase.auth.signOut()} style={{ color: "#ff6b6b", background: 'none', border: 'none', cursor: 'pointer' }}>Salir</button>
-      </div>
-      <div className="content">
-        {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} cuentas={cuentas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
-        {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} cuentas={cuentas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
-        {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
-        {activeTab === "metas" && <Metas usuarioActual={usuarioActual} metas={metas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
-        {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} datosHogar={datosHogar} />}
-        {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} cuentas={cuentas} metas={metas} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
-      </div>
-      <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30">
+      <Toaster position="top-center" toastOptions={{
+        className: 'glass-card border-white/20 text-white',
+        style: { background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)' }
+      }} />
+      
+      {/* Header Moderno */}
+      <header className="sticky top-0 z-40 w-full glass-panel px-6 py-4 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <span className="text-white font-bold">Ñ</span>
+          </div>
+          <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+            {datosHogar.espacios.nombre}
+          </span>
+        </div>
+        <button 
+          onClick={() => supabase.auth.signOut()} 
+          className="text-xs font-medium text-slate-400 hover:text-red-400 transition-colors px-3 py-1.5 rounded-full border border-white/5 hover:border-red-500/20 hover:bg-red-500/10"
+        >
+          Cerrar Sesión
+        </button>
+      </header>
+
+      {/* Contenedor Principal con Animación */}
+      <main className="pb-28 pt-4 px-4 max-w-2xl mx-auto">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} cuentas={cuentas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+            {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} cuentas={cuentas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+            {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
+            {activeTab === "metas" && <Metas usuarioActual={usuarioActual} metas={metas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+            {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} datosHogar={datosHogar} />}
+            {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} cuentas={cuentas} metas={metas} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Navegación Flotante */}
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} />
+      </nav>
     </div>
   );
 }
