@@ -20,6 +20,7 @@ export default function Cuentas({
   const [tipoCuenta, setTipoCuenta] = useState("unica"); // 'unica', 'cuotas', 'tarjeta', 'informal'
   const [permitePagoParcial, setPermitePagoParcial] = useState(false);
   const [tasaCambio, setTasaCambio] = useState(1);
+  const [monedaDeuda, setMonedaDeuda] = useState(monedaGlobal);
 
   // Estados del Formulario (Unificados)
   const [titulo, setTitulo] = useState('');
@@ -42,16 +43,22 @@ export default function Cuentas({
   }, []);
 
   useEffect(() => {
-    if (mostrarModal && monedaGlobal !== "PYG") {
+    if (mostrarModal) {
+      setMonedaDeuda(monedaGlobal);
+    }
+  }, [mostrarModal, monedaGlobal]);
+
+  useEffect(() => {
+    if (mostrarModal && monedaDeuda !== "PYG") {
       async function cargarTasa() {
-        const rate = await obtenerCotizacion(monedaGlobal, "PYG");
+        const rate = await obtenerCotizacion(monedaDeuda, "PYG");
         setTasaCambio(rate);
       }
       cargarTasa();
     } else {
       setTasaCambio(1);
     }
-  }, [mostrarModal, monedaGlobal]);
+  }, [mostrarModal, monedaDeuda]);
 
   async function cargarPrestamosInformales() {
     if (!usuarioActual) return;
@@ -93,7 +100,7 @@ export default function Cuentas({
             acreedor_id: acreedorId,
             monto_total: parseFloat(montoInput),
             concepto: titulo,
-            moneda: monedaGlobal,
+            moneda: monedaDeuda,
             tasa_cambio: parseFloat(tasaCambio),
           },
         ]);
@@ -124,7 +131,7 @@ export default function Cuentas({
               monto_total: montoTotal,
               cantidad_cuotas: numCuotas,
               permite_pago_parcial: permitePagoParcial,
-              moneda: monedaGlobal,
+              moneda: monedaDeuda,
             },
           ])
           .select()
@@ -142,7 +149,7 @@ export default function Cuentas({
             dia_vencimiento: parseInt(diaVencimiento),
             estado: "Pendiente",
             responsable: responsableCuenta,
-            moneda: monedaGlobal,
+            moneda: monedaDeuda,
             tasa_cambio: parseFloat(tasaCambio),
             total_cuotas: numCuotas,
             cuotas_pagadas: i - 1,
@@ -171,7 +178,7 @@ export default function Cuentas({
             cuotas_pagadas: 0,
             estado: "Pendiente",
             responsable: responsableCuenta,
-            moneda: monedaGlobal,
+            moneda: monedaDeuda,
             tasa_cambio: parseFloat(tasaCambio),
             espacio_id: datosHogar?.espacios?.id || datosHogar?.id
           },
@@ -519,14 +526,26 @@ export default function Cuentas({
               </div>
 
               <div className="campo">
-                <label>Descripción / Concepto</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: Alquiler, Préstamo Banco, etc." 
-                  value={titulo} 
-                  onChange={(e) => setTitulo(e.target.value)} 
-                  required 
-                />
+                <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
+                  <div style={{ flex: 2 }}>
+                    <label>Descripción / Concepto</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: Alquiler, Préstamo Banco, etc." 
+                      value={titulo} 
+                      onChange={(e) => setTitulo(e.target.value)} 
+                      required 
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label>Moneda</label>
+                    <select value={monedaDeuda} onChange={(e) => setMonedaDeuda(e.target.value)} style={{ padding: "10px", borderRadius: "8px", width: "100%" }}>
+                      <option value="PYG">PYG (Gs)</option>
+                      <option value="BRL">BRL (R$)</option>
+                      <option value="USD">USD ($)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {tipoCuenta === 'tarjeta' ? (
@@ -588,10 +607,10 @@ export default function Cuentas({
                 </div>
               )}
 
-              {monedaGlobal !== "PYG" && (
+              {monedaDeuda !== "PYG" && (
                 <div className="campo" style={{ marginBottom: "15px", padding: "10px", backgroundColor: "rgba(100, 108, 255, 0.1)", borderRadius: "8px", border: "1px solid #646cff" }}>
                   <label style={{ color: "#646cff", fontWeight: "bold", fontSize: "12px" }}>
-                    Cotización sugerida (1 {monedaGlobal} = ? PYG)
+                    Cotización sugerida (1 {monedaDeuda} = ? PYG)
                   </label>
                   <input
                     type="number"
