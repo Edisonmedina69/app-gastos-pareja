@@ -186,7 +186,7 @@ function App() {
         {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
         {activeTab === "metas" && <Metas usuarioActual={usuarioActual} metas={metas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} />}
         {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} />}
-        {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} cuentas={cuentas} metas={metas} monedaGlobal={monedaGlobal} />}
+        {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} cuentas={cuentas} metas={metas} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
       </div>
       <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { toast } from 'react-hot-toast';
 import { formatearNumero } from '../utils/formatters';
+import { obtenerCotizacion } from '../utils/exchangeApi';
 import { Calendar, CreditCard, Plus, Trash2, CheckCircle, AlertCircle, Handshake, Wallet } from 'lucide-react';
 import '../Estilos/Cuentas.css';
 
@@ -18,6 +19,7 @@ export default function Cuentas({
   const [mostrarModal, setMostrarModal] = useState(false);
   const [tipoCuenta, setTipoCuenta] = useState("unica"); // 'unica', 'cuotas', 'tarjeta', 'informal'
   const [permitePagoParcial, setPermitePagoParcial] = useState(false);
+  const [tasaCambio, setTasaCambio] = useState(1);
 
   // Estados del Formulario (Unificados)
   const [titulo, setTitulo] = useState('');
@@ -38,6 +40,18 @@ export default function Cuentas({
   useEffect(() => {
     cargarPrestamosInformales();
   }, []);
+
+  useEffect(() => {
+    if (mostrarModal && monedaGlobal !== "PYG") {
+      async function cargarTasa() {
+        const rate = await obtenerCotizacion(monedaGlobal, "PYG");
+        setTasaCambio(rate);
+      }
+      cargarTasa();
+    } else {
+      setTasaCambio(1);
+    }
+  }, [mostrarModal, monedaGlobal]);
 
   async function cargarPrestamosInformales() {
     if (!usuarioActual) return;
@@ -80,6 +94,7 @@ export default function Cuentas({
             monto_total: parseFloat(montoInput),
             concepto: titulo,
             moneda: monedaGlobal,
+            tasa_cambio: parseFloat(tasaCambio),
           },
         ]);
 
@@ -128,6 +143,7 @@ export default function Cuentas({
             estado: "Pendiente",
             responsable: responsableCuenta,
             moneda: monedaGlobal,
+            tasa_cambio: parseFloat(tasaCambio),
             total_cuotas: numCuotas,
             cuotas_pagadas: i - 1,
             permite_pago_parcial: permitePagoParcial,
@@ -156,6 +172,7 @@ export default function Cuentas({
             estado: "Pendiente",
             responsable: responsableCuenta,
             moneda: monedaGlobal,
+            tasa_cambio: parseFloat(tasaCambio),
             espacio_id: datosHogar?.espacios?.id || datosHogar?.id
           },
         ]);
@@ -568,6 +585,24 @@ export default function Cuentas({
                     <option value="">Seleccionar...</option>
                     {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
                   </select>
+                </div>
+              )}
+
+              {monedaGlobal !== "PYG" && (
+                <div className="campo" style={{ marginBottom: "15px", padding: "10px", backgroundColor: "rgba(100, 108, 255, 0.1)", borderRadius: "8px", border: "1px solid #646cff" }}>
+                  <label style={{ color: "#646cff", fontWeight: "bold", fontSize: "12px" }}>
+                    Cotización sugerida (1 {monedaGlobal} = ? PYG)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={tasaCambio}
+                    onChange={(e) => setTasaCambio(e.target.value)}
+                    required
+                  />
+                  <small style={{ color: "#4ade80", display: "block", marginTop: "5px", textAlign: "right", fontWeight: "bold" }}>
+                    Equivale a: {formatearNumero((montoInput || 0) * tasaCambio, "PYG")}
+                  </small>
                 </div>
               )}
 

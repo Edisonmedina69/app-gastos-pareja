@@ -1,8 +1,9 @@
 // src/components/Ingresos.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
 import { formatearNumero } from "../utils/formatters";
+import { obtenerCotizacion } from "../utils/exchangeApi";
 
 export default function Ingresos({
   usuarioActual,
@@ -10,10 +11,24 @@ export default function Ingresos({
   monedaGlobal,
   obtenerDatos,
   getNombreUsuario,
+  datosHogar,
 }) {
   const [conceptoIngreso, setConceptoIngreso] = useState("Salario Mensual");
   const [montoIngreso, setMontoIngreso] = useState("");
+  const [tasaCambio, setTasaCambio] = useState(1);
   const [mostrarModal, setMostrarModal] = useState(false);
+
+  useEffect(() => {
+    if (mostrarModal && monedaGlobal !== "PYG") {
+      async function cargarTasa() {
+        const rate = await obtenerCotizacion(monedaGlobal, "PYG");
+        setTasaCambio(rate);
+      }
+      cargarTasa();
+    } else {
+      setTasaCambio(1);
+    }
+  }, [mostrarModal, monedaGlobal]);
 
   async function guardarIngreso(e) {
     e.preventDefault();
@@ -30,6 +45,8 @@ export default function Ingresos({
         mes: fecha.getMonth() + 1,
         anio: fecha.getFullYear(),
         moneda: monedaGlobal,
+        tasa_cambio: parseFloat(tasaCambio),
+        espacio_id: datosHogar?.espacios?.id || datosHogar?.id
       },
     ]);
 
@@ -171,6 +188,25 @@ export default function Ingresos({
               >
                 Visualización: {formatearNumero(montoIngreso, monedaGlobal)}
               </div>
+
+              {monedaGlobal !== "PYG" && (
+                <div style={{ marginBottom: "15px", padding: "10px", backgroundColor: "rgba(40, 167, 105, 0.1)", borderRadius: "8px", border: "1px solid #28a745" }}>
+                  <label style={{ fontSize: "12px", color: "#28a745", display: "block", marginBottom: "5px", fontWeight: "bold" }}>
+                    Cotización sugerida (1 {monedaGlobal} = ? PYG)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={tasaCambio}
+                    onChange={(e) => setTasaCambio(e.target.value)}
+                    required
+                    style={{ marginBottom: "5px" }}
+                  />
+                  <div style={{ fontSize: "12px", color: "#4ade80", textAlign: "right", fontWeight: "bold" }}>
+                    Equivale a: {formatearNumero(montoIngreso * tasaCambio, "PYG")}
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"

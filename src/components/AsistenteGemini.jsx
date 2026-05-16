@@ -1,19 +1,52 @@
 import { useState, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "../supabase";
 import { formatearNumero } from "../utils/formatters";
 import "../Estilos/AsistenteGemini.css";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuentas, metas, monedaGlobal }) {
+export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuentas, metas, monedaGlobal, datosHogar }) {
   const [mensajes, setMensajes] = useState([
     { role: "asistente", text: `¡Haku la polenta, ${usuarioActual?.nombre || "kapé"}! 🔥 Soy tu asistente financiero. ¿En qué te puedo ayudar hoy?` }
   ]);
   const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [tokensDisponibles, setTokensDisponibles] = useState(15000);
+  const [datosTokens, setDatosTokens] = useState({ mensuales: 30000, usados: 0 });
   const [contextoModo, setContextoModo] = useState("Mes Actual");
   const scrollRef = useRef(null);
+
+  const tokensRestantes = Math.max(0, datosTokens.mensuales - datosTokens.usados);
+  const sinTokens = tokensRestantes <= 0;
+
+  useEffect(() => {
+    async function sincronizarTokens() {
+      if (!datosHogar?.espacios?.id) return;
+      
+      const { data } = await supabase
+        .from("espacios")
+        .select("tokens_mensuales, tokens_usados, ultimo_ciclo_tokens")
+        .eq("id", datosHogar.espacios.id)
+        .single();
+
+      if (data) {
+        const ahora = new Date();
+        const ultimoCiclo = data.ultimo_ciclo_tokens ? new Date(data.ultimo_ciclo_tokens) : ahora;
+        
+        if (ahora.getMonth() !== ultimoCiclo.getMonth() || ahora.getFullYear() !== ultimoCiclo.getFullYear()) {
+          const { error } = await supabase.from("espacios").update({
+            tokens_usados: 0,
+            ultimo_ciclo_tokens: ahora.toISOString()
+          }).eq("id", datosHogar.espacios.id);
+          
+          if (!error) setDatosTokens({ mensuales: data.tokens_mensuales, usados: 0 });
+        } else {
+          setDatosTokens({ mensuales: data.tokens_mensuales, usados: data.tokens_usados });
+        }
+      }
+    }
+    sincronizarTokens();
+  }, [datosHogar]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -86,9 +119,15 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
 
       setMensajes(prev => [...prev, { role: "asistente", text }]);
       
-      // Descontar tokens
-      const costo = Math.floor(Math.random() * (200 - 50 + 1)) + 50;
-      setTokensDisponibles(prev => Math.max(0, prev - costo));
+      // Descontar tokens real en DB
+      const costo = 500; // Estimación simple
+      const nuevoUsado = datosTokens.usados + costo;
+      
+      await supabase.from("espacios").update({
+        tokens_usados: nuevoUsado
+      }).eq("id", datosHogar.espacios.id);
+      
+      setDatosTokens(prev => ({ ...prev, usados: nuevoUsado }));
     } catch (error) {
       console.error("Error con Gemini:", error);
       const errorMsg = error.message || "Error desconocido";
@@ -106,7 +145,7 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
 
       <div className="monetizacion-bar">
         <div className="tokens-display">
-          <span>🪙 {tokensDisponibles.toLocaleString("es-PY")} Tokens</span>
+          <span>🪙 {tokensRestantes.toLocaleString("es-PY")} Tokens</span>
         </div>
         <div className="modo-selector">
           <select 
@@ -129,16 +168,32 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
         {cargando && <div className="typing-indicator">ÑandeAsistente está pensando... 🤔</div>}
       </div>
 
+      {sinTokens && (
+        <div className="bloqueo-tokens-banner" style={{
+          backgroundColor: "rgba(220, 53, 69, 0.2)",
+          border: "1px solid #dc3545",
+          color: "#ff6b6b",
+          padding: "10px",
+          borderRadius: "8px",
+          marginBottom: "10px",
+          fontSize: "13px",
+          textAlign: "center"
+        }}>
+          ⚠️ Has agotado tus consultas mágicas de este mes. Pásate a Premium para seguir analizando tus finanzas. 💸✨
+        </div>
+      )}
+
       <div className="chat-input-container">
         <input
           className="chat-input"
           type="text"
-          placeholder="Pregúntame lo que quieras..."
+          placeholder={sinTokens ? "Límite alcanzado 🔒" : "Pregúntame lo que quieras..."}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === "Enter" && enviarMensaje()}
+          disabled={sinTokens || cargando}
         />
-        <button className="send-btn" onClick={enviarMensaje}>
+        <button className="send-btn" onClick={enviarMensaje} disabled={sinTokens || cargando}>
           <span>🚀</span>
         </button>
       </div>
