@@ -1,175 +1,161 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../supabase'; 
-import { Home, Copy, Users, Plus, Check, Key } from 'lucide-react';
-import '../Estilos/ConfiguracionHogar.css';
+import { Key, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const ConfiguracionHogar = ({ usuario, onHogarCreado }) => { // <-- ¡AQUÍ ESTÁ LA MAGIA!
-  const [espacioActual, setEspacioActual] = useState(null);
-  const [nuevoNombre, setNuevoNombre] = useState('');
-  const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false); // Estado para el botón
-  const [copiado, setCopiado] = useState(false);
+const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
+  const [codigo, setCodigo] = useState('');
+  const [nombreUsuario, setNombreUsuario] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [modo, setModo] = useState('unirse'); // 'unirse' | 'crear'
+  const [nuevoHogarNombre, setNuevoHogarNombre] = useState('');
 
-  useEffect(() => {
-    if (usuario) {
-      cargarEspacio();
-    }
-  }, [usuario]);
-
-  const cargarEspacio = async () => {
-    setCargando(true);
-    try {
-      const { data: relacion, error: errorRelacion } = await supabase
-        .from('usuarios_espacios')
-        .select('espacios(*)')
-        .eq('usuario_id', usuario.id)
-        .single();
-
-      if (errorRelacion && errorRelacion.code !== 'PGRST116') throw errorRelacion;
-      
-      if (relacion && relacion.espacios) {
-        setEspacioActual(relacion.espacios);
-      }
-    } catch (error) {
-      console.error('Error al cargar espacio:', error.message);
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const crearEspacio = async (e) => {
+  const manejarVinculacion = async (e) => {
     e.preventDefault();
-    if (!nuevoNombre.trim()) return;
+    if (!codigo.trim() || !nombreUsuario.trim()) return;
 
-    setGuardando(true); // Bloqueamos el botón mientras trabaja
+    setGuardando(true);
     try {
-      // 1. Crear el espacio
-      const { data: nuevoEspacio, error: errorEspacio } = await supabase
+      // 1. Buscar el espacio por código
+      const { data: espacio, error: errorEspacio } = await supabase
         .from('espacios')
-        .insert([{ nombre: nuevoNombre.trim() }])
-        .select()
+        .select('id, nombre_familia')
+        .eq('codigo_invitacion', codigo.trim().toUpperCase())
         .single();
 
-      if (errorEspacio) throw errorEspacio;
+      if (errorEspacio || !espacio) throw new Error('Código de invitación inválido o vencido.');
 
-      // 2. Vincular al usuario como admin
-      const { error: errorVinculo } = await supabase
-        .from('usuarios_espacios')
+      // 2. Crear el perfil del usuario vinculado a ese espacio
+      const { error: errorPerfil } = await supabase
+        .from('perfiles')
         .insert([{ 
-          usuario_id: usuario.id, 
-          espacio_id: nuevoEspacio.id,
-          rol: 'admin'
+          id: usuario.id, 
+          espacio_id: espacio.id,
+          nombre: nombreUsuario.trim(),
+          rol: 'miembro'
         }]);
 
-      if (errorVinculo) throw errorVinculo;
+      if (errorPerfil) throw errorPerfil;
 
-      // 3. ¡AVISAMOS A APP.JSX QUE TERMINAMOS! 🚀
-      if (onHogarCreado) {
-        await onHogarCreado(nuevoEspacio);
-      } else {
-        setEspacioActual(nuevoEspacio);
-      }
-      setNuevoNombre('');
+      if (onHogarCreado) onHogarCreado();
     } catch (error) {
-      console.error('Error al crear espacio:', error.message);
-      alert('Hubo un error al crear el hogar. Atendé la consola kapé.');
+      alert(error.message);
     } finally {
       setGuardando(false);
     }
   };
 
-  const generarCodigoInvitacion = async () => {
-    const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
+  const manejarCreacion = async (e) => {
+    e.preventDefault();
+    if (!nuevoHogarNombre.trim() || !nombreUsuario.trim()) return;
+
+    setGuardando(true);
     try {
-      const { data, error } = await supabase
+      // 1. Crear el espacio
+      const { data: nuevoEspacio, error: errorEspacio } = await supabase
         .from('espacios')
-        .update({ codigo_invitacion: codigo })
-        .eq('id', espacioActual.id)
+        .insert([{ 
+          nombre_familia: nuevoHogarNombre.trim(),
+          codigo_invitacion: Math.random().toString(36).substring(2, 8).toUpperCase()
+        }])
         .select()
         .single();
 
-      if (error) throw error;
-      setEspacioActual(data);
+      if (errorEspacio) throw errorEspacio;
+
+      // 2. Vincular como admin_hogar
+      const { error: errorPerfil } = await supabase
+        .from('perfiles')
+        .insert([{ 
+          id: usuario.id, 
+          espacio_id: nuevoEspacio.id,
+          nombre: nombreUsuario.trim(),
+          rol: 'admin_hogar'
+        }]);
+
+      if (errorPerfil) throw errorPerfil;
+
+      if (onHogarCreado) onHogarCreado();
     } catch (error) {
-      console.error('Error al generar código:', error.message);
+      alert(error.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
-  const copiarCodigo = () => {
-    if (!espacioActual?.codigo_invitacion) return;
-    navigator.clipboard.writeText(espacioActual.codigo_invitacion);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
-
-  if (cargando) return <div className="pantalla-hogar"><div className="cargando">Cargando datos del hogar...</div></div>;
-
   return (
-    <div className="pantalla-hogar">
-      <div className="glass-container">
-        <div className="header-hogar">
-          <div className="icono-wrapper">
-            <Home size={32} />
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decoración de fondo */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/5 rounded-full blur-[120px]" />
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md z-10">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/20 mb-4">
+            <Sparkles className="text-white w-8 h-8" />
           </div>
-          <h2>Configuración del Hogar</h2>
-          <p>Gestioná tu espacio compartido para ÑandeFinanza</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight italic">ÑandeFinanza 2.0</h1>
+          <p className="text-slate-400 mt-2">Personalizá tu perfil y configurá tu hogar</p>
         </div>
 
-        {!espacioActual ? (
-          <div className="crear-espacio-card">
-            <Users size={48} className="icono-ilustracion" />
-            <h3>Aún no tenés un hogar configurado</h3>
-            <p>Creá un nuevo espacio para empezar a compartir tus finanzas.</p>
-            
-            <form onSubmit={crearEspacio} className="formulario-crear">
+        <div className="glass-card p-8">
+          <div className="flex p-1 bg-white/5 rounded-xl border border-white/5 mb-8">
+            <button onClick={() => setModo('unirse')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${modo === 'unirse' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>Unirme 🏠</button>
+            <button onClick={() => setModo('crear')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${modo === 'crear' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>Crear Nuevo ✨</button>
+          </div>
+
+          <form onSubmit={modo === 'unirse' ? manejarVinculacion : manejarCreacion} className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tu Nombre o Apodo</label>
               <input
                 type="text"
-                placeholder="Ej: Familia Medina Valdez"
-                value={nuevoNombre}
-                onChange={(e) => setNuevoNombre(e.target.value)}
+                placeholder="Ej: Edison, Ale..."
+                className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                value={nombreUsuario}
+                onChange={(e) => setNombreUsuario(e.target.value)}
                 required
-                disabled={guardando}
               />
-              <button type="submit" className="btn-primario" disabled={guardando}>
-                <Plus size={18} />
-                {guardando ? 'Guardando Hogar...' : 'Crear Hogar'}
-              </button>
-            </form>
-          </div>
-        ) : (
-          <div className="detalle-espacio-card">
-            <div className="info-hogar">
-              <h3>{espacioActual.nombre}</h3>
-              <span className="badge-rol">Administrador</span>
             </div>
 
-            <div className="invitacion-section">
-              <h4><Key size={18} /> Código de Invitación</h4>
-              <p>Compartí este código para que tu pareja se una a este espacio.</p>
-              
-              {espacioActual.codigo_invitacion ? (
-                <div className="codigo-box">
-                  <span className="codigo-texto">{espacioActual.codigo_invitacion}</span>
-                  <button onClick={copiarCodigo} className="btn-icon" title="Copiar código">
-                    {copiado ? <Check size={20} color="#10b981" /> : <Copy size={20} />}
-                  </button>
+            {modo === 'unirse' ? (
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Código de Invitación</label>
+                <div className="relative">
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="ABCDEF"
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-black tracking-widest outline-none focus:border-indigo-500/50 uppercase"
+                    value={codigo}
+                    onChange={(e) => setCodigo(e.target.value)}
+                    required
+                  />
                 </div>
-              ) : (
-                <button onClick={generarCodigoInvitacion} className="btn-secundario">
-                  Generar Código
-                </button>
-              )}
-            </div>
-            {/* Botón extra por si App.jsx no recargó a tiempo, permite forzar la entrada */}
-            <div style={{marginTop: '20px'}}>
-               <button onClick={() => window.location.reload()} className="btn-primario" style={{background: '#10b981'}}>
-                 Ir al Dashboard de Finanzas
-               </button>
-            </div>
-          </div>
-        )}
-      </div>
+              </div>
+            ) : (
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre de la Familia / Hogar</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Familia Medina..."
+                  className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                  value={nuevoHogarNombre}
+                  onChange={(e) => setNuevoHogarNombre(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              disabled={guardando}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-6"
+            >
+              {guardando ? <Loader2 className="animate-spin" /> : <>{modo === 'unirse' ? 'VINCULAR MI CUENTA' : 'EMPEZAR ÑANDEFINANZA'} <ArrowRight size={18} /></>}
+            </button>
+          </form>
+        </div>
+      </motion.div>
     </div>
   );
 };

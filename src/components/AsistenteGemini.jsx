@@ -1,48 +1,35 @@
 import { useState, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from "../supabase";
-import { formatearNumero } from "../utils/formatters";
-import "../Estilos/AsistenteGemini.css";
+import { motion, AnimatePresence } from "framer-motion";
+import { Bot, Send, Sparkles, Zap, AlertTriangle } from "lucide-react";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuentas, metas, monedaGlobal, datosHogar }) {
+export default function AsistenteGemini({ usuarioActual, monedaGlobal, datosHogar }) {
   const [mensajes, setMensajes] = useState([
     { role: "asistente", text: `¡Haku la polenta, ${usuarioActual?.nombre || "kapé"}! 🔥 Soy tu asistente financiero. ¿En qué te puedo ayudar hoy?` }
   ]);
   const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [datosTokens, setDatosTokens] = useState({ mensuales: 30000, usados: 0 });
+  const [datosTokens, setDatosTokens] = useState({ disponibles: 10000 });
   const [contextoModo, setContextoModo] = useState("Mes Actual");
   const scrollRef = useRef(null);
 
-  const tokensRestantes = Math.max(0, datosTokens.mensuales - datosTokens.usados);
-  const sinTokens = tokensRestantes <= 0;
+  const sinTokens = datosTokens.disponibles <= 0;
 
   useEffect(() => {
     async function sincronizarTokens() {
-      if (!datosHogar?.espacios?.id) return;
+      if (!datosHogar?.espacio_id) return;
       
       const { data } = await supabase
         .from("espacios")
-        .select("tokens_mensuales, tokens_usados, ultimo_ciclo_tokens")
-        .eq("id", datosHogar.espacios.id)
+        .select("tokens_ia_disponibles")
+        .eq("id", datosHogar.espacio_id)
         .single();
 
       if (data) {
-        const ahora = new Date();
-        const ultimoCiclo = data.ultimo_ciclo_tokens ? new Date(data.ultimo_ciclo_tokens) : ahora;
-        
-        if (ahora.getMonth() !== ultimoCiclo.getMonth() || ahora.getFullYear() !== ultimoCiclo.getFullYear()) {
-          const { error } = await supabase.from("espacios").update({
-            tokens_usados: 0,
-            ultimo_ciclo_tokens: ahora.toISOString()
-          }).eq("id", datosHogar.espacios.id);
-          
-          if (!error) setDatosTokens({ mensuales: data.tokens_mensuales, usados: 0 });
-        } else {
-          setDatosTokens({ mensuales: data.tokens_mensuales, usados: data.tokens_usados });
-        }
+        setDatosTokens({ disponibles: data.tokens_ia_disponibles });
       }
     }
     sincronizarTokens();
@@ -55,11 +42,11 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
   }, [mensajes]);
 
   async function enviarMensaje() {
-    if (!input.trim() || cargando) return;
+    if (!input.trim() || cargando || sinTokens) return;
     if (!API_KEY) {
       setMensajes(prev => [...prev, 
         { role: "usuario", text: input },
-        { role: "asistente", text: "⚠️ No se encontró la API Key de Gemini. Por favor, configúrala en el archivo .env como VITE_GEMINI_API_KEY." }
+        { role: "asistente", text: "⚠️ No se encontró la API Key de Gemini." }
       ]);
       setInput("");
       return;
@@ -71,46 +58,15 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
     setCargando(true);
 
     try {
-      console.log("Intentando conectar con Gemini... Key empieza con:", API_KEY?.substring(0, 5));
       const genAI = new GoogleGenerativeAI(API_KEY);
-      // Probando con gemini-pro que es más universal
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-      // Filtrar datos según contextoModo
-      let gastosFiltrados = gastos;
-      let ingresosFiltrados = ingresos;
-
-      if (contextoModo === "Mes Actual") {
-        const hace30Dias = new Date();
-        hace30Dias.setDate(hace30Dias.getDate() - 30);
-        gastosFiltrados = gastos.filter(g => new Date(g.fecha) >= hace30Dias);
-        ingresosFiltrados = ingresos.filter(i => new Date(i.fecha) >= hace30Dias);
-      }
-
-      // Generar contexto financiero
-      const resumenGastos = gastosFiltrados.slice(0, 10).map(g => `- ${g.concepto}: ${formatearNumero(g.monto, g.moneda)}`).join("\n");
-      const totalIngresos = ingresosFiltrados.reduce((acc, i) => acc + i.monto, 0);
-      const totalCuentas = cuentas.filter(c => c.estado === "Pendiente").reduce((acc, c) => acc + c.monto, 0);
-      const resumenMetas = metas.map(m => `- ${m.titulo}: ${formatearNumero(m.monto_actual || 0, m.moneda)} / ${formatearNumero(m.monto_objetivo, m.moneda)}`).join("\n");
-      
       const promptSistema = `
-        Eres un asistente financiero empático, amigable y experto llamado "ÑandeAsistente".
-        Tu objetivo es ayudar al usuario a entender sus finanzas. Hablas con un tono paraguayo amigable (puedes usar palabras como "kapé", "haku la polenta", "re de bicio", etc.).
-        
-        CONTEXTO DEL USUARIO:
+        Eres "ÑandeAsistente", experto financiero paraguayo amigable.
+        CONTEXTO:
+        - Hogar: ${datosHogar?.espacios?.nombre_familia}
         - Usuario: ${usuarioActual?.nombre}
-        - Moneda preferida: ${monedaGlobal}
-        - Ingresos totales (${contextoModo}): ${formatearNumero(totalIngresos, monedaGlobal)}
-        - Deudas pendientes: ${formatearNumero(totalCuentas, monedaGlobal)}
-        - Metas de ahorro:
-        ${resumenMetas || "No hay metas registradas aún."}
-        - Últimos gastos registrados (${contextoModo}):
-        ${resumenGastos}
-        
-        REGLAS:
-        1. Mantén tus respuestas concisas pero útiles.
-        2. Si el usuario te pregunta sobre sus gastos, usa los datos proporcionados.
-        3. Siempre sé empático y motiva al ahorro.
+        - Moneda: ${monedaGlobal}
       `;
 
       const result = await model.generateContent([promptSistema, ...mensajes.map(m => `${m.role === "asistente" ? "Asistente" : "Usuario"}: ${m.text}`), `Usuario: ${input}`]);
@@ -119,83 +75,126 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, cuent
 
       setMensajes(prev => [...prev, { role: "asistente", text }]);
       
-      // Descontar tokens real en DB
-      const costo = 500; // Estimación simple
-      const nuevoUsado = datosTokens.usados + costo;
-      
-      await supabase.from("espacios").update({
-        tokens_usados: nuevoUsado
-      }).eq("id", datosHogar.espacios.id);
-      
-      setDatosTokens(prev => ({ ...prev, usados: nuevoUsado }));
-    } catch (error) {
-      console.error("Error con Gemini:", error);
-      const errorMsg = error.message || "Error desconocido";
-      setMensajes(prev => [...prev, { role: "asistente", text: `Lo siento, hubo un problema: ${errorMsg}. 🧠💥` }]);
+      const costo = 500;
+      const nuevoDisponible = Math.max(0, datosTokens.disponibles - costo);
+      await supabase.from("espacios").update({ tokens_ia_disponibles: nuevoDisponible }).eq("id", datosHogar.espacio_id);
+      setDatosTokens({ disponibles: nuevoDisponible });
+    } catch (err) {
+      console.error("Error en enviarMensaje:", err);
+      setMensajes(prev => [...prev, { role: "asistente", text: "Error de conexión con el cerebro IA. 🧠💥" }]);
     } finally {
       setCargando(false);
     }
   }
 
   return (
-    <div className="asistente-container">
-      <div className="asistente-header">
-        <h2 className="asistente-titulo">Asistente ÑandeFinanza</h2>
-      </div>
-
-      <div className="monetizacion-bar">
-        <div className="tokens-display">
-          <span>🪙 {tokensRestantes.toLocaleString("es-PY")} Tokens</span>
+    <div className="flex flex-col h-[calc(100vh-180px)] max-w-2xl mx-auto">
+      {/* Header Asistente */}
+      <div className="glass-card mb-4 p-4 border-l-4 border-l-indigo-500 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-600/20 rounded-xl flex items-center justify-center text-indigo-400">
+            <Bot size={24} />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-white leading-none">ÑandeAsistente</h2>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">En línea</span>
+            </div>
+          </div>
         </div>
-        <div className="modo-selector">
+        <div className="flex items-center gap-2">
           <select 
-            className="modo-select"
+            className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-400 outline-none focus:border-indigo-500/50"
             value={contextoModo}
             onChange={(e) => setContextoModo(e.target.value)}
           >
             <option value="Mes Actual">Mes Actual</option>
-            <option value="Historial Completo">Historial Completo</option>
+            <option value="Historial Completo">Historial</option>
           </select>
         </div>
       </div>
 
-      <div className="chat-messages" ref={scrollRef}>
-        {mensajes.map((m, index) => (
-          <div key={index} className={`mensaje ${m.role}`}>
-            {m.text}
+      {/* Barra de Tokens */}
+      <div className="flex gap-2 mb-4">
+        <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-2 px-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap size={14} className="text-amber-400" />
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Energía Mágica</span>
           </div>
-        ))}
-        {cargando && <div className="typing-indicator">ÑandeAsistente está pensando... 🤔</div>}
+          <span className="text-xs font-black text-white">{datosTokens.disponibles.toLocaleString("es-PY")}</span>
+        </div>
+        <div className="w-1/3 bg-white/5 border border-white/10 rounded-xl p-2 px-3 flex items-center justify-center gap-2">
+          <Sparkles size={14} className="text-indigo-400" />
+          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest italic">PREMIUM</span>
+        </div>
       </div>
 
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar mb-4" ref={scrollRef}>
+        <AnimatePresence>
+          {mensajes.map((m, index) => (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              key={index}
+              className={`flex ${m.role === "usuario" ? "justify-end" : "justify-start"}`}
+            >
+              <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-lg ${
+                m.role === "usuario" 
+                  ? "bg-indigo-600 text-white rounded-br-none" 
+                  : "glass-panel text-slate-200 rounded-bl-none border-l-2 border-l-indigo-500/50"
+              }`}>
+                {m.text}
+              </div>
+            </motion.div>
+          ))}
+          {cargando && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+              <div className="glass-panel p-4 rounded-2xl rounded-bl-none border-l-2 border-l-indigo-500/50">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Error/Warning Banner */}
       {sinTokens && (
-        <div className="bloqueo-tokens-banner" style={{
-          backgroundColor: "rgba(220, 53, 69, 0.2)",
-          border: "1px solid #dc3545",
-          color: "#ff6b6b",
-          padding: "10px",
-          borderRadius: "8px",
-          marginBottom: "10px",
-          fontSize: "13px",
-          textAlign: "center"
-        }}>
-          ⚠️ Has agotado tus consultas mágicas de este mes. Pásate a Premium para seguir analizando tus finanzas. 💸✨
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3"
+        >
+          <AlertTriangle className="text-red-400 shrink-0" size={18} />
+          <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Has agotado tus consultas mágicas. Pásate a Premium para seguir. 💸</p>
+        </motion.div>
       )}
 
-      <div className="chat-input-container">
+      {/* Input Area */}
+      <div className="glass-panel p-2 rounded-2xl flex items-center gap-2 border-white/20 focus-within:border-indigo-500/50 transition-all">
         <input
-          className="chat-input"
           type="text"
-          placeholder={sinTokens ? "Límite alcanzado 🔒" : "Pregúntame lo que quieras..."}
+          placeholder={sinTokens ? "Límite de tokens alcanzado 🔒" : "Preguntame lo que quieras..."}
+          className="flex-1 bg-transparent border-none outline-none px-4 py-2 text-white text-sm placeholder:text-slate-600 disabled:cursor-not-allowed"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === "Enter" && enviarMensaje()}
           disabled={sinTokens || cargando}
         />
-        <button className="send-btn" onClick={enviarMensaje} disabled={sinTokens || cargando}>
-          <span>🚀</span>
-        </button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={enviarMensaje}
+          disabled={sinTokens || cargando || !input.trim()}
+          className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-indigo-600/20"
+        >
+          <Send size={18} />
+        </motion.button>
       </div>
     </div>
   );

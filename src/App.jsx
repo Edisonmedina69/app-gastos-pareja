@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
 import { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import "./App.css";
+// import "./App.css";
 
 // COMPONENTES
 import Login from "./components/Login";
@@ -14,142 +14,150 @@ import Metas from "./components/Metas";
 import Historial from "./components/Historial";
 import ConfiguracionHogar from "./components/ConfiguracionHogar";
 import AsistenteGemini from "./components/AsistenteGemini";
+import SuperadminPanel from "./components/SuperadminPanel";
 
 function App() {
   const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState("inicio");
+  const [modoVista, setModoVista] = useState("familiar"); // 'familiar' | 'personal'
   const [usuarios, setUsuarios] = useState([]);
   const [gastos, setGastos] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [otroUsuario, setOtroUsuario] = useState(null);
   const [ingresos, setIngresos] = useState([]);
-  const [cuentas, setCuentas] = useState([]);
-  const [metas, setMetas] = useState([]);
+  const [deudas, setDeudas] = useState([]); // Nueva estructura de deudas
   const [monedaGlobal, setMonedaGlobal] = useState("PYG");
   const [datosHogar, setDatosHogar] = useState(null);
   const [verificandoHogar, setVerificandoHogar] = useState(true);
 
-  // --- FUNCIÓN ANTI-BLOQUEO PARA VERIFICAR HOGAR ---
-  const verificarHogar = async (usuarioId) => {
-    console.log("🔍 [Pasó 3] Verificando hogar para:", usuarioId);
-    
-    // Promesa de tiempo límite (2.5 segundos)
-    const timeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Timeout Supabase")), 2500)
-    );
-
+  // --- VERIFICAR PERFIL Y HOGAR (Fase 7) ---
+  const verificarPerfil = async (usuarioId) => {
+    console.log("🔍 Verificando perfil para:", usuarioId);
     try {
-      // Intentamos la consulta pero con un cronómetro encima
-      const consulta = supabase
-        .from('usuarios_espacios')
-        .select('rol, espacio_id')
-        .eq('usuario_id', usuarioId);
+      const { data: perfil, error } = await supabase
+        .from('perfiles')
+        .select('*, espacios(*)')
+        .eq('id', usuarioId)
+        .single();
 
-      const result = await Promise.race([consulta, timeout]);
-      const { data: relacion, error: errorRel } = result;
-
-      if (errorRel) throw errorRel;
-
-      if (!relacion || relacion.length === 0) {
-        console.log("ℹ️ Usuario sin hogar vinculado.");
+      if (error || !perfil) {
+        console.log("ℹ️ Usuario sin perfil o espacio vinculado.");
         return null;
       }
 
-      // Buscamos datos del espacio (también con protección)
-      const { data: espacio, error: errorEsp } = await Promise.race([
-        supabase.from('espacios').select('*').eq('id', relacion[0].espacio_id).single(),
-        timeout
-      ]);
-
-      if (errorEsp) throw errorEsp;
-
-      console.log("🏠 Hogar encontrado:", espacio.nombre);
-      return { rol: relacion[0].rol, espacio_id: relacion[0].espacio_id, espacios: espacio };
+      console.log("🏠 Hogar encontrado:", perfil.espacios?.nombre_familia || "Sin nombre");
+      return perfil;
     } catch (error) {
-      console.error("🚨 Falló verificación de hogar (posible timeout o RLS):", error.message);
-      return null; // Si falla, devolvemos null para que el usuario pueda al menos ver la pantalla de crear hogar
+      console.error("🚨 Falló verificación de perfil:", error.message);
+      return null;
     }
   };
 
-  // --- ARRANQUE UNIFICADO ---
+  // --- ARRANQUE OPTIMIZADO ---
   useEffect(() => {
     let montado = true;
 
+    // Seguro de vida: Si en 6 segundos no cargó, desbloqueamos la pantalla
+    const timerCierre = setTimeout(() => {
+      if (montado && verificandoHogar) {
+        console.warn("⚠️ Tiempo de carga excedido. Forzando desbloqueo.");
+        setVerificandoHogar(false);
+      }
+    }, 6000);
+
     const inicializar = async () => {
-      console.log("🚀 [Pasó 1] Iniciando arranque...");
+      console.log("🚀 [Arranque] Iniciando comprobación de sesión...");
       try {
-        const { data: { session: s } } = await supabase.auth.getSession();
-        if (!montado) return;
+        const { data: { session: s }, error: errS } = await supabase.auth.getSession();
         
+        if (errS) throw errS;
+        if (!montado) return;
+
         setSession(s);
+
         if (s) {
           console.log("✅ Sesión detectada:", s.user.email);
-          const hogar = await verificarHogar(s.user.id);
-          setDatosHogar(hogar);
+          const perfil = await verificarPerfil(s.user.id);
+          if (montado) setDatosHogar(perfil);
+        } else {
+          console.log("ℹ️ No hay sesión activa.");
         }
       } catch (err) {
-        console.error("🚨 Error inicializando:", err);
+        console.error("🚨 Error crítico en arranque:", err.message);
       } finally {
-        if (montado) setVerificandoHogar(false);
-        console.log("🏁 [Pasó FINAL] App desbloqueada.");
+        if (montado) {
+          setVerificandoHogar(false);
+          clearTimeout(timerCierre);
+          console.log("🏁 [Arranque] Finalizado.");
+        }
       }
     };
 
     inicializar();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log("🔄 Cambio Auth:", event);
+      console.log("🔄 [Auth] Evento:", event);
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setDatosHogar(null);
         setVerificandoHogar(false);
-      } else if (s) {
+      } else if (s && event === 'SIGNED_IN') {
         setSession(s);
-        const hogar = await verificarHogar(s.user.id);
-        setDatosHogar(hogar);
-        setVerificandoHogar(false);
+        const perfil = await verificarPerfil(s.user.id);
+        if (montado) {
+          setDatosHogar(perfil);
+          setVerificandoHogar(false);
+        }
       }
     });
 
-    return () => { montado = false; subscription.unsubscribe(); };
+    return () => { 
+      montado = false; 
+      subscription.unsubscribe();
+      clearTimeout(timerCierre);
+    };
   }, []);
 
-  // --- CARGA DE DATOS ---
-  async function obtenerDatos() {
+  // --- CARGA DE DATOS (ESQUEMA PRO) ---
+  const obtenerDatos = useCallback(async () => {
     if (!datosHogar || !session) return;
-    const eid = datosHogar.espacios.id;
-    console.log("📊 Cargando datos del espacio ID:", eid);
+    const eid = datosHogar.espacio_id;
 
     try {
-      const [resU, resG, resI, resC, resM] = await Promise.all([
-        supabase.from("usuarios").select("*"),
-        supabase.from("gastos").select("*").eq('espacio_id', eid).order("fecha", { ascending: false }),
-        supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid),
-        supabase.from("cuentas_pendientes").select("*").eq('espacio_id', eid),
-        supabase.from("metas_ahorro").select("*").eq('espacio_id', eid)
-      ]);
+      // 1. Cargar Miembros del Hogar
+      const { data: miembros } = await supabase
+        .from("perfiles")
+        .select("*")
+        .eq("espacio_id", eid);
 
-      if (resU.data) {
-        setUsuarios(resU.data);
-        const logueado = resU.data.find(u => u.email === session.user.email);
+      if (miembros) {
+        setUsuarios(miembros);
+        const logueado = miembros.find(u => u.id === session.user.id);
         if (logueado) {
           setUsuarioActual(logueado);
-          const pareja = resU.data.find(u => u.id !== logueado.id);
+          const pareja = miembros.find(u => u.id !== logueado.id);
           if (pareja) setOtroUsuario(pareja);
         }
       }
+
+      // 2. Cargar Transacciones y Deudas
+      const [resG, resI, resD] = await Promise.all([
+        supabase.from("gastos").select("*").eq('espacio_id', eid).order("fecha", { ascending: false }),
+        supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid),
+        supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid)
+      ]);
+
       if (resG.data) setGastos(resG.data);
       if (resI.data) setIngresos(resI.data);
-      if (resC.data) setCuentas(resC.data);
-      if (resM.data) setMetas(resM.data);
+      if (resD.data) setDeudas(resD.data);
     } catch (e) {
-      console.error("Error cargando tablas:", e);
+      console.error("Error cargando datos Fase 7:", e);
     }
-  }
+  }, [datosHogar, session]);
 
   useEffect(() => {
     if (session && !verificandoHogar && datosHogar) obtenerDatos();
-  }, [session, verificandoHogar, datosHogar]);
+  }, [session, verificandoHogar, datosHogar, obtenerDatos]);
 
   const getNombreUsuario = (id) => {
     const u = usuarios.find((u) => u.id === id);
@@ -159,20 +167,16 @@ function App() {
   // --- RENDER ---
   if (verificandoHogar) {
     return (
-      <div style={{ backgroundColor: '#0f172a', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
-        <div style={{ textAlign: 'center' }}>
-          <p>Conectando con ÑandeFinanza... 🧉</p>
-          <button onClick={() => setVerificandoHogar(false)} style={{ fontSize: '10px', opacity: 0.5, background: 'none', border: '1px solid', color: 'white', cursor: 'pointer' }}>Forzar entrada</button>
-        </div>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+          Conectando con ÑandeFinanza 2.0... 🧉
+        </motion.div>
       </div>
     );
   }
 
   if (!session) return <Login />;
-
-  if (session && !datosHogar) {
-    return <ConfiguracionHogar usuario={session.user} onHogarCreado={() => window.location.reload()} />;
-  }
+  if (session && !datosHogar) return <ConfiguracionHogar usuario={session.user} onHogarCreado={() => window.location.reload()} />;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30">
@@ -181,47 +185,69 @@ function App() {
         style: { background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)' }
       }} />
       
-      {/* Header Moderno */}
-      <header className="sticky top-0 z-40 w-full glass-panel px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <span className="text-white font-bold">Ñ</span>
+      {/* Header Moderno con Switch de Contexto (HU-18) */}
+      <header className="sticky top-0 z-40 w-full glass-panel px-6 py-4 flex flex-col gap-4">
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <span className="text-white font-bold">Ñ</span>
+            </div>
+            <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+              {datosHogar?.espacios?.nombre_familia || "Mi Hogar"}
+            </span>
           </div>
-          <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-            {datosHogar.espacios.nombre}
-          </span>
+          <button onClick={() => supabase.auth.signOut()} className="text-[10px] font-bold text-slate-500 hover:text-red-400 uppercase tracking-widest transition-colors">Salir</button>
         </div>
-        <button 
-          onClick={() => supabase.auth.signOut()} 
-          className="text-xs font-medium text-slate-400 hover:text-red-400 transition-colors px-3 py-1.5 rounded-full border border-white/5 hover:border-red-500/20 hover:bg-red-500/10"
-        >
-          Cerrar Sesión
-        </button>
+
+        {/* TOGGLE FAMILIAR / PERSONAL */}
+        <div className="flex justify-center">
+          <div className="relative flex p-1 bg-black/20 rounded-xl border border-white/5 w-full max-w-[280px]">
+            <motion.div
+              className="absolute top-1 bottom-1 bg-indigo-600 rounded-lg shadow-lg"
+              initial={false}
+              animate={{ x: modoVista === 'familiar' ? 0 : '100%' }}
+              style={{ width: 'calc(50% - 4px)' }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            />
+            <button 
+              onClick={() => setModoVista('familiar')}
+              className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'familiar' ? 'text-white' : 'text-slate-500'}`}
+            >
+              Familiar 🏠
+            </button>
+            <button 
+              onClick={() => setModoVista('personal')}
+              className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'personal' ? 'text-white' : 'text-slate-500'}`}
+            >
+              Personal 👤
+            </button>
+          </div>
+        </div>
       </header>
 
-      {/* Contenedor Principal con Animación */}
+      {/* Contenedor Principal */}
       <main className="pb-28 pt-4 px-4 max-w-2xl mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            key={`${activeTab}-${modoVista}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
           >
-            {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} cuentas={cuentas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
-            {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} cuentas={cuentas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+            {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} />}
+            {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+            {/* Otros componentes se actualizarán en pasos siguientes */}
             {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
-            {activeTab === "metas" && <Metas usuarioActual={usuarioActual} metas={metas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
             {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} datosHogar={datosHogar} />}
-            {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} cuentas={cuentas} metas={metas} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
+            {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
+            {activeTab === "admin" && datosHogar?.rol === 'superadmin' && <SuperadminPanel />}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* Navegación Flotante */}
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-        <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={datosHogar?.rol === 'superadmin'} />
       </nav>
     </div>
   );

@@ -1,115 +1,133 @@
-// src/components/Login.jsx
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
+import { motion } from "framer-motion";
+import { User, Lock, ArrowRight, Loader2 } from "lucide-react";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [cargando, setCargando] = useState(false);
 
   async function handleLogin(e) {
     e.preventDefault();
-    const toastId = toast.loading("Buscando usuario...");
+    setCargando(true);
+    const toastId = toast.loading("Verificando acceso...");
 
-    // PASO 1: Buscar el correo del usuario en la tabla "usuarios"
-    // Usamos .ilike() para que no importe si escribís "edison", "Edison" o "EDISON"
-    const { data: usuarioDb, error: errorBusqueda } = await supabase
-      .from("usuarios")
-      .select("email")
-      .ilike("nombre", username.trim())
-      .single();
+    try {
+      let emailFinal = username.trim();
 
-    if (errorBusqueda || !usuarioDb) {
-      toast.error(`No encontramos a nadie llamado "${username}"`, {
-        id: toastId,
+      // Si no parece un email, intentamos buscarlo como nombre en la nueva tabla perfiles
+      if (!emailFinal.includes("@")) {
+        const { data: perfil, error: errP } = await supabase
+          .from("perfiles")
+          .select("id")
+          .ilike("nombre", emailFinal)
+          .maybeSingle();
+
+        // Si encontramos el perfil, necesitamos su email. 
+        // Como no tenemos el email en perfiles (está en auth.users),
+        // este flujo de "entrar por nombre" requiere que el nombre sea único o usar email directo.
+        // OPTIMIZACIÓN: Si el usuario puso un nombre y no lo hallamos, avisamos.
+        if (errP) console.warn("Nota: Búsqueda por nombre limitada por RLS inicial.");
+        
+        // Si no lo hallamos por nombre, forzamos a que ingrese su email
+        if (!perfil) {
+          throw new Error("Por favor, ingresá tu correo electrónico para el primer inicio en la 2.0.");
+        }
+        
+        // En Supabase Auth, si no tenemos el email, no podemos loguear solo con ID desde el cliente por seguridad.
+        // Por lo tanto, el estándar en la 2.0 será usar EMAIL para loguear.
+      }
+
+      const { error: errorAuth } = await supabase.auth.signInWithPassword({
+        email: emailFinal,
+        password: password,
       });
-      return;
-    }
 
-    // PASO 2: Si lo encontramos, iniciamos sesión con su correo oculto
-    toast.loading("Iniciando sesión...", { id: toastId });
+      if (errorAuth) throw new Error("Credenciales inválidas. Revisá tu email y contraseña. ❌");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: usuarioDb.email,
-      password: password,
-    });
-
-    if (error) {
-      toast.error("Contraseña incorrecta ❌", { id: toastId });
-    } else {
-      toast.success(`¡Bienvenido de vuelta, ${username}! 🚀`, { id: toastId });
+      toast.success(`¡Bienvenido de vuelta! 🚀`, { id: toastId });
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setCargando(false);
     }
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        backgroundColor: "#121212",
-      }}
-    >
-      <div
-        className="card"
-        style={{
-          width: "100%",
-          maxWidth: "350px",
-          borderTop: "4px solid #646cff",
-          textAlign: "center",
-        }}
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
+      {/* Decoración de fondo */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 rounded-full blur-[120px]" />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md z-10"
       >
-        <h2 style={{ marginTop: 0 }}>Mis Finanzas 💸</h2>
-        <p style={{ color: "#aaa", fontSize: "14px", marginBottom: "20px" }}>
-          Ingresá tu nombre y contraseña
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/20 mb-4">
+            <span className="text-white text-3xl font-bold italic">Ñ</span>
+          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">ÑandeFinanza</h1>
+          <p className="text-slate-400 mt-2">Gestionen sus finanzas con inteligencia</p>
+        </div>
+
+        <div className="glass-card border-white/10 p-8">
+          <h2 className="text-xl font-semibold text-white mb-6">Iniciar Sesión</h2>
+          
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Correo Electrónico</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <input
+                  type="email"
+                  placeholder="Ej: edison@correo.com"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={cargando}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              {cargando ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  Entrar <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-slate-500 text-sm mt-8">
+          ¿No tienen cuenta? Contacten con el administrador de su hogar.
         </p>
-
-        <form
-          onSubmit={handleLogin}
-          style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-        >
-          <div style={{ textAlign: "left" }}>
-            <label
-              style={{ fontSize: "12px", color: "#888", fontWeight: "bold" }}
-            >
-              👤 Nombre de Usuario
-            </label>
-            <input
-              type="text"
-              placeholder="Ej: Edison..."
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              style={{ width: "100%", marginTop: "5px" }}
-            />
-          </div>
-
-          <div style={{ textAlign: "left" }}>
-            <label
-              style={{ fontSize: "12px", color: "#888", fontWeight: "bold" }}
-            >
-              🔑 Contraseña
-            </label>
-            <input
-              type="password"
-              placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ width: "100%", marginTop: "5px" }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            style={{ marginTop: "10px", padding: "12px", fontSize: "16px" }}
-          >
-            Entrar
-          </button>
-        </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

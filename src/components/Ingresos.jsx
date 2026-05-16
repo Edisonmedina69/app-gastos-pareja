@@ -4,6 +4,8 @@ import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
 import { formatearNumero } from "../utils/formatters";
 import { obtenerCotizacion } from "../utils/exchangeApi";
+import { motion } from "framer-motion";
+import { Plus, Wallet, TrendingUp, Calendar, User, ArrowUpRight, X } from "lucide-react";
 
 export default function Ingresos({
   usuarioActual,
@@ -26,7 +28,7 @@ export default function Ingresos({
       }
       cargarTasa();
     } else {
-      setTasaCambio(1);
+      setTasaCambio(prev => prev === 1 ? 1 : 1); // Solo actualiza si cambia, aunque prev === 1 es el default
     }
   }, [mostrarModal, monedaGlobal]);
 
@@ -46,7 +48,7 @@ export default function Ingresos({
         anio: fecha.getFullYear(),
         moneda: monedaGlobal,
         tasa_cambio: parseFloat(tasaCambio),
-        espacio_id: datosHogar?.espacios?.id || datosHogar?.id
+        espacio_id: datosHogar.espacio_id
       },
     ]);
 
@@ -56,142 +58,130 @@ export default function Ingresos({
       });
     } else {
       setMontoIngreso("");
-      setMostrarModal(false); // Cierra la ventana
+      setMostrarModal(false);
       toast.success("¡Ingreso registrado! 💰", { id: toastId });
       obtenerDatos();
     }
   }
 
   return (
-    <>
-      {/* BOTÓN GIGANTE PARA NUEVO INGRESO */}
-      <button
-        onClick={() => setMostrarModal(true)}
-        style={{
-          width: "100%",
-          padding: "15px",
-          backgroundColor: "#28a745",
-          color: "white",
-          border: "none",
-          borderRadius: "10px",
-          fontSize: "16px",
-          fontWeight: "bold",
-          marginBottom: "20px",
-          cursor: "pointer",
-          boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
-        }}
-      >
-        ➕ Registrar Nuevo Ingreso
-      </button>
+    <div className="space-y-6">
+      {/* Header Seccion */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-emerald-400" /> Gestión de Ingresos
+        </h2>
+      </div>
 
-      {/* EXTRACTO (INDEX) DE INGRESOS */}
-      <div className="card" style={{ borderTop: "4px solid #28a745" }}>
-        <h3 style={{ margin: "0 0 15px 0" }}>📥 Historial de Ingresos</h3>
-        <div>
-          {ingresos.map((i) => (
-            <div
-              key={i.id}
-              className="movimiento-item"
-              style={{ borderLeft: "4px solid #28a745", paddingLeft: "10px" }}
-            >
+      {/* BOTÓN NUEVO INGRESO */}
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setMostrarModal(true)}
+        className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 transition-colors"
+      >
+        <div className="p-1 bg-white/20 rounded-lg">
+          <Plus className="w-5 h-5" />
+        </div>
+        Registrar Nuevo Ingreso
+      </motion.button>
+
+      {/* LISTADO DE INGRESOS */}
+      <div className="glass-card border-l-4 border-l-emerald-500">
+        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-emerald-400" /> Historial de Ingresos
+        </h3>
+        
+        <div className="space-y-4">
+          {ingresos.length === 0 ? (
+            <p className="text-center py-8 text-slate-500 italic text-sm">No hay ingresos registrados este mes.</p>
+          ) : (
+            ingresos.map((i) => (
               <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
+                key={i.id}
+                className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors group"
               >
-                <div>
-                  <strong>{getNombreUsuario(i.usuario_id)}</strong>
-                  <div style={{ fontSize: "12px", color: "#888" }}>
-                    {i.concepto}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-sm">{getNombreUsuario(i.usuario_id)}</div>
+                    <div className="text-xs text-slate-400 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> {i.concepto}
+                    </div>
                   </div>
                 </div>
-                <div className="movimiento-monto" style={{ color: "#28a745" }}>
-                  + {formatearNumero(i.monto, i.moneda)}
+                <div className="text-right">
+                  <div className="text-emerald-400 font-black tracking-tight">
+                    + {formatearNumero(i.monto, i.moneda)}
+                  </div>
+                  {i.moneda !== "PYG" && (
+                    <div className="text-[10px] text-slate-500">
+                      ≈ {formatearNumero(i.monto * (i.tasa_cambio || 1), "PYG")}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
-      {/* MODAL DE CADASTRO (Ventana Emergente Oculta) */}
+      {/* MODAL DE REGISTRO */}
       {mostrarModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.85)",
-            zIndex: 999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            className="card"
-            style={{
-              width: "100%",
-              maxWidth: "400px",
-              position: "relative",
-              margin: 0,
-              borderTop: "4px solid #28a745",
-            }}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-lg glass-panel p-6 rounded-3xl relative"
           >
             <button
               onClick={() => setMostrarModal(false)}
-              style={{
-                position: "absolute",
-                top: "15px",
-                right: "15px",
-                background: "transparent",
-                border: "none",
-                fontSize: "20px",
-                color: "#aaa",
-                cursor: "pointer",
-              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
             >
-              ✖
+              <X className="w-6 h-6" />
             </button>
 
-            <h3 style={{ marginTop: 0 }}>📥 Registrar Ingreso</h3>
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-emerald-400" /> Registrar Ingreso
+            </h2>
 
-            <form onSubmit={guardarIngreso}>
-              <input
-                type="text"
-                placeholder="Ej: Salario Fijo, Venta..."
-                value={conceptoIngreso}
-                onChange={(e) => setConceptoIngreso(e.target.value)}
-                required
-              />
-              <input
-                type="number"
-                placeholder={`Monto en ${monedaGlobal}`}
-                value={montoIngreso}
-                onChange={(e) => setMontoIngreso(e.target.value)}
-                required
-              />
+            <form onSubmit={guardarIngreso} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Concepto</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Salario Fijo, Venta..."
+                  value={conceptoIngreso}
+                  onChange={(e) => setConceptoIngreso(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-500/50 transition-colors"
+                  required
+                />
+              </div>
 
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#aaa",
-                  marginTop: "-10px",
-                  marginBottom: "15px",
-                  textAlign: "right",
-                }}
-              >
-                Visualización: {formatearNumero(montoIngreso, monedaGlobal)}
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Monto en {monedaGlobal}</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={montoIngreso}
+                    onChange={(e) => setMontoIngreso(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-500/50 transition-colors text-xl font-bold"
+                    required
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{monedaGlobal}</div>
+                </div>
+              </div>
+
+              <div className="text-right text-xs text-slate-500 font-medium">
+                Vista previa: {formatearNumero(montoIngreso || 0, monedaGlobal)}
               </div>
 
               {monedaGlobal !== "PYG" && (
-                <div style={{ marginBottom: "15px", padding: "10px", backgroundColor: "rgba(40, 167, 105, 0.1)", borderRadius: "8px", border: "1px solid #28a745" }}>
-                  <label style={{ fontSize: "12px", color: "#28a745", display: "block", marginBottom: "5px", fontWeight: "bold" }}>
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                  <label className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-2">
                     Cotización sugerida (1 {monedaGlobal} = ? PYG)
                   </label>
                   <input
@@ -199,31 +189,25 @@ export default function Ingresos({
                     step="0.01"
                     value={tasaCambio}
                     onChange={(e) => setTasaCambio(e.target.value)}
+                    className="w-full bg-slate-950/50 border border-emerald-500/30 rounded-xl px-4 py-2 text-white outline-none focus:border-emerald-400 transition-colors mb-2"
                     required
-                    style={{ marginBottom: "5px" }}
                   />
-                  <div style={{ fontSize: "12px", color: "#4ade80", textAlign: "right", fontWeight: "bold" }}>
-                    Equivale a: {formatearNumero(montoIngreso * tasaCambio, "PYG")}
+                  <div className="text-right text-xs font-bold text-emerald-400">
+                    Equivale a: {formatearNumero((montoIngreso || 0) * tasaCambio, "PYG")}
                   </div>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="btn-primary"
-                style={{
-                  backgroundColor: "#28a745",
-                  width: "100%",
-                  marginTop: "10px",
-                  padding: "12px",
-                }}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 mt-4"
               >
-                Guardar y Cerrar
+                Guardar Ingreso <ArrowUpRight className="w-5 h-5" />
               </button>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
-    </>
+    </div>
   );
 }
