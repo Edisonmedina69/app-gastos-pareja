@@ -35,20 +35,27 @@ export default function Inicio({
   const [paraQuien, setParaQuien] = useState("Ambos");
   const [porcentajePagador, setPorcentajePagador] = useState(50);
   const [tasaCambio, setTasaCambio] = useState(1);
+  const [monedaGasto, setMonedaGasto] = useState(monedaGlobal);
 
   const [mostrarModal, setMostrarModal] = useState(false);
 
   useEffect(() => {
-    if (mostrarModal && monedaGlobal !== "PYG") {
+    if (mostrarModal) {
+      setMonedaGasto(monedaGlobal);
+    }
+  }, [mostrarModal, monedaGlobal]);
+
+  useEffect(() => {
+    if (mostrarModal && monedaGasto !== "PYG") {
       async function cargarTasa() {
-        const rate = await obtenerCotizacion(monedaGlobal, "PYG");
+        const rate = await obtenerCotizacion(monedaGasto, "PYG");
         setTasaCambio(rate);
       }
       cargarTasa();
     } else {
       setTasaCambio(1);
     }
-  }, [mostrarModal, monedaGlobal]);
+  }, [mostrarModal, monedaGasto]);
 
   async function guardarGasto(e) {
     e.preventDefault();
@@ -63,7 +70,7 @@ export default function Inicio({
         categoria,
         pagador_id: usuarioActual.id,
         para_quien: paraQuien,
-        moneda: monedaGlobal,
+        moneda: monedaGasto,
         tasa_cambio: parseFloat(tasaCambio),
         porcentaje_pagador: paraQuien === "Ambos" ? porcentajePagador : 100,
         espacio_id: datosHogar.espacios.id // INYECTAMOS EL HOGAR ACÁ
@@ -82,102 +89,109 @@ export default function Inicio({
     }
   }
 
-  // --- MATEMÁTICA Y PREPARACIÓN DE GRÁFICOS ---
-  let saldoBilleteraYo = 0;
-  let saldoBilleteraOtro = 0;
-  let balanceDeudas = 0;
-  let totalGastadoYo = 0;
-  let totalGastadoOtro = 0;
+  // --- MATEMÁTICA Y PREPARACIÓN DE GRÁFICOS (DUAL DASHBOARD HU-12) ---
+  let saldoHogarPYG = 0;
+  let saldoPersonalPYG = 0;
+  
+  let saldoBilleteraYo = 0; // En monedaGlobal
+  let saldoBilleteraOtro = 0; // En monedaGlobal
+  let balanceDeudas = 0; // En monedaGlobal
+  let totalGastadoYo = 0; // En monedaGlobal
+  let totalGastadoOtro = 0; // En monedaGlobal
 
   const gastosPorCategoria = {};
   const gastosPorPersonaCategoria = {};
 
   if (usuarioActual && otroUsuario) {
+    // 1. Procesar Ingresos
     ingresos.forEach((i) => {
+      const montoPYG = i.monto * (i.tasa_cambio || 1);
+      saldoHogarPYG += montoPYG;
+      if (i.usuario_id === usuarioActual.id) saldoPersonalPYG += montoPYG;
+
+      // Para los saldos en moneda seleccionada (legacy/visual)
       if (i.moneda === monedaGlobal) {
-        if (i.usuario_id === usuarioActual.id)
-          saldoBilleteraYo += Number(i.monto);
-        else if (i.usuario_id === otroUsuario.id)
-          saldoBilleteraOtro += Number(i.monto);
+        if (i.usuario_id === usuarioActual.id) saldoBilleteraYo += Number(i.monto);
+        else saldoBilleteraOtro += Number(i.monto);
+      } else if (monedaGlobal === "PYG") {
+        if (i.usuario_id === usuarioActual.id) saldoBilleteraYo += montoPYG;
+        else saldoBilleteraOtro += montoPYG;
       }
     });
 
+    // 2. Procesar Gastos
     gastos.forEach((g) => {
       const montoGasto = Number(g.monto);
+      const montoPYG = montoGasto * (g.tasa_cambio || 1);
+      
+      saldoHogarPYG -= montoPYG;
+      if (g.pagador_id === usuarioActual.id) saldoPersonalPYG -= montoPYG;
 
-      if (g.moneda === monedaGlobal) {
-        if (g.pagador_id === usuarioActual.id) {
-          saldoBilleteraYo -= montoGasto;
-          totalGastadoYo += montoGasto;
-        } else if (g.pagador_id === otroUsuario.id) {
-          saldoBilleteraOtro -= montoGasto;
-          totalGastadoOtro += montoGasto;
-        }
+      // Lógica legacy para gráficos y billeteras en monedaGlobal
+      const montoParaCalculo = g.moneda === monedaGlobal ? montoGasto : (montoPYG / (monedaGlobal === "BRL" ? 1450 : 1)); // Estimación si no coincide
 
-        if (g.para_quien === "Ambos") {
-          const porcPagador = Number(g.porcentaje_pagador || 50);
-          const porcOtro = 100 - porcPagador;
-
-          if (g.pagador_id === usuarioActual.id)
-            balanceDeudas += montoGasto * (porcOtro / 100);
-          else if (g.pagador_id === otroUsuario.id)
-            balanceDeudas -= montoGasto * (porcOtro / 100);
-        } else {
-          if (
-            g.pagador_id === usuarioActual.id &&
-            g.para_quien === otroUsuario.nombre
-          )
-            balanceDeudas += montoGasto;
-          else if (
-            g.pagador_id === otroUsuario.id &&
-            g.para_quien === usuarioActual.nombre
-          )
-            balanceDeudas -= montoGasto;
-        }
-
-        if (gastosPorCategoria[g.categoria])
-          gastosPorCategoria[g.categoria] += montoGasto;
-        else gastosPorCategoria[g.categoria] = montoGasto;
-
-        if (!gastosPorPersonaCategoria[g.categoria]) {
-          gastosPorPersonaCategoria[g.categoria] = {
-            name: g.categoria,
-            Yo: 0,
-            Pareja: 0,
-          };
-        }
-        if (g.pagador_id === usuarioActual.id)
-          gastosPorPersonaCategoria[g.categoria].Yo += montoGasto;
-        else if (g.pagador_id === otroUsuario.id)
-          gastosPorPersonaCategoria[g.categoria].Pareja += montoGasto;
+      if (g.pagador_id === usuarioActual.id) {
+        saldoBilleteraYo -= montoParaCalculo;
+        totalGastadoYo += montoParaCalculo;
+      } else if (g.pagador_id === otroUsuario.id) {
+        saldoBilleteraOtro -= montoParaCalculo;
+        totalGastadoOtro += montoParaCalculo;
       }
+
+      if (g.para_quien === "Ambos") {
+        const porcPagador = Number(g.porcentaje_pagador || 50);
+        const porcOtro = 100 - porcPagador;
+
+        if (g.pagador_id === usuarioActual.id)
+          balanceDeudas += montoParaCalculo * (porcOtro / 100);
+        else if (g.pagador_id === otroUsuario.id)
+          balanceDeudas -= montoParaCalculo * (porcOtro / 100);
+      } else {
+        if (g.pagador_id === usuarioActual.id && g.para_quien === otroUsuario.nombre)
+          balanceDeudas += montoParaCalculo;
+        else if (g.pagador_id === otroUsuario.id && g.para_quien === usuarioActual.nombre)
+          balanceDeudas -= montoParaCalculo;
+      }
+
+      if (gastosPorCategoria[g.categoria])
+        gastosPorCategoria[g.categoria] += montoParaCalculo;
+      else gastosPorCategoria[g.categoria] = montoParaCalculo;
+
+      if (!gastosPorPersonaCategoria[g.categoria]) {
+        gastosPorPersonaCategoria[g.categoria] = { name: g.categoria, Yo: 0, Pareja: 0 };
+      }
+      if (g.pagador_id === usuarioActual.id)
+        gastosPorPersonaCategoria[g.categoria].Yo += montoParaCalculo;
+      else if (g.pagador_id === otroUsuario.id)
+        gastosPorPersonaCategoria[g.categoria].Pareja += montoParaCalculo;
     });
   }
 
   // --- MODO SUPERVIVENCIA (CÁLCULO DE FALTANTE) ---
-  let totalCuentasPendientes = 0;
+  let totalCuentasPendientesPYG = 0;
+  let totalCuentasPendientesGlobal = 0;
+
   if (cuentas) {
     cuentas.forEach((c) => {
-      if (c.estado !== "Pagado" && c.moneda === monedaGlobal) {
+      if (c.estado !== "Pagado") {
         const hoy = new Date();
-        const fPago = c.fecha_ultimo_pago
-          ? new Date(c.fecha_ultimo_pago)
-          : null;
-        const pagadoMes =
-          fPago &&
-          fPago.getMonth() === hoy.getMonth() &&
-          fPago.getFullYear() === hoy.getFullYear();
+        const fPago = c.fecha_ultimo_pago ? new Date(c.fecha_ultimo_pago) : null;
+        const pagadoMes = fPago && fPago.getMonth() === hoy.getMonth() && fPago.getFullYear() === hoy.getFullYear();
 
         if (!pagadoMes) {
-          totalCuentasPendientes += Number(c.monto);
+          const montoPYG = Number(c.monto) * (c.tasa_cambio || 1);
+          totalCuentasPendientesPYG += montoPYG;
+          
+          if (c.moneda === monedaGlobal) totalCuentasPendientesGlobal += Number(c.monto);
+          else totalCuentasPendientesGlobal += (montoPYG / (monedaGlobal === "BRL" ? 1450 : 1));
         }
       }
     });
   }
 
-  const saldoTotalFamiliar = saldoBilleteraYo + saldoBilleteraOtro;
-  const faltante = totalCuentasPendientes - saldoTotalFamiliar;
-  const necesitaPlata = faltante > 0;
+  const saldoTotalFamiliarGlobal = saldoBilleteraYo + saldoBilleteraOtro;
+  const faltanteGlobal = totalCuentasPendientesGlobal - saldoTotalFamiliarGlobal;
+  const necesitaPlata = faltanteGlobal > 0;
 
   const datosGraficoCategorias = Object.keys(gastosPorCategoria).map((key) => ({
     name: key,
@@ -193,6 +207,67 @@ export default function Inicio({
 
   return (
     <>
+      {/* DASHBOARD DUAL HU-12 */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "15px", marginBottom: "20px" }}>
+        {/* SECCIÓN FAMILIAR (TOP) */}
+        <div
+          className="card"
+          style={{
+            background: "rgba(255, 255, 255, 0.05)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            padding: "20px",
+            borderRadius: "15px",
+            textAlign: "center",
+            boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+            borderTop: "4px solid #646cff"
+          }}
+        >
+          <small style={{ color: "#aaa", textTransform: "uppercase", letterSpacing: "1px" }}>Saldo del Hogar 🏠</small>
+          <h1 style={{ margin: "10px 0", fontSize: "2.5rem", color: saldoHogarPYG < 0 ? "#ff6b6b" : "#4ade80" }}>
+            {formatearNumero(monedaGlobal === "PYG" ? saldoHogarPYG : (saldoHogarPYG / (monedaGlobal === "BRL" ? 1450 : 1)), monedaGlobal)}
+          </h1>
+          <p style={{ fontSize: "12px", color: "#888" }}>Suma de todos los ingresos menos gastos convertidos</p>
+        </div>
+
+        {/* SECCIÓN PERSONAL */}
+        <div style={{ display: "flex", gap: "10px" }}>
+          <div
+            className="card"
+            style={{
+              flex: 1,
+              margin: 0,
+              padding: "15px",
+              background: "rgba(255, 255, 255, 0.03)",
+              borderLeft: "4px solid #4ade80",
+              borderRadius: "10px"
+            }}
+          >
+            <small style={{ color: "#aaa" }}>Mi Disponible 👤</small>
+            <h3 style={{ margin: "5px 0 0 0", color: saldoPersonalPYG < 0 ? "#ff6b6b" : "white" }}>
+              {formatearNumero(monedaGlobal === "PYG" ? saldoPersonalPYG : (saldoPersonalPYG / (monedaGlobal === "BRL" ? 1450 : 1)), monedaGlobal)}
+            </h3>
+          </div>
+          
+          <div
+            className="card"
+            style={{
+              flex: 1,
+              margin: 0,
+              padding: "15px",
+              background: "rgba(255, 255, 255, 0.03)",
+              borderLeft: "4px solid #aaa",
+              borderRadius: "10px"
+            }}
+          >
+            <small style={{ color: "#aaa" }}>Pareja ({otroUsuario?.nombre})</small>
+            <h3 style={{ margin: "5px 0 0 0", color: (saldoHogarPYG - saldoPersonalPYG) < 0 ? "#ff6b6b" : "white" }}>
+              {formatearNumero(monedaGlobal === "PYG" ? (saldoHogarPYG - saldoPersonalPYG) : ((saldoHogarPYG - saldoPersonalPYG) / (monedaGlobal === "BRL" ? 1450 : 1)), monedaGlobal)}
+            </h3>
+          </div>
+        </div>
+      </div>
+
       <div
         style={{
           display: "flex",
@@ -247,49 +322,6 @@ export default function Inicio({
       >
         ➕ Registrar Nuevo Gasto
       </button>
-
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <div
-          className="card"
-          style={{
-            flex: 1,
-            margin: 0,
-            padding: "15px",
-            borderTop: "4px solid #646cff",
-          }}
-        >
-          <small style={{ color: "#aaa" }}>Mi Billetera</small>
-          <h3
-            style={{
-              margin: "5px 0 0 0",
-              color: saldoBilleteraYo < 0 ? "#dc3545" : "white",
-            }}
-          >
-            {formatearNumero(saldoBilleteraYo, monedaGlobal)}
-          </h3>
-        </div>
-        <div
-          className="card"
-          style={{
-            flex: 1,
-            margin: 0,
-            padding: "15px",
-            borderTop: "4px solid #888",
-          }}
-        >
-          <small style={{ color: "#aaa" }}>
-            Billetera {otroUsuario?.nombre}
-          </small>
-          <h3
-            style={{
-              margin: "5px 0 0 0",
-              color: saldoBilleteraOtro < 0 ? "#dc3545" : "white",
-            }}
-          >
-            {formatearNumero(saldoBilleteraOtro, monedaGlobal)}
-          </h3>
-        </div>
-      </div>
 
       <div
         className="card"
@@ -430,13 +462,27 @@ export default function Inicio({
             <h3 style={{ marginTop: 0 }}>🛒 Cargar Gasto</h3>
 
             <form onSubmit={guardarGasto}>
-              <input
-                type="text"
-                placeholder="Ej: Supermercado..."
-                value={concepto}
-                onChange={(e) => setConcepto(e.target.value)}
-                required
-              />
+              <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+                <div style={{ flex: 2 }}>
+                  <label style={{ fontSize: "12px", color: "#aaa" }}>Concepto</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Supermercado..."
+                    value={concepto}
+                    onChange={(e) => setConcepto(e.target.value)}
+                    required
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: "12px", color: "#aaa" }}>Moneda</label>
+                  <select value={monedaGasto} onChange={(e) => setMonedaGasto(e.target.value)}>
+                    <option value="PYG">PYG (Gs)</option>
+                    <option value="BRL">BRL (R$)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+              </div>
+
               <input
                 type="number"
                 placeholder={`Monto`}
@@ -453,13 +499,13 @@ export default function Inicio({
                   textAlign: "right",
                 }}
               >
-                Visualización: {formatearNumero(monto, monedaGlobal)}
+                Visualización: {formatearNumero(monto, monedaGasto)}
               </div>
 
-              {monedaGlobal !== "PYG" && (
+              {monedaGasto !== "PYG" && (
                 <div style={{ marginBottom: "15px" }}>
                   <label style={{ fontSize: "12px", color: "#aaa", display: "block", marginBottom: "5px" }}>
-                    Cotización sugerida (1 {monedaGlobal} = ? PYG)
+                    Cotización sugerida (1 {monedaGasto} = ? PYG)
                   </label>
                   <input
                     type="number"
