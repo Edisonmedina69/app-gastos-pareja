@@ -9,6 +9,7 @@ export default function Metas({
   metas,
   monedaGlobal,
   obtenerDatos,
+  datosHogar
 }) {
   const [tituloMeta, setTituloMeta] = useState("");
   const [montoObjetivoMeta, setMontoObjetivoMeta] = useState("");
@@ -24,6 +25,7 @@ export default function Metas({
         monto_objetivo: parseFloat(montoObjetivoMeta),
         moneda: monedaGlobal,
         creador_id: usuarioActual.id,
+        espacio_id: datosHogar?.espacios?.id || datosHogar?.id
       },
     ]);
 
@@ -63,6 +65,7 @@ export default function Metas({
               pagador_id: usuarioActual.id,
               para_quien: "Ambos",
               moneda: meta.moneda,
+              espacio_id: datosHogar?.espacios?.id || datosHogar?.id
             },
           ]);
         obtenerDatos();

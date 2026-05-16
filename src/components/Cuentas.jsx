@@ -102,6 +102,7 @@ export default function Cuentas({
             concepto: titulo,
             moneda: monedaDeuda,
             tasa_cambio: parseFloat(tasaCambio),
+            espacio_id: datosHogar?.espacios?.id || datosHogar?.id
           },
         ]);
 

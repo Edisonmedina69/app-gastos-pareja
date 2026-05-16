@@ -184,8 +184,8 @@ function App() {
         {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} cuentas={cuentas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
         {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} cuentas={cuentas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
         {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
-        {activeTab === "metas" && <Metas usuarioActual={usuarioActual} metas={metas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} />}
-        {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} />}
+        {activeTab === "metas" && <Metas usuarioActual={usuarioActual} metas={metas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+        {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} datosHogar={datosHogar} />}
         {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} cuentas={cuentas} metas={metas} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
       </div>
       <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} />
