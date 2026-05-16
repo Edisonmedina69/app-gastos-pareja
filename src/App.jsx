@@ -1,7 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Home, 
+  CreditCard, 
+  PlusCircle, 
+  History, 
+  Bot, 
+  Shield, 
+  User, 
+  LogOut 
+} from "lucide-react";
 // import "./App.css";
 
 // COMPONENTES
@@ -179,77 +189,142 @@ function App() {
   if (session && !datosHogar) return <ConfiguracionHogar usuario={session.user} onHogarCreado={() => window.location.reload()} />;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 flex overflow-hidden">
       <Toaster position="top-center" toastOptions={{
         className: 'glass-card border-white/20 text-white',
         style: { background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)' }
       }} />
       
-      {/* Header Moderno con Switch de Contexto (HU-18) */}
-      <header className="sticky top-0 z-40 w-full glass-panel px-6 py-4 flex flex-col gap-4">
-        <div className="flex justify-between items-center w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <span className="text-white font-bold">Ñ</span>
+      {/* SIDEBAR DESKTOP (HU-16) */}
+      <aside className="hidden lg:flex flex-col w-64 h-screen glass-panel border-r border-white/5 sticky top-0 left-0 z-50">
+        <div className="p-8">
+          <div className="flex items-center gap-3 mb-10">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-xl shadow-indigo-500/30">
+              <span className="text-white text-xl font-black italic">Ñ</span>
             </div>
-            <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-              {datosHogar?.espacios?.nombre_familia || "Mi Hogar"}
-            </span>
+            <div>
+              <h1 className="font-bold text-lg leading-tight tracking-tighter">ÑandeFinanza</h1>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Versión 2.0 Pro</p>
+            </div>
           </div>
-          <button onClick={() => supabase.auth.signOut()} className="text-[10px] font-bold text-slate-500 hover:text-red-400 uppercase tracking-widest transition-colors">Salir</button>
+          
+          <nav className="space-y-1">
+            <SidebarLink id="inicio" icon={Home} label="Inicio" activeTab={activeTab} setActiveTab={setActiveTab} />
+            <SidebarLink id="cuentas" icon={CreditCard} label="Deudas Pro" activeTab={activeTab} setActiveTab={setActiveTab} />
+            <SidebarLink id="ingresos" icon={PlusCircle} label="Ingresos" activeTab={activeTab} setActiveTab={setActiveTab} />
+            <SidebarLink id="historial" icon={History} label="Libro Mayor" activeTab={activeTab} setActiveTab={setActiveTab} />
+            <SidebarLink id="asistente" icon={Bot} label="Asistente IA" activeTab={activeTab} setActiveTab={setActiveTab} />
+            {datosHogar?.rol === 'superadmin' && (
+              <SidebarLink id="admin" icon={Shield} label="Admin Shield" activeTab={activeTab} setActiveTab={setActiveTab} />
+            )}
+          </nav>
         </div>
 
-        {/* TOGGLE FAMILIAR / PERSONAL */}
-        <div className="flex justify-center">
-          <div className="relative flex p-1 bg-black/20 rounded-xl border border-white/5 w-full max-w-[280px]">
-            <motion.div
-              className="absolute top-1 bottom-1 bg-indigo-600 rounded-lg shadow-lg"
-              initial={false}
-              animate={{ x: modoVista === 'familiar' ? 0 : '100%' }}
-              style={{ width: 'calc(50% - 4px)' }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            />
-            <button 
-              onClick={() => setModoVista('familiar')}
-              className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'familiar' ? 'text-white' : 'text-slate-500'}`}
-            >
-              Familiar 🏠
-            </button>
-            <button 
-              onClick={() => setModoVista('personal')}
-              className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'personal' ? 'text-white' : 'text-slate-500'}`}
-            >
-              Personal 👤
+        <div className="mt-auto p-6 border-t border-white/5">
+          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl">
+            <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <User size={16} />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-xs font-bold text-white truncate">{usuarioActual?.nombre || 'Usuario'}</p>
+              <p className="text-[10px] text-slate-500 uppercase font-black truncate">{datosHogar?.rol || 'Miembro'}</p>
+            </div>
+            <button onClick={() => supabase.auth.signOut()} className="text-slate-500 hover:text-red-400 transition-colors">
+              <LogOut size={16} />
             </button>
           </div>
         </div>
-      </header>
+      </aside>
 
-      {/* Contenedor Principal */}
-      <main className="pb-28 pt-4 px-4 max-w-2xl mx-auto">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${activeTab}-${modoVista}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} />}
-            {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
-            {/* Otros componentes se actualizarán en pasos siguientes */}
-            {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
-            {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} datosHogar={datosHogar} />}
-            {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
-            {activeTab === "admin" && datosHogar?.rol === 'superadmin' && <SuperadminPanel />}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {/* Header Moderno con Switch de Contexto (HU-18) */}
+        <header className="sticky top-0 z-40 w-full glass-panel px-6 py-4 flex flex-col gap-4 lg:bg-transparent lg:backdrop-blur-none lg:border-none">
+          <div className="flex justify-between items-center w-full lg:hidden">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold">Ñ</span>
+              </div>
+              <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                {datosHogar?.espacios?.nombre_familia || "Mi Hogar"}
+              </span>
+            </div>
+            <button onClick={() => supabase.auth.signOut()} className="text-[10px] font-bold text-slate-500 hover:text-red-400 uppercase tracking-widest transition-colors">Salir</button>
+          </div>
 
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-        <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={datosHogar?.rol === 'superadmin'} />
-      </nav>
+          {/* TOGGLE FAMILIAR / PERSONAL - Ahora centrado en desktop también */}
+          <div className="flex justify-center lg:justify-start lg:px-6 lg:pt-4">
+            <div className="relative flex p-1 bg-black/40 lg:bg-white/5 backdrop-blur-xl rounded-xl border border-white/5 w-full max-w-[280px]">
+              <motion.div
+                className="absolute top-1 bottom-1 bg-indigo-600 rounded-lg shadow-lg"
+                initial={false}
+                animate={{ x: modoVista === 'familiar' ? 0 : '100%' }}
+                style={{ width: 'calc(50% - 4px)' }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+              <button 
+                onClick={() => setModoVista('familiar')}
+                className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'familiar' ? 'text-white' : 'text-slate-500'}`}
+              >
+                Familiar 🏠
+              </button>
+              <button 
+                onClick={() => setModoVista('personal')}
+                className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'personal' ? 'text-white' : 'text-slate-500'}`}
+              >
+                Personal 👤
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Contenedor Principal (Scrolleable) */}
+        <main className="flex-1 overflow-y-auto pb-28 lg:pb-8 pt-4 px-4 custom-scrollbar">
+          <div className="max-w-4xl mx-auto w-full">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${activeTab}-${modoVista}`}
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+              >
+                {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} />}
+                {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+                {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
+                {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} datosHogar={datosHogar} />}
+                {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
+                {activeTab === "admin" && datosHogar?.rol === 'superadmin' && <SuperadminPanel />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
+
+        {/* Navegación Inferior (Sólo Móvil/Tablet) */}
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden">
+          <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={datosHogar?.rol === 'superadmin'} />
+        </nav>
+      </div>
     </div>
+  );
+}
+
+// Sub-componente para links de sidebar con animación
+function SidebarLink({ id, icon: Icon, label, activeTab, setActiveTab }) {
+  const isActive = activeTab === id;
+  return (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={`
+        w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 relative group
+        ${isActive ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-500 hover:bg-white/5 hover:text-slate-200'}
+      `}
+    >
+      <Icon size={18} className={isActive ? 'animate-pulse' : 'group-hover:scale-110 transition-transform'} />
+      <span className="text-xs font-bold uppercase tracking-widest">{label}</span>
+      {isActive && (
+        <motion.div layoutId="sidebar-active" className="absolute left-0 w-1 h-6 bg-indigo-500 rounded-full" />
+      )}
+    </button>
   );
 }
 
