@@ -16,16 +16,22 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
 
     setGuardando(true);
     try {
-      // 1. Buscar el espacio por código
+      // 1. Buscar el espacio por código y traer su límite y miembros actuales
       const { data: espacio, error: errorEspacio } = await supabase
         .from('espacios')
-        .select('id, nombre_familia')
+        .select('id, nombre_familia, limite_usuarios, perfiles(id)')
         .eq('codigo_invitacion', codigo.trim().toUpperCase())
         .single();
 
       if (errorEspacio || !espacio) throw new Error('Código de invitación inválido o vencido.');
 
-      // 2. Crear el perfil del usuario vinculado a ese espacio
+      // 2. Verificar límite en frontend (HU-23)
+      const miembrosActuales = espacio.perfiles?.length || 0;
+      if (miembrosActuales >= espacio.limite_usuarios) {
+        throw new Error(`Límite de usuarios alcanzado (${espacio.limite_usuarios}) para este hogar. Contactá al administrador.`);
+      }
+
+      // 3. Crear el perfil del usuario vinculado a ese espacio
       const { error: errorPerfil } = await supabase
         .from('perfiles')
         .insert([{ 
@@ -35,7 +41,12 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
           rol: 'miembro'
         }]);
 
-      if (errorPerfil) throw errorPerfil;
+      if (errorPerfil) {
+        if (errorPerfil.message.includes('Límite de usuarios')) {
+          throw new Error(errorPerfil.message);
+        }
+        throw errorPerfil;
+      }
 
       if (onHogarCreado) onHogarCreado();
     } catch (error) {

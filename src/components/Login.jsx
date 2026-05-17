@@ -57,9 +57,12 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
-      {/* Decoración de fondo */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 rounded-full blur-[120px]" />
+      {/* FONDO PATRIO DIFUMINADO (Rojo, Blanco, Azul) - HU-28 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] bg-red-600/20 rounded-full blur-[120px] mix-blend-screen"></div>
+        <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen"></div>
+        <div className="absolute -bottom-[20%] left-[20%] w-[500px] h-[500px] bg-white/10 rounded-full blur-[100px] mix-blend-screen"></div>
+      </div>
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -71,7 +74,8 @@ export default function Login() {
             <span className="text-white text-3xl font-bold italic">Ñ</span>
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">ÑandeFinanza</h1>
-          <p className="text-slate-400 mt-2">Gestionen sus finanzas con inteligencia</p>
+          <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">🇵🇾 Sistema 100% Paraguayo</p>
+          <p className="text-slate-400 mt-2 text-sm italic">Hecho con ❤️ y mucho Tereré 🧉</p>
         </div>
 
         <div className="glass-card border-white/10 p-8">

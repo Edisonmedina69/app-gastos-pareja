@@ -13,8 +13,10 @@ import {
   Scale, 
   PieChart as PieIcon, 
   Users,
-  ArrowUpRight
+  ArrowUpRight,
+  Sparkles
 } from "lucide-react";
+import IngresoMagico from "./IngresoMagico";
 import {
   PieChart,
   Pie,
@@ -45,6 +47,7 @@ export default function Inicio({
   const [tasaCambio, setTasaCambio] = useState(1);
   const [monedaGasto, setMonedaGasto] = useState(monedaGlobal);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [mostrarMagico, setMostrarMagico] = useState(false);
 
   // --- EFECTO TASAS DINÁMICAS ---
   useEffect(() => {
@@ -104,6 +107,30 @@ export default function Inicio({
       setPorcentajePagador(50);
       setMostrarModal(false);
       toast.success("¡Gasto guardado con éxito! 🛒", { id: toastId });
+      obtenerDatos();
+    }
+  }
+
+  async function confirmarGastoMagico(datos) {
+    if (!usuarioActual || !datosHogar) return;
+    const toastId = toast.loading("Confirmando gasto inteligente...");
+
+    const { error } = await supabase.from("gastos").insert([
+      {
+        ...datos,
+        usuario_id: usuarioActual.id,
+        pagador_id: usuarioActual.id,
+        para_quien: "Ambos",
+        porcentaje_pagador: 50,
+        espacio_id: datosHogar.espacio_id,
+        tasa_cambio: 1 
+      },
+    ]);
+
+    if (error) {
+      toast.error("Error al guardar: " + error.message, { id: toastId });
+    } else {
+      toast.success("¡Gasto mágico guardado! ✨", { id: toastId });
       obtenerDatos();
     }
   }
@@ -237,14 +264,33 @@ export default function Inicio({
         )}
       </div>
 
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setMostrarModal(true)}
-        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-colors"
-      >
-        <Plus className="w-5 h-5" /> Registrar Nuevo Gasto
-      </motion.button>
+      <div className="flex gap-3">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setMostrarModal(true)}
+          className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-colors"
+        >
+          <Plus className="w-5 h-5" /> Gasto Manual
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setMostrarMagico(true)}
+          className="px-6 py-4 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-bold rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-colors hover:bg-indigo-500/20"
+        >
+          <Sparkles className="w-5 h-5" /> IA
+        </motion.button>
+      </div>
+
+      {/* COMPONENTE MAGICO */}
+      <IngresoMagico 
+        isOpen={mostrarMagico} 
+        onClose={() => setMostrarMagico(false)}
+        onConfirm={confirmarGastoMagico}
+        monedaGlobal={monedaGlobal}
+      />
 
       {/* SECCIÓN ALERTAS (Solo Familiar) */}
       {modoVista === 'familiar' && (
@@ -254,32 +300,38 @@ export default function Inicio({
               {necesitaPlata ? <AlertCircle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
             </div>
             <div className="flex-1">
-              <h3 className={`text-lg font-bold ${necesitaPlata ? "text-red-400" : "text-emerald-400"}`}>
-                {necesitaPlata ? "Alerta: Faltan fondos" : "Cuentas aseguradas"}
-              </h3>
-              <div className={`mt-4 p-3 rounded-xl text-center font-bold text-sm ${necesitaPlata ? "bg-red-500 text-white" : "bg-emerald-500 text-white"}`}>
-                {necesitaPlata 
-                  ? `Falta conseguir: ${formatearNumero(faltanteGlobal, monedaGlobal)}` 
-                  : `Sobran: ${formatearNumero(Math.abs(faltanteGlobal), monedaGlobal)} 🎉`}
-              </div>
+            <h3 className={`text-lg font-bold ${necesitaPlata ? "text-red-400" : "text-emerald-400"}`}>
+              {necesitaPlata ? "🚨 Hendy kavaju resa! (Faltan fondos)" : "✅ Cuentas aseguradas"}
+            </h3>
+            <div className={`mt-4 p-3 rounded-xl text-center font-bold text-sm ${necesitaPlata ? "bg-red-500 text-white" : "bg-emerald-500 text-white"}`}>
+              {necesitaPlata 
+                ? `Falta conseguir: ${formatearNumero(faltanteGlobal, monedaGlobal)}` 
+                : `🤑 Ñande plata heta! Nos sobra: ${formatearNumero(Math.abs(faltanteGlobal), monedaGlobal)} 🧉`}
+            </div>
             </div>
           </div>
         </div>
       )}
 
       {/* AJUSTE DE CUENTAS (Solo Familiar) */}
-      {modoVista === 'familiar' && balanceDeudasPYG !== 0 && (
+      {modoVista === 'familiar' && (
         <div className="glass-card overflow-hidden relative">
           <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Scale className="w-4 h-4 text-indigo-400" /> Ajuste de Cuentas
           </h3>
           <div className="flex items-center justify-between">
             <div className="text-lg font-medium text-white">
-              {balanceDeudasPYG > 0 ? `${otroUsuario?.nombre} te debe` : `Le debés a ${otroUsuario?.nombre}`}
+              {balanceDeudasPYG === 0 
+                ? "¡Están al día, che kape! 🧉" 
+                : balanceDeudasPYG > 0 
+                  ? `${otroUsuario?.nombre} te debe` 
+                  : `Le debés a ${otroUsuario?.nombre}`}
             </div>
-            <div className={`text-2xl font-black ${balanceDeudasPYG > 0 ? "text-indigo-400" : "text-amber-400"}`}>
-              {formatearNumero(Math.abs(balanceDeudasGlobal), monedaGlobal)}
-            </div>
+            {balanceDeudasPYG !== 0 && (
+              <div className={`text-2xl font-black ${balanceDeudasPYG > 0 ? "text-indigo-400" : "text-amber-400"}`}>
+                {formatearNumero(Math.abs(balanceDeudasGlobal), monedaGlobal)}
+              </div>
+            )}
           </div>
         </div>
       )}

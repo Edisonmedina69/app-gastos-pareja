@@ -22,6 +22,7 @@ export default function SuperadminPanel() {
   const [busqueda, setBusqueda] = useState("");
   const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
   const [nuevoHogarNombre, setNuevoNombre] = useState("");
+  const [limiteUsuarios, setLimiteUsuarios] = useState(2);
   const [guardando, setGuardando] = useState(false);
   const [copiadoId, setCopiadoId] = useState(null);
 
@@ -31,12 +32,19 @@ export default function SuperadminPanel() {
 
   async function cargarEspacios() {
     setCargando(true);
+    // Cargamos espacios y contamos perfiles asociados (HU-23)
     const { data } = await supabase
       .from("espacios")
-      .select("*")
+      .select("*, perfiles(id)")
       .order("created_at", { ascending: false });
     
-    if (data) setEspacios(data);
+    if (data) {
+      const formateados = data.map(e => ({
+        ...e,
+        miembros_count: e.perfiles?.length || 0
+      }));
+      setEspacios(formateados);
+    }
     setCargando(false);
   }
 
@@ -48,20 +56,21 @@ export default function SuperadminPanel() {
     const toastId = toast.loading("Creando nuevo hogar...");
 
     try {
-      // Generar código de invitación aleatorio
       const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
 
       const { error } = await supabase
         .from("espacios")
         .insert([{ 
           nombre_familia: nuevoHogarNombre.trim(),
-          codigo_invitacion: codigo
+          codigo_invitacion: codigo,
+          limite_usuarios: parseInt(limiteUsuarios)
         }]);
 
       if (error) throw error;
 
       toast.success("¡Espacio creado! Comparte el código.", { id: toastId });
       setNuevoNombre("");
+      setLimiteUsuarios(2);
       setMostrarModalCrear(false);
       cargarEspacios();
     } catch (err) {
@@ -140,8 +149,13 @@ export default function SuperadminPanel() {
                     <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-widest font-bold">Hogar ID: {e.id.substring(0, 8)}...</p>
                   </div>
                 </div>
-                <div className="bg-slate-900/50 px-2 py-1 rounded text-[10px] text-slate-400 font-bold border border-white/5">
-                  {new Date(e.created_at).toLocaleDateString()}
+                <div className="flex flex-col items-end gap-1">
+                  <div className="bg-slate-900/50 px-2 py-1 rounded text-[10px] text-slate-400 font-bold border border-white/5">
+                    {new Date(e.created_at).toLocaleDateString()}
+                  </div>
+                  <div className={`text-[10px] font-black px-2 py-0.5 rounded ${e.miembros_count >= e.limite_usuarios ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                    {e.miembros_count} / {e.limite_usuarios} USUARIOS
+                  </div>
                 </div>
               </div>
 
@@ -201,6 +215,20 @@ export default function SuperadminPanel() {
                     required
                     autoFocus
                   />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Plan / Límite de Usuarios</label>
+                  <select
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50 transition-all"
+                    value={limiteUsuarios}
+                    onChange={(e) => setLimiteUsuarios(e.target.value)}
+                  >
+                    <option value="1">Plan Soltero (1 Usuario)</option>
+                    <option value="2">Plan Pareja (2 Usuarios)</option>
+                    <option value="5">Plan Familia (5 Usuarios)</option>
+                    <option value="10">Plan Premium (10 Usuarios)</option>
+                  </select>
                 </div>
 
                 <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl">
