@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from "../supabase";
+import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Send, Sparkles, Zap, AlertTriangle } from "lucide-react";
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-export default function AsistenteGemini({ usuarioActual, monedaGlobal, datosHogar }) {
+export default function AsistenteGemini({ usuarioActual, gastos, ingresos, monedaGlobal, datosHogar }) {
   const [mensajes, setMensajes] = useState([
     { role: "asistente", text: `¡Haku la polenta, ${usuarioActual?.nombre || "kapé"}! 🔥 Soy tu asistente financiero. ¿En qué te puedo ayudar hoy?` }
   ]);
@@ -43,54 +41,44 @@ export default function AsistenteGemini({ usuarioActual, monedaGlobal, datosHoga
 
   async function enviarMensaje() {
     if (!input.trim() || cargando || sinTokens) return;
-    if (!API_KEY) {
-      setMensajes(prev => [...prev, 
-        { role: "usuario", text: input },
-        { role: "asistente", text: "⚠️ No se encontró la API Key de Gemini." }
-      ]);
-      setInput("");
-      return;
-    }
 
     const nuevoMensajeUsuario = { role: "usuario", text: input };
     setMensajes(prev => [...prev, nuevoMensajeUsuario]);
+    const mensajeParaIA = input;
     setInput("");
     setCargando(true);
 
     try {
-      const genAI = new GoogleGenerativeAI(API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      // Preparamos el contexto financiero
+      const contexto = {
+        ingresos: ingresos || [],
+        gastos: gastos || [],
+        moneda: monedaGlobal || 'PYG'
+      };
 
-      const promptSistema = `
-        Eres el Asistente Financiero Oficial de 'ÑandeFinanza 2.0', una aplicación creada en Paraguay. 
-        Tu rol es actuar como un 'kape' (amigo cercano) experto en finanzas que ayuda a las parejas y solteros a administrar su dinero.
-        
-        REGLAS DE TU PERSONALIDAD:
-        1. Tu tono es empático, profesional pero muy amigable. Nunca juzgas.
-        2. Usas 'Jopara' (mezcla natural de español paraguayo y guaraní). 
-        3. Ejemplos de palabras que puedes usar: 'che kape', 'hendy', 'tranquilo', 'iporã', 'macanada', 'ñande plata heta'.
-        4. No exageres, úsalo con naturalidad como lo haría un joven profesional paraguayo.
-        5. Cuando des consejos para ahorrar o analices los gastos, prioriza la paz mental de la relación o del usuario.
-        
-        CONTEXTO:
-        - Hogar: ${datosHogar?.espacios?.nombre_familia}
-        - Usuario: ${usuarioActual?.nombre}
-        - Moneda: ${monedaGlobal}
-      `;
+      // Llamamos al backend seguro (Supabase Edge Function)
+      const { data, error } = await supabase.functions.invoke('chat-ia', {
+        body: { 
+          mensaje: mensajeParaIA, 
+          contexto_financiero: contexto 
+        }
+      });
 
-      const result = await model.generateContent([promptSistema, ...mensajes.map(m => `${m.role === "asistente" ? "Asistente" : "Usuario"}: ${m.text}`), `Usuario: ${input}`]);
-      const response = await result.response;
-      const text = response.text();
+      if (error) throw error;
 
-      setMensajes(prev => [...prev, { role: "asistente", text }]);
+      // Agregamos la respuesta del kape al chat
+      setMensajes(prev => [...prev, { role: "asistente", text: data.respuesta }]);
       
+      // Actualizar tokens (Descuento local y remoto)
       const costo = 500;
       const nuevoDisponible = Math.max(0, datosTokens.disponibles - costo);
       await supabase.from("espacios").update({ tokens_ia_disponibles: nuevoDisponible }).eq("id", datosHogar.espacio_id);
       setDatosTokens({ disponibles: nuevoDisponible });
+
     } catch (err) {
-      console.error("Error en enviarMensaje:", err);
-      setMensajes(prev => [...prev, { role: "asistente", text: "Error de conexión con el cerebro IA. 🧠💥" }]);
+      console.error("Error del asistente:", err);
+      toast.error("Hendy la conexión che kape. No pude procesar tu mensaje.");
+      setMensajes(prev => [...prev, { role: "asistente", text: "Haupei, hubo un error conectando con mi cerebro seguro. Intentá de nuevo en un rato. 🧠💥" }]);
     } finally {
       setCargando(false);
     }

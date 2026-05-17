@@ -31,10 +31,10 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
         throw new Error(`Límite de usuarios alcanzado (${espacio.limite_usuarios}) para este hogar. Contactá al administrador.`);
       }
 
-      // 3. Crear el perfil del usuario vinculado a ese espacio
+      // 3. Vincular el perfil (Usamos UPSERT para evitar error de duplicado)
       const { error: errorPerfil } = await supabase
         .from('perfiles')
-        .insert([{ 
+        .upsert([{ 
           id: usuario.id, 
           espacio_id: espacio.id,
           nombre: nombreUsuario.trim(),
@@ -74,10 +74,10 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
 
       if (errorEspacio) throw errorEspacio;
 
-      // 2. Vincular como admin_hogar
+      // 2. Vincular como admin_hogar (Usamos UPSERT para evitar error de duplicado)
       const { error: errorPerfil } = await supabase
         .from('perfiles')
-        .insert([{ 
+        .upsert([{ 
           id: usuario.id, 
           espacio_id: nuevoEspacio.id,
           nombre: nombreUsuario.trim(),

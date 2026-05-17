@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, Camera, Loader2, Wand2 } from "lucide-react";
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal }) {
   const [input, setInput] = useState("");
@@ -13,41 +11,20 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
 
   async function procesarEntrada() {
     if (!input.trim() || cargando) return;
-    if (!API_KEY) return toast.error("Configurá la API Key de Gemini");
 
     setCargando(true);
     const toastId = toast.loading("La IA está analizando tu gasto...");
 
     try {
-      const genAI = new GoogleGenerativeAI(API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // Llamamos al backend seguro
+      const { data, error } = await supabase.functions.invoke('ingreso-magico', {
+        body: { input, monedaGlobal }
+      });
 
-      const prompt = `
-        Sos un asistente experto en finanzas paraguayas. Analizá el siguiente texto o descripción de un gasto y extraé los datos en formato JSON.
-        
-        REGLAS:
-        1. Si el monto dice "150mil" o "150k", convertilo a número: 150000.
-        2. La categoría debe ser una de estas: Casa, Supermercado, Combustible, Salidas, Salud, Ahorro, Otros.
-        3. Si no se especifica moneda, asumí que es "${monedaGlobal}".
-        4. Retorná ÚNICAMENTE un objeto JSON con esta estructura: 
-           {"concepto": string, "monto": number, "categoria": string, "moneda": string}
-        
-        TEXTO DEL USUARIO: "${input}"
-      `;
+      if (error) throw error;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      // Limpiar el texto por si Gemini agrega markdown ```json
-      const jsonMatch = text.match(/\{.*\}/s);
-      if (jsonMatch) {
-        const data = JSON.parse(jsonMatch[0]);
-        setResultado(data);
-        toast.success("¡Gasto interpretado con éxito! ✨", { id: toastId });
-      } else {
-        throw new Error("No pude interpretar el gasto. Intentá ser más específico.");
-      }
+      setResultado(data);
+      toast.success("¡Gasto interpretado con éxito! ✨", { id: toastId });
     } catch (err) {
       toast.error(err.message, { id: toastId });
     } finally {
@@ -63,10 +40,7 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
     const toastId = toast.loading("Leyendo el ticket con IA...");
 
     try {
-      const genAI = new GoogleGenerativeAI(API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-      // Convertir archivo a base64 para Gemini
+      // Convertir archivo a base64 para el backend
       const reader = new FileReader();
       const base64Promise = new Promise((resolve) => {
         reader.onload = () => resolve(reader.result.split(',')[1]);
@@ -74,32 +48,22 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
       });
       const base64Data = await base64Promise;
 
-      const prompt = `
-        Analizá esta foto de un ticket o recibo. Extraé el total pagado y el concepto principal.
-        Retorná ÚNICAMENTE un objeto JSON: 
-        {"concepto": string, "monto": number, "categoria": string, "moneda": string}
-        
-        Categorías válidas: Casa, Supermercado, Combustible, Salidas, Salud, Ahorro, Otros.
-        Si la moneda es Gs o Guaraníes, usá "PYG". Si es R$ o Reales, usá "BRL".
-      `;
+      // Llamamos al backend seguro enviando la imagen
+      const { data, error } = await supabase.functions.invoke('ingreso-magico', {
+        body: { 
+          foto: base64Data, 
+          mimeType: file.type,
+          monedaGlobal 
+        }
+      });
 
-      const result = await model.generateContent([
-        prompt,
-        { inlineData: { data: base64Data, mimeType: file.type } }
-      ]);
-      
-      const response = await result.response;
-      const text = response.text();
-      const jsonMatch = text.match(/\{.*\}/s);
-      
-      if (jsonMatch) {
-        setResultado(JSON.parse(jsonMatch[0]));
-        toast.success("¡Ticket procesado! Revisa los datos.", { id: toastId });
-      } else {
-        throw new Error("No pude leer el ticket claramente.");
-      }
+      if (error) throw error;
+
+      setResultado(data);
+      toast.success("¡Ticket procesado! Revisa los datos.", { id: toastId });
     } catch (err) {
-      toast.error(err.message, { id: toastId });
+      console.error("Error procesando foto:", err);
+      toast.error("No pude leer el ticket. Intentá de nuevo.", { id: toastId });
     } finally {
       setCargando(false);
     }

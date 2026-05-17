@@ -45,7 +45,10 @@ export default function Login() {
         password: password,
       });
 
-      if (errorAuth) throw new Error("Credenciales inválidas. Revisá tu email y contraseña. ❌");
+      if (errorAuth) {
+        console.error("🚨 Error de Supabase Auth:", errorAuth);
+        throw new Error(errorAuth.message || "Credenciales inválidas. Revisá tu email y contraseña. ❌");
+      }
 
       toast.success(`¡Bienvenido de vuelta! 🚀`, { id: toastId });
     } catch (err) {

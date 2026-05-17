@@ -130,7 +130,7 @@ function App() {
 
   // --- CARGA DE DATOS (ESQUEMA PRO) ---
   const obtenerDatos = useCallback(async () => {
-    if (!datosHogar || !session) return;
+    if (!datosHogar || !session || !datosHogar.espacio_id) return;
     const eid = datosHogar.espacio_id;
 
     try {
@@ -186,7 +186,11 @@ function App() {
   }
 
   if (!session) return <Login />;
-  if (session && !datosHogar) return <ConfiguracionHogar usuario={session.user} onHogarCreado={() => window.location.reload()} />;
+  
+  // Si tiene sesión pero NO tiene hogar vinculado (o el perfil no existe) -> Pantalla de Configuración
+  if (session && (!datosHogar || !datosHogar.espacio_id)) {
+    return <ConfiguracionHogar usuario={session.user} onHogarCreado={() => window.location.reload()} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 flex overflow-hidden">
