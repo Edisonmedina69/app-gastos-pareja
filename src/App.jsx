@@ -279,7 +279,8 @@ function App() {
 
         {/* Contenedor Principal (Scrolleable) */}
         <main className="flex-1 overflow-y-auto pb-28 lg:pb-8 pt-4 px-4 custom-scrollbar">
-          <div className="max-w-4xl mx-auto w-full">
+          {/* Ancho total para aprovechar monitores ultra-wide */}
+          <div className="w-full">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${activeTab}-${modoVista}`}

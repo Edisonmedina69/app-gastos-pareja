@@ -92,7 +92,8 @@ export default function Cuentas({
   }
 
   async function pagarCuota(cuota, maestra) {
-    const abonoStr = window.prompt(`Cuota ${cuota.numero_cuota}/${maestra.cuotas_detalle?.length || '?'}\nMonto: ${formatearNumero(cuota.monto_cuota - cuota.monto_abonado, maestra.moneda)}\n¿Cuánto vas a pagar hoy?`, cuota.monto_cuota - cuota.monto_abonado);
+    const deudaActual = cuota.monto_cuota - cuota.monto_abonado;
+    const abonoStr = window.prompt(`Cuota ${cuota.numero_cuota}/${maestra.cuotas_detalle?.length || '?'}\nMonto de esta cuota: ${formatearNumero(deudaActual, maestra.moneda)}\n¿Cuánto vas a pagar hoy?`, deudaActual);
     
     if (abonoStr === null) return;
     const abono = parseFloat(abonoStr);
@@ -101,9 +102,16 @@ export default function Cuentas({
     const toastId = toast.loading("Registrando pago...");
     try {
       const nuevoAbonoTotal = Number(cuota.monto_abonado) + abono;
-      const estaPagado = nuevoAbonoTotal >= cuota.monto_cuota;
+      let estaPagado = nuevoAbonoTotal >= cuota.monto_cuota;
+      let saldoSobrante = 0;
 
-      // 1. Actualizar Cuota
+      // Si es cuenta FLEXIBLE y paga menos, cerramos la actual y calculamos lo que sobra
+      if (maestra.permite_pago_parcial && !estaPagado) {
+        estaPagado = true; // Forzamos el cierre de esta cuota
+        saldoSobrante = cuota.monto_cuota - nuevoAbonoTotal;
+      }
+
+      // 1. Actualizar Cuota Actual
       const { error: errC } = await supabase
         .from("cuotas_detalle")
         .update({
@@ -116,7 +124,26 @@ export default function Cuentas({
 
       if (errC) throw errC;
 
-      // 2. Registrar en Historial de Gastos
+      // 2. Traspasar saldo a la siguiente cuota si es flexible y quedó saldo
+      if (saldoSobrante > 0) {
+        const { data: siguientes } = await supabase
+          .from("cuotas_detalle")
+          .select("id, monto_cuota")
+          .eq("deuda_maestra_id", maestra.id)
+          .eq("estado", "pendiente")
+          .gt("numero_cuota", cuota.numero_cuota)
+          .order("numero_cuota", { ascending: true })
+          .limit(1);
+
+        if (siguientes && siguientes.length > 0) {
+          const proxima = siguientes[0];
+          await supabase.from("cuotas_detalle")
+            .update({ monto_cuota: Number(proxima.monto_cuota) + saldoSobrante })
+            .eq("id", proxima.id);
+        }
+      }
+
+      // 3. Registrar Gasto
       await supabase.from("gastos").insert([{
         concepto: `Pago Cuota: ${maestra.titulo} (${cuota.numero_cuota})`,
         monto: abono,
@@ -128,10 +155,52 @@ export default function Cuentas({
         espacio_id: datosHogar.espacio_id
       }]);
 
-      toast.success(estaPagado ? "¡Cuota liquidada! 🎉" : "Abono registrado 🔄", { id: toastId });
+      toast.success(saldoSobrante > 0 ? `Pago registrado. Restante sumado al próximo mes 🔄` : "¡Cuota liquidada! 🎉", { id: toastId });
       obtenerDatos();
     } catch (err) {
       toast.error("Error al pagar: " + err.message, { id: toastId });
+    }
+  }
+
+  async function liquidarDeudaTotal(maestra) {
+    const pendientes = maestra.cuotas_detalle.filter(c => c.estado === 'pendiente');
+    if (pendientes.length === 0) return;
+
+    const totalPagar = pendientes.reduce((acc, c) => acc + (Number(c.monto_cuota) - Number(c.monto_abonado)), 0);
+    
+    if(window.confirm(`¿Estás seguro de liquidar de un golpe las ${pendientes.length} cuotas restantes?\nMonto Total: ${formatearNumero(totalPagar, maestra.moneda)}`)) {
+      const toastId = toast.loading("Liquidando deuda por completo...");
+      try {
+        // 1. Marcar todas como pagadas
+        const { error: errUpd } = await supabase
+          .from("cuotas_detalle")
+          .update({ 
+            estado: 'pagado', 
+            fecha_pago: new Date().toISOString(), 
+            pagador_id: usuarioActual.id 
+          })
+          .eq("deuda_maestra_id", maestra.id)
+          .eq("estado", "pendiente");
+
+        if (errUpd) throw errUpd;
+
+        // 2. Registrar el gasto consolidado
+        await supabase.from("gastos").insert([{
+          concepto: `Liquidación Total Anticipada: ${maestra.titulo}`,
+          monto: totalPagar,
+          categoria: "Préstamo",
+          usuario_id: usuarioActual.id,
+          pagador_id: usuarioActual.id,
+          para_quien: "Ambos",
+          moneda: maestra.moneda,
+          espacio_id: datosHogar.espacio_id
+        }]);
+
+        toast.success("¡Deuda cancelada por completo! 🎉", { id: toastId });
+        obtenerDatos();
+      } catch (err) {
+        toast.error("Error al liquidar: " + err.message, { id: toastId });
+      }
     }
   }
 
