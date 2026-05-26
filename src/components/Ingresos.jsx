@@ -260,7 +260,7 @@ export default function Ingresos({
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="text-xl font-black text-white">{formatearNumero(p.monto, p.moneda)}</div>
-                    <button onClick={() => confirmarRecepcion(prog)} onClick={() => confirmarRecepcion(p)} className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-emerald-900/20 flex items-center gap-2 active:scale-95 transition-all">
+                    <button onClick={() => confirmarRecepcion(p)} className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-emerald-900/20 flex items-center gap-2 active:scale-95 transition-all">
                       <CheckCircle size={14}/> CONFIRMAR COBRO
                     </button>
                   </div>
