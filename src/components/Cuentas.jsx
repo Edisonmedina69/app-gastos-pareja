@@ -5,7 +5,7 @@ import { formatearNumero, formatarInput, desformatearInput } from '../utils/form
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash
 } from 'lucide-react';
 
 export default function Cuentas({
@@ -28,6 +28,7 @@ export default function Cuentas({
   const [tipoDeuda, setTipoDeuda] = useState("fija"); 
   const [alcanceDeuda, setAlcanceDeuda] = useState("familiar"); // individual | familiar
   const [titulo, setTitulo] = useState('');
+  const [nroTarjeta, setNroTarjeta] = useState('');
   const [montoTotalFormateado, setMontoTotalFormateado] = useState('');
   const [lineaCreditoFormateada, setLineaCreditoFormateada] = useState('');
   const [pagoMinimoFormateado, setPagoMinimoFormateado] = useState('');
@@ -52,7 +53,6 @@ export default function Cuentas({
     }
   }, [mostrarModal, monedaGlobal, tipoDeuda]);
 
-  // HU-10: Real-time Health Check (BCP 40% Rule)
   const projectedHealth = () => {
     const montoTotalNum = desformatearInput(montoTotalFormateado);
     if (!montoTotalNum || !saludFinanciera.ingresos) return saludFinanciera.indice;
@@ -74,7 +74,7 @@ export default function Cuentas({
   }
 
   const resetForm = () => {
-    setTitulo(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCantidadCuotas(1); 
+    setTitulo(''); setNroTarjeta(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCantidadCuotas(1); 
     setTipoDeuda("fija"); setAlcanceDeuda("familiar"); setDiaVencimiento("5"); setFechaCierreTarjeta("25");
   };
 
@@ -98,7 +98,8 @@ export default function Cuentas({
           alcance: alcanceDeuda, permite_pago_parcial: tipoDeuda !== 'fija', moneda: monedaDeuda,
           linea_credito_total: lineaTotal || 0,
           linea_credito_disponible: (lineaTotal || 0) - (tipoDeuda === 'tarjeta_credito' ? totalMonto : 0),
-          fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null
+          fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
+          nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null
         }])
         .select().single();
 
@@ -133,31 +134,25 @@ export default function Cuentas({
         if (!tasaManual) throw new Error("Debes ingresar la cotización manual");
         mMonedaDeuda = montoAbono * parseFloat(tasaManual);
       }
-
       const nAbonoTotal = Number(cuota.monto_abonado) + mMonedaDeuda;
       const estaPagado = nAbonoTotal >= cuota.monto_cuota;
-
       await supabase.from("cuotas_detalle").update({
         monto_abonado: nAbonoTotal, estado: estaPagado ? 'pagado' : 'pendiente',
         fecha_pago: new Date().toISOString(), pagador_id: usuarioActual.id
       }).eq("id", cuota.id);
-
       if (maestra.tipo === 'tarjeta_credito') {
         await supabase.from("deudas_maestras").update({ 
           linea_credito_disponible: Number(maestra.linea_credito_disponible) + mMonedaDeuda 
         }).eq("id", maestra.id);
       }
-
       await supabase.from("gastos").insert([{
         concepto: `Pago Deuda: ${maestra.titulo}`, monto: montoAbono, categoria: "Pago Tarjeta de Crédito",
         usuario_id: usuarioActual.id, pagador_id: usuarioActual.id, para_quien: "Ambos", moneda: monedaAbono, espacio_id: datosHogar.espacio_id
       }]);
-
       const { data: check } = await supabase.from('cuotas_detalle').select('estado').eq('deuda_maestra_id', maestra.id);
       if (check.every(c => c.estado === 'pagado')) {
         await supabase.from('deudas_maestras').update({ estado: 'cerrada' }).eq('id', maestra.id);
       }
-
       toast.success("Pago registrado!", { id: toastId });
       setMostrarModalPago(false); setPagoSeleccionado(null); obtenerDatos();
     } catch (err) { toast.error(err.message, { id: toastId }); }
@@ -212,7 +207,7 @@ export default function Cuentas({
   return (
     <div className="space-y-6 pb-20">
       <header className="flex items-center justify-between">
-        <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+        <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 backdrop-blur-md">
           {['activas', 'archivadas'].map(p => <button key={p} onClick={() => setPestana(p)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${pestana === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>{p}</button>)}
         </div>
         <button onClick={() => setMostrarModal(true)} className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg"><Plus size={24} /></button>
@@ -226,7 +221,6 @@ export default function Cuentas({
           const totalPagado = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_abonado), 0) || 0;
           const totalMontoDeuda = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_cuota), 0) || 0;
           const porcProgreso = totalMontoDeuda > 0 ? (totalPagado / totalMontoDeuda) * 100 : 0;
-          const cuotasSaldadas = d.cuotas_detalle?.filter(c => c.estado === 'pagado').length || 0;
 
           return (
             <motion.div key={d.id} layout className={`glass-card border-l-4 ${pestana === 'activas' ? 'border-l-indigo-500' : 'border-l-slate-600 opacity-80'}`}>
@@ -240,7 +234,7 @@ export default function Cuentas({
                       <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-indigo-500/20"><Users size={10}/> Familiar</div>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-tighter">{d.tipo} • {d.alcance}</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-tighter">{d.tipo} {d.nro_tarjeta && `• Term. ${d.nro_tarjeta}`} • {d.alcance}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   {cuotaActual && <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {new Date(cuotaActual.fecha_vencimiento).toLocaleDateString()}</div>}
@@ -285,8 +279,8 @@ export default function Cuentas({
       <AnimatePresence>
         {mostrarModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg glass-panel p-6 rounded-3xl relative">
-              <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 text-slate-400"><X size={24} /></button>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg glass-panel p-6 rounded-3xl relative max-h-[90vh] overflow-y-auto">
+              <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
               <h2 className="text-xl font-black text-white mb-6 uppercase">Nuevo Compromiso Pro</h2>
               <form onSubmit={guardarDeudaPro} className="space-y-5">
                 <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
@@ -295,24 +289,69 @@ export default function Cuentas({
                 <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                   {['fija', 'flexible', 'tarjeta_credito'].map(t => <button key={t} type="button" onClick={() => setTipoDeuda(t)} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>{t.replace('_', ' ')}</button>)}
                 </div>
-                <input type="text" placeholder="Descripción" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" required />
-                <div className="grid grid-cols-2 gap-4">
-                  <input type="text" placeholder="Monto" value={montoTotalFormateado} onChange={(e) => setMontoTotalFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none" required />
-                  <select value={monedaDeuda} onChange={(e) => setMonedaDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white"><option value="PYG">PYG</option><option value="BRL">BRL</option></select>
+                
+                <div className="space-y-1">
+                   <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Descripción / Entidad</label>
+                   <input type="text" placeholder="Ej: Préstamo Banco Itaú" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" required />
                 </div>
+
+                {tipoDeuda === 'tarjeta_credito' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos de la Tarjeta</label>
+                    <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white font-black tracking-widest outline-none focus:border-indigo-500/50" />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">{tipoDeuda === 'tarjeta_credito' ? 'Deuda Actual' : 'Monto Total'}</label>
+                    <input type="text" value={montoTotalFormateado} onChange={(e) => setMontoTotalFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" placeholder="0" required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
+                    <select value={monedaDeuda} onChange={(e) => setMonedaDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"><option value="PYG">PYG</option><option value="BRL">BRL</option></select>
+                  </div>
+                </div>
+
                 {tipoDeuda === 'tarjeta_credito' ? (
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="text" placeholder="Pago Mínimo" value={pagoMinimoFormateado} onChange={(e) => setPagoMinimoFormateado(formatarInput(e.target.value))} className="bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white" />
-                    <input type="text" placeholder="Línea Crédito" value={lineaCreditoFormateada} onChange={(e) => setLineaCreditoFormateada(formatarInput(e.target.value))} className="bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white" />
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Pago Mínimo</label>
+                      <input type="text" value={pagoMinimoFormateado} onChange={(e) => setPagoMinimoFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none" placeholder="0" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Línea Crédito</label>
+                      <input type="text" value={lineaCreditoFormateada} onChange={(e) => setLineaCreditoFormateada(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none" placeholder="0" />
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="Cuotas" value={cantidadCuotas} onChange={(e) => setCantidadCuotas(e.target.value)} className="bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white" />
-                    <input type="number" placeholder="Día Vence" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white" />
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Cuotas Totales</label>
+                      <input type="number" min="1" value={cantidadCuotas} onChange={(e) => setCantidadCuotas(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
+                      <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                    </div>
                   </div>
                 )}
-                {zonaPeligro && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4"><AlertTriangle className="text-red-500" /><p className="text-[11px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite del BCP.</p></div>}
-                <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : "REGISTRAR"}</button>
+
+                {tipoDeuda === 'tarjeta_credito' && (
+                   <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
+                      <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Cierre</label>
+                      <input type="number" min="1" max="31" value={fechaCierreTarjeta} onChange={(e) => setFechaCierreTarjeta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                    </div>
+                   </div>
+                )}
+
+                {zonaPeligro && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4"><AlertTriangle className="text-red-500 shrink-0" /><p className="text-[11px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP.</p></div>}
+                <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : "REGISTRAR DEUDA"}</button>
               </form>
             </motion.div>
           </div>

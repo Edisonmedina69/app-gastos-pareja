@@ -287,7 +287,7 @@ function App() {
                 {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
                 {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
                 {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
-                {activeTab === "admin" && datosHogar?.rol === 'superadmin' && <SuperadminPanel />}
+                {activeTab === "admin" && datosHogar?.rol === 'superadmin' && <SuperadminPanel datosHogar={datosHogar} />}
               </motion.div>
             </AnimatePresence>
           </div>
