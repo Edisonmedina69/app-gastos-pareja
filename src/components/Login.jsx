@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Lock, ArrowRight, Loader2, Sparkles, Key, Users } from "lucide-react";
+import { User, Lock, ArrowRight, Loader2, Sparkles, Key, ShieldCheck, Mail } from "lucide-react";
 
 export default function Login() {
   const [modo, setModo] = useState("login"); // 'login' | 'unirme'
@@ -14,8 +14,10 @@ export default function Login() {
 
   async function handleAuth(e) {
     e.preventDefault();
+    if (!email.trim() || !password.trim()) return;
+    
     setCargando(true);
-    const toastId = toast.loading(modo === 'login' ? "Entrando..." : "Vinculando hogar...");
+    const toastId = toast.loading(modo === 'login' ? "Verificando acceso..." : "Vinculando hogar patriótico...");
 
     try {
       if (modo === 'login') {
@@ -23,33 +25,32 @@ export default function Login() {
           email: email.trim(),
           password: password,
         });
-        if (error) throw error;
-        toast.success("¡Haupei! Ya estás dentro. 🚀", { id: toastId });
+        if (error) throw new Error("Credenciales inválidas. Revisá tu email y contraseña.");
+        toast.success(`¡Bienvenido de vuelta! 🚀`, { id: toastId });
       } else {
-        // --- FLUJO UNIRME A FAMILIA (Para Bianca) ---
-        // 1. Crear la cuenta en Auth
+        // --- FLUJO UNIRME (Registro con Email y Código) ---
+        if (!nombre.trim()) throw new Error("Por favor, ingresá tu nombre.");
+        if (!codigo.trim()) throw new Error("Necesitás el Código de Invitación.");
+
+        // 1. Crear usuario en Auth
         const { data: authData, error: errorAuth } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
         });
 
         if (errorAuth) throw errorAuth;
-        if (!authData.user) throw new Error("No se pudo crear el usuario.");
+        if (!authData.user) throw new Error("No se pudo crear la cuenta.");
 
-        // 2. Buscar el espacio por código
+        // 2. Buscar el espacio
         const { data: espacio, error: errE } = await supabase
           .from('espacios')
           .select('id, limite_usuarios, perfiles(id)')
           .eq('codigo_invitacion', codigo.trim().toUpperCase())
           .single();
 
-        if (errE || !espacio) throw new Error("Código de invitación inválido. Pedile a tu pareja el código correcto.");
+        if (errE || !espacio) throw new Error("Código de familia inválido.");
         
-        if (espacio.perfiles?.length >= espacio.limite_usuarios) {
-          throw new Error("El hogar ya está lleno. El admin debe subir de plan.");
-        }
-
-        // 3. Crear el perfil vinculado al instante
+        // 3. Crear Perfil vinculado
         const { error: errP } = await supabase.from('perfiles').insert([{
           id: authData.user.id,
           nombre: nombre.trim(),
@@ -59,11 +60,11 @@ export default function Login() {
 
         if (errP) throw errP;
 
-        toast.success("¡Bienvenida a la familia! 🏠✨ Ya podés entrar.", { id: toastId, duration: 5000 });
+        toast.success("¡Vinculación exitosa! 🏠✨ Ya podés iniciar sesión.", { id: toastId, duration: 6000 });
         setModo("login");
       }
     } catch (err) {
-      toast.error(err.message || "Error al procesar. Revisá tus datos.", { id: toastId });
+      toast.error(err.message, { id: toastId });
     } finally {
       setCargando(false);
     }
@@ -71,66 +72,79 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-        <div className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] bg-red-600/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px]" />
+      {/* DISEÑO LINDO: BLOBS PATRIOS (Rojo, Blanco, Azul) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] bg-red-600/20 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute -bottom-[20%] left-[20%] w-[500px] h-[500px] bg-white/10 rounded-full blur-[100px] mix-blend-screen" />
       </div>
 
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm z-10">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/20 mb-3">
-            <Sparkles className="text-white w-7 h-7" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/20 mb-4">
+            <span className="text-white text-3xl font-bold italic">Ñ</span>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tighter italic">ÑandeFinanza 2.0</h1>
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Organización Real para Parejas</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">ÑandeFinanza</h1>
+          <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">🇵🇾 Sistema 100% Paraguayo</p>
+          <p className="text-slate-400 mt-2 text-sm italic">Hecho con ❤️ y mucho Tereré 🧉</p>
         </div>
 
-        <div className="glass-card p-6 border-white/10 shadow-2xl relative">
-          <div className="flex p-1 bg-white/5 rounded-xl border border-white/5 mb-6">
-            <button onClick={() => setModo('login')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${modo === 'login' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>Entrar</button>
-            <button onClick={() => setModo('unirme')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${modo === 'unirme' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>Unirme a Hogar 🏠</button>
+        <div className="glass-card border-white/10 p-8 shadow-2xl relative overflow-hidden">
+          {/* TABS PARA CAMBIAR ENTRE ENTRAR Y UNIRME */}
+          <div className="flex p-1 bg-white/5 rounded-xl border border-white/5 mb-8">
+            <button onClick={() => setModo('login')} className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-lg transition-all ${modo === 'login' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Entrar</button>
+            <button onClick={() => setModo('unirme')} className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-lg transition-all ${modo === 'unirme' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Unirme a Hogar 🏠</button>
           </div>
 
-          <form onSubmit={handleAuth} className="space-y-4">
+          <h2 className="text-xl font-semibold text-white mb-6">
+            {modo === 'login' ? "Iniciar Sesión" : "Crear mi Perfil"}
+          </h2>
+          
+          <form onSubmit={handleAuth} className="space-y-5">
             {modo === 'unirme' && (
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tu Nombre</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Tu Nombre o Apodo</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
-                  <input type="text" placeholder="Ej: Bianca" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm outline-none focus:border-indigo-500/50" required />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                  <input type="text" placeholder="Ej: Bianca" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-indigo-500/50 transition-all" required />
                 </div>
               </div>
             )}
 
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Correo Electrónico</label>
-              <input type="email" placeholder="tu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-4 text-white text-sm outline-none focus:border-indigo-500/50" required />
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Correo Electrónico</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <input type="email" placeholder="tu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-indigo-500/50 transition-all" required />
+              </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Contraseña</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Contraseña</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
-                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm outline-none focus:border-indigo-500/50" required />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-indigo-500/50 transition-all" required />
               </div>
             </div>
 
             {modo === 'unirme' && (
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-amber-500 uppercase ml-1 flex items-center gap-1"><Key size={10}/> Código de Familia</label>
-                <input type="text" placeholder="ABCDEF" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} className="w-full bg-amber-500/5 border border-amber-500/20 rounded-xl py-3 px-4 text-white font-black tracking-widest outline-none focus:border-amber-500/50" required />
-              </div>
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-1">
+                <label className="text-[10px] font-bold text-amber-500 uppercase tracking-wider ml-1 flex items-center gap-1"><Key size={12}/> Código de Invitación</label>
+                <input type="text" placeholder="ABCDEF" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} className="w-full bg-amber-500/5 border border-amber-500/20 rounded-xl py-3 px-4 text-white font-black tracking-[0.3em] outline-none focus:border-amber-500/50 text-center uppercase" required />
+              </motion.div>
             )}
 
-            <button type="submit" disabled={cargando} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
-              {cargando ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{modo === 'login' ? 'INICIAR SESIÓN' : 'VINCULAR MI CUENTA'} <ArrowRight size={18} /></>}
+            <button type="submit" disabled={cargando} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+              {cargando ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{modo === 'login' ? 'ENTRAR' : 'VINCULAR MI CUENTA'} <ArrowRight size={18} /></>}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-slate-600 text-[10px] font-bold mt-8 uppercase tracking-tighter">
-          {modo === 'login' ? "Sistema Seguro 🛡️" : "Unite a tu pareja para ver los gastos juntos"}
-        </p>
+        <div className="mt-8 flex flex-col items-center gap-2">
+           <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+             <ShieldCheck size={14} className="text-indigo-400" /> Sistema Seguro con Encriptación Bancaria 🛡️
+           </p>
+        </div>
       </motion.div>
     </div>
   );
