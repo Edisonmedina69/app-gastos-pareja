@@ -110,17 +110,25 @@ function App() {
 
   // --- MOTOR DE SALUD FINANCIERA (HU-09) ---
   const saludFinanciera = useMemo(() => {
-    if (!usuarioActual) return { carga: 0, ingresos: 0, indice: 0 };
+    if (!usuarioActual) return { carga: 0, ingresos: 0, indice: 0, balanceHogar: 0 };
     
-    // 1. Ingresos totales del usuario (Mes actual)
-    const hoy = new Date();
-    const totalIngresos = ingresos
+    // 1. Ingresos totales del usuario (Mes actual) para salud individual
+    const totalIngresosYo = ingresos
       ?.filter(i => i.usuario_id === usuarioActual.id)
       ?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
 
-    // 2. Carga de Deuda Mensual
-    // Regla: 100% individual + 50% familiar
-    let carga = 0;
+    // 2. Ingresos totales del hogar (Para balance global)
+    const totalIngresosHogar = ingresos
+      ?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
+
+    // 3. Gastos totales del hogar
+    const totalGastosHogar = gastos
+      ?.reduce((acc, g) => acc + (Number(g.monto) * (g.tasa_cambio || 1)), 0) || 0;
+
+    // 4. Carga de Deuda Mensual
+    let cargaIndividual = 0;
+    let cargaTotalHogar = 0;
+
     deudas.forEach(d => {
       if (d.estado === 'cerrada') return;
       
@@ -129,17 +137,24 @@ function App() {
 
       const montoCuotaPYG = (cuotaActual.monto_cuota - cuotaActual.monto_abonado) * (d.tasa_cambio || 1);
       
+      // Para la salud del usuario
       if (d.alcance === 'individual' && d.creador_id === usuarioActual.id) {
-        carga += montoCuotaPYG;
+        cargaIndividual += montoCuotaPYG;
       } else if (d.alcance === 'familiar') {
-        carga += (montoCuotaPYG * 0.5);
+        cargaIndividual += (montoCuotaPYG * 0.5);
       }
+
+      // Para el balance del hogar (100% de todas las cuotas pendientes)
+      cargaTotalHogar += montoCuotaPYG;
     });
 
-    const indice = totalIngresos > 0 ? (carga / totalIngresos) * 100 : (carga > 0 ? 100 : 0);
+    const indice = totalIngresosYo > 0 ? (cargaIndividual / totalIngresosYo) * 100 : (cargaIndividual > 0 ? 100 : 0);
+    
+    // Balance Real del Hogar = Ingresos - Gastos - Compromisos de Deuda
+    const balanceHogar = totalIngresosHogar - totalGastosHogar - cargaTotalHogar;
 
-    return { carga, ingresos: totalIngresos, indice };
-  }, [usuarioActual, deudas, ingresos]);
+    return { carga: cargaIndividual, ingresos: totalIngresosYo, indice, balanceHogar };
+  }, [usuarioActual, deudas, ingresos, gastos]);
 
   async function verificarVencimientos(deudasData, eid, notisActuales) {
     const hoy = new Date();
