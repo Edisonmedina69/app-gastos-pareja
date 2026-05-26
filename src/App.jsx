@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./supabase";
 import { Toaster, toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,7 +12,6 @@ import {
   User, 
   LogOut 
 } from "lucide-react";
-// import "./App.css";
 
 // COMPONENTES
 import Login from "./components/Login";
@@ -29,307 +28,260 @@ import SuperadminPanel from "./components/SuperadminPanel";
 function App() {
   const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState("inicio");
-  const [modoVista, setModoVista] = useState("familiar"); // 'familiar' | 'personal'
+  const [modoVista, setModoVista] = useState("familiar");
   const [usuarios, setUsuarios] = useState([]);
   const [gastos, setGastos] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [otroUsuario, setOtroUsuario] = useState(null);
   const [ingresos, setIngresos] = useState([]);
-  const [deudas, setDeudas] = useState([]); // Nueva estructura de deudas
+  const [deudas, setDeudas] = useState([]); 
+  const [notificaciones, setNotificaciones] = useState([]);
   const [monedaGlobal, setMonedaGlobal] = useState("PYG");
   const [datosHogar, setDatosHogar] = useState(null);
   const [verificandoHogar, setVerificandoHogar] = useState(true);
 
-  // --- VERIFICAR PERFIL Y HOGAR (Fase 7) ---
+  // --- VERIFICAR PERFIL ---
   const verificarPerfil = async (usuarioId) => {
-    console.log("🔍 Verificando perfil para:", usuarioId);
     try {
-      const { data: perfil, error } = await supabase
-        .from('perfiles')
-        .select('*, espacios(*)')
-        .eq('id', usuarioId)
-        .single();
-
-      if (error || !perfil) {
-        console.log("ℹ️ Usuario sin perfil o espacio vinculado.");
-        return null;
-      }
-
-      console.log("🏠 Hogar encontrado:", perfil.espacios?.nombre_familia || "Sin nombre");
-      return perfil;
-    } catch (error) {
-      console.error("🚨 Falló verificación de perfil:", error.message);
-      return null;
-    }
+      const { data: perfil, error } = await supabase.from('perfiles').select('*, espacios(*)').eq('id', usuarioId).single();
+      return (error || !perfil) ? null : perfil;
+    } catch (error) { return null; }
   };
 
-  // --- ARRANQUE OPTIMIZADO ---
   useEffect(() => {
     let montado = true;
-
-    // Seguro de vida: Si en 6 segundos no cargó, desbloqueamos la pantalla
-    const timerCierre = setTimeout(() => {
-      if (montado && verificandoHogar) {
-        console.warn("⚠️ Tiempo de carga excedido. Forzando desbloqueo.");
-        setVerificandoHogar(false);
-      }
-    }, 6000);
-
+    const timerCierre = setTimeout(() => { if (montado && verificandoHogar) setVerificandoHogar(false); }, 6000);
     const inicializar = async () => {
-      console.log("🚀 [Arranque] Iniciando comprobación de sesión...");
       try {
-        const { data: { session: s }, error: errS } = await supabase.auth.getSession();
-        
-        if (errS) throw errS;
+        const { data: { session: s } } = await supabase.auth.getSession();
         if (!montado) return;
-
         setSession(s);
-
         if (s) {
-          console.log("✅ Sesión detectada:", s.user.email);
           const perfil = await verificarPerfil(s.user.id);
           if (montado) setDatosHogar(perfil);
-        } else {
-          console.log("ℹ️ No hay sesión activa.");
         }
-      } catch (err) {
-        console.error("🚨 Error crítico en arranque:", err.message);
-      } finally {
-        if (montado) {
-          setVerificandoHogar(false);
-          clearTimeout(timerCierre);
-          console.log("🏁 [Arranque] Finalizado.");
-        }
+      } catch (err) {} finally {
+        if (montado) { setVerificandoHogar(false); clearTimeout(timerCierre); }
       }
     };
-
     inicializar();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log("🔄 [Auth] Evento:", event);
-      if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setDatosHogar(null);
-        setVerificandoHogar(false);
-      } else if (s && event === 'SIGNED_IN') {
+      if (event === 'SIGNED_OUT') { setSession(null); setDatosHogar(null); }
+      else if (s && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         setSession(s);
         const perfil = await verificarPerfil(s.user.id);
-        if (montado) {
-          setDatosHogar(perfil);
-          setVerificandoHogar(false);
-        }
+        if (montado) setDatosHogar(perfil);
       }
     });
-
-    return () => { 
-      montado = false; 
-      subscription.unsubscribe();
-      clearTimeout(timerCierre);
-    };
+    return () => { montado = false; subscription.unsubscribe(); clearTimeout(timerCierre); };
   }, []);
 
-  // --- CARGA DE DATOS (ESQUEMA PRO) ---
   const obtenerDatos = useCallback(async () => {
     if (!datosHogar || !session || !datosHogar.espacio_id) return;
     const eid = datosHogar.espacio_id;
 
     try {
-      // 1. Cargar Miembros del Hogar
-      const { data: miembros } = await supabase
-        .from("perfiles")
-        .select("*")
-        .eq("espacio_id", eid);
-
+      const { data: miembros } = await supabase.from("perfiles").select("*").eq("espacio_id", eid);
       if (miembros) {
         setUsuarios(miembros);
         const logueado = miembros.find(u => u.id === session.user.id);
         if (logueado) {
           setUsuarioActual(logueado);
-          const pareja = miembros.find(u => u.id !== logueado.id);
-          if (pareja) setOtroUsuario(pareja);
+          setOtroUsuario(miembros.find(u => u.id !== logueado.id));
         }
       }
 
-      // 2. Cargar Transacciones y Deudas
-      const [resG, resI, resD] = await Promise.all([
+      const [resG, resI, resD, resN] = await Promise.all([
         supabase.from("gastos").select("*").eq('espacio_id', eid).order("fecha", { ascending: false }),
         supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid),
-        supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid)
+        supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid),
+        supabase.from("notificaciones").select("*").eq('espacio_id', eid).order('created_at', { ascending: false }).limit(15)
       ]);
 
       if (resG.data) setGastos(resG.data);
       if (resI.data) setIngresos(resI.data);
-      if (resD.data) setDeudas(resD.data);
-    } catch (e) {
-      console.error("Error cargando datos Fase 7:", e);
-    }
+      if (resD.data) {
+        setDeudas(resD.data);
+        verificarVencimientos(resD.data, eid, resN.data || []);
+      }
+      if (resN.data) setNotificaciones(resN.data);
+    } catch (e) {}
   }, [datosHogar, session]);
 
-  useEffect(() => {
-    if (session && !verificandoHogar && datosHogar) obtenerDatos();
-  }, [session, verificandoHogar, datosHogar, obtenerDatos]);
+  // --- MOTOR DE SALUD FINANCIERA (HU-09) ---
+  const saludFinanciera = useMemo(() => {
+    if (!usuarioActual) return { carga: 0, ingresos: 0, indice: 0 };
+    
+    // 1. Ingresos totales del usuario (Mes actual)
+    const hoy = new Date();
+    const totalIngresos = ingresos
+      ?.filter(i => i.usuario_id === usuarioActual.id)
+      ?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
 
-  const getNombreUsuario = (id) => {
-    const u = usuarios.find((u) => u.id === id);
-    return u ? u.nombre : "Desconocido";
+    // 2. Carga de Deuda Mensual
+    // Regla: 100% individual + 50% familiar
+    let carga = 0;
+    deudas.forEach(d => {
+      if (d.estado === 'cerrada') return;
+      
+      const cuotaActual = d.cuotas_detalle?.find(c => c.estado === 'pendiente');
+      if (!cuotaActual) return;
+
+      const montoCuotaPYG = (cuotaActual.monto_cuota - cuotaActual.monto_abonado) * (d.tasa_cambio || 1);
+      
+      if (d.alcance === 'individual' && d.creador_id === usuarioActual.id) {
+        carga += montoCuotaPYG;
+      } else if (d.alcance === 'familiar') {
+        carga += (montoCuotaPYG * 0.5);
+      }
+    });
+
+    const indice = totalIngresos > 0 ? (carga / totalIngresos) * 100 : (carga > 0 ? 100 : 0);
+
+    return { carga, ingresos: totalIngresos, indice };
+  }, [usuarioActual, deudas, ingresos]);
+
+  async function verificarVencimientos(deudasData, eid, notisActuales) {
+    const hoy = new Date();
+    const alertasNuevas = [];
+    deudasData.forEach(d => {
+      d.cuotas_detalle?.forEach(c => {
+        if (c.estado === 'pendiente') {
+          const venc = new Date(c.fecha_vencimiento);
+          const diffDays = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+          if (diffDays >= 0 && diffDays <= 2) {
+            const msg = `Cuota ${c.numero_cuota} de "${d.titulo}" vence en ${diffDays === 0 ? 'hoy' : diffDays + ' días'}.`;
+            if (!notisActuales.some(n => n.mensaje === msg)) {
+              alertasNuevas.push({ espacio_id: eid, usuario_id: session.user.id, titulo: '⚠️ Vencimiento', mensaje: msg, tipo: 'alerta' });
+            }
+          }
+        }
+      });
+    });
+    if (alertasNuevas.length > 0) await supabase.from('notificaciones').insert(alertasNuevas);
+  }
+
+  const markNotisAsRead = async () => {
+    if (!datosHogar) return;
+    await supabase.from('notificaciones').update({ leida: true }).eq('espacio_id', datosHogar.espacio_id).eq('leida', false);
+    obtenerDatos();
   };
 
-  // --- RENDER ---
-  if (verificandoHogar) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-          Conectando con ÑandeFinanza 2.0... 🧉
-        </motion.div>
-      </div>
-    );
-  }
+  const responderSolicitud = async (noti, aceptada) => {
+    const toastId = toast.loading(aceptada ? "Procesando ayuda..." : "Rechazando solicitud...");
+    try {
+      const { deuda_id, cuota_id, monto, moneda } = noti.metadata;
 
-  if (!session) return <Login />;
-  
-  // Si tiene sesión pero NO tiene hogar vinculado (o el perfil no existe) -> Pantalla de Configuración
-  if (session && (!datosHogar || !datosHogar.espacio_id)) {
-    return <ConfiguracionHogar usuario={session.user} onHogarCreado={() => window.location.reload()} />;
-  }
+      if (aceptada) {
+        // 1. Registrar Pago en Deuda
+        const { data: cuota } = await supabase.from('cuotas_detalle').select('*').eq('id', cuota_id).single();
+        const nuevoAbono = Number(cuota.monto_abonado) + Number(monto);
+        const pagada = nuevoAbono >= cuota.monto_cuota;
+
+        await supabase.from('cuotas_detalle').update({ 
+          monto_abonado: nuevoAbono, 
+          estado: pagada ? 'pagado' : 'pendiente',
+          pagador_id: usuarioActual.id,
+          fecha_pago: new Date().toISOString()
+        }).eq('id', cuota_id);
+
+        // 2. DOBLE ASIENTO: Gasto para el ACEPTADOR (HU-07)
+        await supabase.from('gastos').insert([{
+          espacio_id: datosHogar.espacio_id,
+          usuario_id: usuarioActual.id,
+          pagador_id: usuarioActual.id,
+          concepto: `Ayuda Pago Deuda: ${noti.mensaje.split('"')[1]}`,
+          monto: monto,
+          moneda: moneda,
+          categoria: "Ayuda Familiar",
+          para_quien: "Pareja"
+        }]);
+
+        toast.success("¡Ayuda registrada con éxito! ❤️", { id: toastId });
+      } else {
+        // Notificar rechazo
+        await supabase.from('notificaciones').insert([{
+          espacio_id: datosHogar.espacio_id,
+          usuario_id: noti.metadata.solicitante_id,
+          titulo: "Solicitud Rechazada",
+          mensaje: `${usuarioActual.nombre} no puede ayudarte con este pago ahora.`,
+          tipo: "info"
+        }]);
+        toast.error("Solicitud rechazada", { id: toastId });
+      }
+
+      // Eliminar o marcar leída la notificación original
+      await supabase.from('notificaciones').delete().eq('id', noti.id);
+      obtenerDatos();
+    } catch (e) {
+      toast.error("Error al procesar", { id: toastId });
+    }
+  };
+
+  useEffect(() => { if (session && !verificandoHogar && datosHogar) obtenerDatos(); }, [session, verificandoHogar, datosHogar, obtenerDatos]);
+
+  if (verificandoHogar) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Iniciando ÑandeFinanza...</div>;
+  if (!session || !datosHogar) return <Login onLogin={(s) => setSession(s)} />;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 flex overflow-hidden">
-      <Toaster position="top-center" toastOptions={{
-        className: 'glass-card border-white/20 text-white',
-        style: { background: 'rgba(30, 41, 59, 0.8)', backdropFilter: 'blur(12px)' }
-      }} />
+    <div className="min-h-screen bg-slate-950 text-slate-200">
+      <Toaster position="top-center" reverseOrder={false} />
       
-      {/* SIDEBAR DESKTOP (HU-16) */}
-      <aside className="hidden lg:flex flex-col w-64 h-screen glass-panel border-r border-white/5 sticky top-0 left-0 z-50">
-        <div className="p-8">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-xl shadow-indigo-500/30">
-              <span className="text-white text-xl font-black italic">Ñ</span>
+      <div className="max-w-5xl mx-auto flex flex-col lg:flex-row min-h-screen">
+        <aside className="hidden lg:flex flex-col w-64 p-6 border-r border-white/5 space-y-8">
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
+              <span className="text-xl font-black text-white">Ñ</span>
             </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight tracking-tighter">ÑandeFinanza</h1>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Versión 2.0 Pro</p>
-            </div>
+            <h1 className="text-lg font-black tracking-tight text-white">ÑandeFinanza</h1>
           </div>
-          
-          <nav className="space-y-1">
-            <SidebarLink id="inicio" icon={Home} label="Inicio" activeTab={activeTab} setActiveTab={setActiveTab} />
-            <SidebarLink id="cuentas" icon={CreditCard} label="Deudas Pro" activeTab={activeTab} setActiveTab={setActiveTab} />
-            <SidebarLink id="ingresos" icon={PlusCircle} label="Ingresos" activeTab={activeTab} setActiveTab={setActiveTab} />
-            <SidebarLink id="historial" icon={History} label="Libro Mayor" activeTab={activeTab} setActiveTab={setActiveTab} />
-            <SidebarLink id="asistente" icon={Bot} label="Asistente IA" activeTab={activeTab} setActiveTab={setActiveTab} />
-            {datosHogar?.rol === 'superadmin' && (
-              <SidebarLink id="admin" icon={Shield} label="Admin Shield" activeTab={activeTab} setActiveTab={setActiveTab} />
-            )}
+
+          <nav className="flex-1 space-y-2">
+            {[
+              { id: "inicio", icon: Home, label: "Dashboard" },
+              { id: "cuentas", icon: CreditCard, label: "Deudas Pro" },
+              { id: "ingresos", icon: PlusCircle, label: "Mis Ingresos" },
+              { id: "historial", icon: History, label: "Transacciones" },
+              { id: "asistente", icon: Bot, label: "Asistente IA" }
+            ].map(link => (
+              <button key={link.id} onClick={() => setActiveTab(link.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === link.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>
+                <link.icon size={20} /> {link.label}
+              </button>
+            ))}
           </nav>
-        </div>
 
-        <div className="mt-auto p-6 border-t border-white/5">
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl">
-            <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <User size={16} />
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-bold text-white truncate">{usuarioActual?.nombre || 'Usuario'}</p>
-              <p className="text-[10px] text-slate-500 uppercase font-black truncate">{datosHogar?.rol || 'Miembro'}</p>
-            </div>
-            <button onClick={() => supabase.auth.signOut()} className="text-slate-500 hover:text-red-400 transition-colors">
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* Header Moderno con Switch de Contexto (HU-18) */}
-        <header className="sticky top-0 z-40 w-full glass-panel px-6 py-4 flex flex-col gap-4 lg:bg-transparent lg:backdrop-blur-none lg:border-none">
-          <div className="flex justify-between items-center w-full lg:hidden">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold">Ñ</span>
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-[10px] font-bold">{usuarioActual?.nombre?.charAt(0)}</div>
+              <div>
+                <div className="text-xs font-bold text-white leading-none">{usuarioActual?.nombre}</div>
+                <div className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-tighter">{datosHogar.rol}</div>
               </div>
-              <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                {datosHogar?.espacios?.nombre_familia || "Mi Hogar"}
-              </span>
             </div>
-            <button onClick={() => supabase.auth.signOut()} className="text-[10px] font-bold text-slate-500 hover:text-red-400 uppercase tracking-widest transition-colors">Salir</button>
+            <button onClick={() => supabase.auth.signOut()} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
+        </aside>
 
-          {/* TOGGLE FAMILIAR / PERSONAL - Ahora centrado en desktop también */}
-          <div className="flex justify-center lg:justify-start lg:px-6 lg:pt-4">
-            <div className="relative flex p-1 bg-black/40 lg:bg-white/5 backdrop-blur-xl rounded-xl border border-white/5 w-full max-w-[280px]">
-              <motion.div
-                className="absolute top-1 bottom-1 bg-indigo-600 rounded-lg shadow-lg"
-                initial={false}
-                animate={{ x: modoVista === 'familiar' ? 0 : '100%' }}
-                style={{ width: 'calc(50% - 4px)' }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-              <button 
-                onClick={() => setModoVista('familiar')}
-                className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'familiar' ? 'text-white' : 'text-slate-500'}`}
-              >
-                Familiar 🏠
-              </button>
-              <button 
-                onClick={() => setModoVista('personal')}
-                className={`relative z-10 flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${modoVista === 'personal' ? 'text-white' : 'text-slate-500'}`}
-              >
-                Personal 👤
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Contenedor Principal (Scrolleable) */}
-        <main className="flex-1 overflow-y-auto pb-28 lg:pb-8 pt-4 px-4 custom-scrollbar">
-          {/* Ancho total para aprovechar monitores ultra-wide */}
-          <div className="w-full">
+        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+          <div className="max-w-3xl mx-auto">
             <AnimatePresence mode="wait">
-              <motion.div
-                key={`${activeTab}-${modoVista}`}
-                initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -15, scale: 0.98 }}
-                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-              >
-                {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} />}
-                {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
-                {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
-                {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} getNombreUsuario={getNombreUsuario} datosHogar={datosHogar} />}
-                {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} />}
+              <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} />}
+                {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
+                {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+                {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} />}
+                {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
                 {activeTab === "admin" && datosHogar?.rol === 'superadmin' && <SuperadminPanel />}
               </motion.div>
             </AnimatePresence>
           </div>
         </main>
 
-        {/* Navegación Inferior (Sólo Móvil/Tablet) */}
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden">
-          <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={datosHogar?.rol === 'superadmin'} />
+          <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={datosHogar?.rol === 'superadmin'} notificaciones={notificaciones} markAsRead={markNotisAsRead} responderSolicitud={responderSolicitud} />
         </nav>
       </div>
     </div>
-  );
-}
-
-// Sub-componente para links de sidebar con animación
-function SidebarLink({ id, icon: Icon, label, activeTab, setActiveTab }) {
-  const isActive = activeTab === id;
-  return (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={`
-        w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 relative group
-        ${isActive ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-500 hover:bg-white/5 hover:text-slate-200'}
-      `}
-    >
-      <Icon size={18} className={isActive ? 'animate-pulse' : 'group-hover:scale-110 transition-transform'} />
-      <span className="text-xs font-bold uppercase tracking-widest">{label}</span>
-      {isActive && (
-        <motion.div layoutId="sidebar-active" className="absolute left-0 w-1 h-6 bg-indigo-500 rounded-full" />
-      )}
-    </button>
   );
 }
 
