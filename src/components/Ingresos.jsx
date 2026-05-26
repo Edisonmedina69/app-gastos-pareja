@@ -6,7 +6,7 @@ import { obtenerCotizacion } from "../utils/exchangeApi";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Wallet, TrendingUp, Calendar, User, ArrowUpRight, X, 
-  Settings, Clock, CheckCircle, RefreshCcw, Landmark, Trash2
+  Settings, Clock, CheckCircle, RefreshCcw, Landmark, Trash2, Edit2, History
 } from "lucide-react";
 
 export default function Ingresos({
@@ -18,9 +18,9 @@ export default function Ingresos({
   datosHogar,
 }) {
   // UI State
-  const [activeTab, setActiveTab] = useState("historial"); // 'historial' | 'programados'
+  const [activeTab, setActiveTab] = useState("historial"); // 'historial' | 'programados' | 'historial_salarios'
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [tipoRegistro, setTipoIngreso] = useState("variable"); // 'variable' | 'fijo'
+  const [tipoRegistro, setTipoIngreso] = useState("variable"); // 'variable' | 'fijo' | 'edicion'
   const [guardando, setGuardando] = useState(false);
 
   // Form State
@@ -29,12 +29,15 @@ export default function Ingresos({
   const [moneda, setMoneda] = useState(monedaGlobal);
   const [diaRecurrencia, setDiaRecurrencia] = useState("5");
   const [tasaCambio, setTasaCambio] = useState(1);
+  const [idEditando, setIdEditando] = useState(null);
+  const [montoAnterior, setMontoAnterior] = useState(0);
   
   // Data State
   const [programados, setProgramados] = useState([]);
+  const [historialSalarios, setHistorialSalarios] = useState([]);
 
   useEffect(() => {
-    if (mostrarModal) {
+    if (mostrarModal && tipoRegistro !== 'edicion') {
       setMoneda(monedaGlobal);
       setConcepto(tipoRegistro === 'fijo' ? "Salario Mensual" : "");
     }
@@ -49,7 +52,10 @@ export default function Ingresos({
   }, [moneda]);
 
   useEffect(() => {
-    if (datosHogar) cargarProgramados();
+    if (datosHogar) {
+      cargarProgramados();
+      cargarHistorialSalarios();
+    }
   }, [datosHogar]);
 
   async function cargarProgramados() {
@@ -62,6 +68,15 @@ export default function Ingresos({
     if (data) setProgramados(data);
   }
 
+  async function cargarHistorialSalarios() {
+    const { data } = await supabase
+      .from("historial_salarios")
+      .select("*")
+      .eq("espacio_id", datosHogar.espacio_id)
+      .order("created_at", { ascending: false });
+    if (data) setHistorialSalarios(data);
+  }
+
   async function registrarIngreso(e) {
     e.preventDefault();
     setGuardando(true);
@@ -69,7 +84,6 @@ export default function Ingresos({
 
     try {
       if (tipoRegistro === 'variable') {
-        // HU-13: Registro Rápido
         const { error } = await supabase.from("ingresos_mensuales").insert([{
           usuario_id: usuarioActual.id,
           espacio_id: datosHogar.espacio_id,
@@ -82,8 +96,7 @@ export default function Ingresos({
         }]);
         if (error) throw error;
         toast.success("¡Ingreso registrado! 💰", { id: toastId });
-      } else {
-        // HU-11: Programar Ingreso Fijo
+      } else if (tipoRegistro === 'fijo') {
         const { error } = await supabase.from("ingresos_programados").insert([{
           usuario_id: usuarioActual.id,
           espacio_id: datosHogar.espacio_id,
@@ -96,11 +109,38 @@ export default function Ingresos({
         if (error) throw error;
         toast.success("¡Ingreso programado con éxito! 📅", { id: toastId });
         cargarProgramados();
+      } else if (tipoRegistro === 'edicion') {
+        // HU-14: Actualización de Salario con Auditoría
+        const nuevoMonto = parseFloat(monto);
+        
+        // 1. Actualizar el registro programado
+        const { error: errUpd } = await supabase
+          .from("ingresos_programados")
+          .update({ monto: nuevoMonto, descripcion: concepto, dia_recurrencia: parseInt(diaRecurrencia) })
+          .eq("id", idEditando);
+        if (errUpd) throw errUpd;
+
+        // 2. Guardar en Historial de Auditoría si el monto cambió
+        if (nuevoMonto !== montoAnterior) {
+          await supabase.from("historial_salarios").insert([{
+            espacio_id: datosHogar.espacio_id,
+            usuario_id: usuarioActual.id,
+            ingreso_programado_id: idEditando,
+            monto_anterior: montoAnterior,
+            monto_nuevo: nuevoMonto,
+            moneda: moneda,
+            motivo: nuevoMonto > montoAnterior ? "Aumento Salarial" : "Ajuste Salarial"
+          }]);
+        }
+
+        toast.success("¡Ingreso actualizado y recalculado! 📈", { id: toastId });
+        cargarProgramados();
+        cargarHistorialSalarios();
       }
       
       setMostrarModal(false);
       resetForm();
-      obtenerDatos();
+      obtenerDatos(); // Recalcula Salud Financiera globalmente
     } catch (err) {
       toast.error(err.message, { id: toastId });
     } finally {
@@ -109,7 +149,6 @@ export default function Ingresos({
   }
 
   async function confirmarRecepcion(prog) {
-    // HU-12: Confirmación manual
     const toastId = toast.loading(`Acreditando ${prog.descripcion}...`);
     try {
       const { error } = await supabase.from("ingresos_mensuales").insert([{
@@ -138,8 +177,19 @@ export default function Ingresos({
     }
   }
 
+  const abrirEdicion = (p) => {
+    setIdEditando(p.id);
+    setMontoAnterior(p.monto);
+    setConcepto(p.descripcion);
+    setMonto(p.monto);
+    setMoneda(p.moneda);
+    setDiaRecurrencia(p.dia_recurrencia.toString());
+    setTipoIngreso('edicion');
+    setMostrarModal(true);
+  };
+
   const resetForm = () => {
-    setMonto(""); setConcepto(""); setDiaRecurrencia("5");
+    setMonto(""); setConcepto(""); setDiaRecurrencia("5"); setIdEditando(null); setMontoAnterior(0);
   };
 
   return (
@@ -149,12 +199,13 @@ export default function Ingresos({
           <TrendingUp className="w-5 h-5 text-emerald-400" /> Motor de Ingresos
         </h2>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 backdrop-blur-md">
-          <button onClick={() => setActiveTab('historial')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'historial' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500'}`}>Efectivos</button>
-          <button onClick={() => setActiveTab('programados')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'programados' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>Programados</button>
+          <button onClick={() => setActiveTab('historial')} className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'historial' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500'}`}>Efectivos</button>
+          <button onClick={() => setActiveTab('programados')} className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'programados' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>Fijos</button>
+          <button onClick={() => setActiveTab('historial_salarios')} className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'historial_salarios' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}><History size={14}/></button>
         </div>
       </header>
 
-      {/* BOTÓN REGISTRO RÁPIDO */}
+      {/* BOTONES ACCIÓN */}
       <div className="grid grid-cols-2 gap-3">
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setTipoIngreso('variable'); setMostrarModal(true); }} className="p-4 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl flex flex-col items-center gap-2 hover:bg-emerald-600/30 transition-all">
           <Plus className="text-emerald-400" />
@@ -167,7 +218,7 @@ export default function Ingresos({
       </div>
 
       <AnimatePresence mode="wait">
-        {activeTab === 'historial' ? (
+        {activeTab === 'historial' && (
           <motion.div key="historial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             {ingresos.length === 0 ? (
               <div className="glass-card py-12 text-center opacity-40"><Wallet size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">Sin ingresos este mes</p></div>
@@ -188,7 +239,9 @@ export default function Ingresos({
               ))
             )}
           </motion.div>
-        ) : (
+        )}
+
+        {activeTab === 'programados' && (
           <motion.div key="programados" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             {programados.length === 0 ? (
               <div className="glass-card py-12 text-center opacity-40"><Clock size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">No tenés ingresos fijos</p></div>
@@ -200,11 +253,14 @@ export default function Ingresos({
                       <h4 className="font-black text-white text-sm uppercase">{p.descripcion}</h4>
                       <p className="text-[10px] text-slate-500 font-black">Cobra los días {p.dia_recurrencia} • {getNombreUsuario(p.usuario_id)}</p>
                     </div>
-                    <button onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-600 hover:text-red-400"><Trash2 size={16}/></button>
+                    <div className="flex gap-1">
+                      <button onClick={() => abrirEdicion(p)} className="p-2 text-slate-600 hover:text-indigo-400"><Edit2 size={16}/></button>
+                      <button onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-600 hover:text-red-400"><Trash2 size={16}/></button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="text-xl font-black text-white">{formatearNumero(p.monto, p.moneda)}</div>
-                    <button onClick={() => confirmarRecepcion(p)} className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-emerald-900/20 flex items-center gap-2 active:scale-95 transition-all">
+                    <button onClick={() => confirmarRecepcion(prog)} onClick={() => confirmarRecepcion(p)} className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-emerald-900/20 flex items-center gap-2 active:scale-95 transition-all">
                       <CheckCircle size={14}/> CONFIRMAR COBRO
                     </button>
                   </div>
@@ -213,17 +269,42 @@ export default function Ingresos({
             )}
           </motion.div>
         )}
+
+        {activeTab === 'historial_salarios' && (
+          <motion.div key="salarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Crecimiento Salarial</h3>
+            {historialSalarios.length === 0 ? (
+              <div className="glass-card py-12 text-center opacity-40"><TrendingUp size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">No hay historial de ajustes</p></div>
+            ) : (
+              historialSalarios.map((h) => (
+                <div key={h.id} className="glass-card bg-white/5 border-white/5 relative overflow-hidden">
+                  <div className="flex items-center justify-between relative z-10">
+                    <div>
+                      <div className="text-[10px] font-black text-indigo-400 uppercase">{h.motivo}</div>
+                      <div className="text-xs font-bold text-white mt-1">{new Date(h.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-500 line-through">{formatearNumero(h.monto_anterior, h.moneda)}</div>
+                      <div className="text-sm font-black text-emerald-400">→ {formatearNumero(h.monto_nuevo, h.moneda)}</div>
+                    </div>
+                  </div>
+                  <div className="absolute top-0 right-0 opacity-5 -mr-4 -mt-4"><TrendingUp size={64}/></div>
+                </div>
+              ))
+            )}
+          </motion.div>
+        )}
       </AnimatePresence>
 
-      {/* MODAL REGISTRO DINÁMICO */}
+      {/* MODAL DINÁMICO */}
       <AnimatePresence>
         {mostrarModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg glass-panel p-6 rounded-3xl relative">
-              <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
+              <button onClick={() => { setMostrarModal(false); resetForm(); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
               <h2 className="text-xl font-black text-white mb-6 uppercase tracking-tighter flex items-center gap-2">
                 {tipoRegistro === 'variable' ? <Plus className="text-emerald-400"/> : <Clock className="text-indigo-400"/>}
-                {tipoRegistro === 'variable' ? 'Registrar Ingreso' : 'Programar Ingreso Fijo'}
+                {tipoRegistro === 'variable' ? 'Registrar Ingreso' : (tipoRegistro === 'fijo' ? 'Programar Ingreso Fijo' : 'Ajustar Ingreso Fijo')}
               </h2>
 
               <form onSubmit={registrarIngreso} className="space-y-4">
@@ -239,7 +320,7 @@ export default function Ingresos({
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
-                    <select value={moneda} onChange={(e) => setMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white">
+                    <select value={moneda} onChange={(e) => setMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" disabled={tipoRegistro === 'edicion'}>
                       <option value="PYG">PYG</option>
                       <option value="BRL">BRL</option>
                       <option value="USD">USD</option>
@@ -247,16 +328,22 @@ export default function Ingresos({
                   </div>
                 </div>
 
-                {tipoRegistro === 'fijo' && (
+                {(tipoRegistro === 'fijo' || tipoRegistro === 'edicion') && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1">Día de Recurrencia (Mensual)</label>
                     <input type="number" min="1" max="31" value={diaRecurrencia} onChange={(e) => setDiaRecurrencia(e.target.value)} className="w-full bg-indigo-500/5 border border-indigo-500/20 rounded-xl px-4 py-3 text-white font-black" required />
-                    <p className="text-[9px] text-slate-500 italic ml-1">El sistema te notificará este día para que confirmes el cobro.</p>
                   </div>
                 )}
 
+                {tipoRegistro === 'edicion' && parseFloat(monto) > montoAnterior && (
+                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+                      <TrendingUp className="text-emerald-500" size={18} />
+                      <p className="text-[10px] text-emerald-200 font-bold">¡Felicidades kape! Este aumento mejorará tu índice de endeudamiento automáticamente.</p>
+                   </motion.div>
+                )}
+
                 <button type="submit" disabled={guardando} className={`w-full py-4 font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${tipoRegistro === 'variable' ? 'bg-emerald-600' : 'bg-indigo-600'} text-white active:scale-95`}>
-                  {guardando ? <Loader2 className="animate-spin" /> : (tipoRegistro === 'variable' ? 'REGISTRAR AHORA' : 'PROGRAMAR MENSUAL')}
+                  {guardando ? <Loader2 className="animate-spin" /> : (tipoRegistro === 'variable' ? 'REGISTRAR AHORA' : (tipoRegistro === 'fijo' ? 'PROGRAMAR MENSUAL' : 'CONFIRMAR AJUSTE'))}
                 </button>
               </form>
             </motion.div>
