@@ -5,11 +5,12 @@ import { formatearNumero } from '../utils/formatters';
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2
 } from 'lucide-react';
 
 export default function Cuentas({
   usuarioActual,
+  otroUsuario,
   deudas,
   gastos,
   ingresos,
@@ -264,6 +265,20 @@ export default function Cuentas({
     finally { setAnalizandoIA(false); }
   }
 
+  async function eliminarDeuda(maestra) {
+    if (window.confirm(`¿Seguro que querés eliminar la deuda "${maestra.titulo}"? Esto borrará también todo el historial de cuotas.`)) {
+      const toastId = toast.loading("Borrando compromiso...");
+      try {
+        const { error } = await supabase.from('deudas_maestras').delete().eq('id', maestra.id);
+        if (error) throw error;
+        toast.success("Deuda eliminada permanentemente.", { id: toastId });
+        obtenerDatos();
+      } catch (e) {
+        toast.error("No se pudo eliminar: " + e.message, { id: toastId });
+      }
+    }
+  }
+
   // --- INTERNAL COMPONENTS ---
 
   function ModalAbono() {
@@ -348,19 +363,36 @@ export default function Cuentas({
                   <div onClick={() => setDeudaExpandida(estaExpandida ? null : d.id)} className="cursor-pointer">
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-white text-lg group-hover:text-indigo-400 transition-colors">{d.titulo}</h4>
-                      {d.alcance === 'individual' ? <Lock size={12} className="text-amber-400" /> : <Users size={12} className="text-indigo-400" />}
+                      {d.alcance === 'individual' ? (
+                        <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-amber-500/20">
+                          <Lock size={10}/> {esMia ? 'Mía' : `De ${otroUsuario?.nombre || 'Pareja'}`}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-indigo-500/20">
+                          <Users size={10}/> Familiar
+                        </div>
+                      )}
                     </div>
                     <p className="text-[10px] text-slate-500 uppercase font-black tracking-tighter">
                       {d.tipo.replace('_', ' ')} • {d.alcance}
                     </p>
                   </div>
-                  {pestana === 'activas' && cuotaActual && (
-                    <div className="flex flex-col items-end">
-                       <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20 flex items-center gap-1">
-                         <Calendar size={10}/> VENCE {new Date(cuotaActual.fecha_vencimiento).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                       </div>
-                    </div>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {pestana === 'activas' && cuotaActual && (
+                      <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20 flex items-center gap-1">
+                        <Calendar size={10}/> VENCE {new Date(cuotaActual.fecha_vencimiento).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                      </div>
+                    )}
+                    {(esMia || datosHogar.rol === 'superadmin') && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); eliminarDeuda(d); }} 
+                        className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                        title="Eliminar deuda"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Progress Visuals based on Type */}
@@ -511,7 +543,7 @@ export default function Cuentas({
                     <>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Pago Mínimo Mes</label>
-                        <input type="number" value={pagoMinimo} onChange={(e) => setPagoMinimo(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
+                        <input type="number" value={pagoMinimo} onChange={(e) => setpagoMinimo(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Línea de Crédito</label>
