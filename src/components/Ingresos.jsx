@@ -6,7 +6,7 @@ import { obtenerCotizacion } from "../utils/exchangeApi";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Wallet, TrendingUp, Calendar, User, ArrowUpRight, X, 
-  Settings, Clock, CheckCircle, RefreshCcw, Landmark, Trash2, Edit2, History
+  Settings, Clock, CheckCircle, RefreshCcw, Landmark, Trash2, Edit2, History, Loader2
 } from "lucide-react";
 
 export default function Ingresos({
@@ -18,9 +18,9 @@ export default function Ingresos({
   datosHogar,
 }) {
   // UI State
-  const [activeTab, setActiveTab] = useState("historial"); // 'historial' | 'programados' | 'historial_salarios'
+  const [activeTab, setActiveTab] = useState("historial"); 
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [tipoRegistro, setTipoIngreso] = useState("variable"); // 'variable' | 'fijo' | 'edicion'
+  const [tipoRegistro, setTipoIngreso] = useState("variable"); 
   const [guardando, setGuardando] = useState(false);
 
   // Form State
@@ -56,25 +56,37 @@ export default function Ingresos({
       cargarProgramados();
       cargarHistorialSalarios();
     }
-  }, [datosHogar]);
+  }, [datosHogar?.espacio_id]); // Solo si cambia el espacio
 
   async function cargarProgramados() {
-    const { data } = await supabase
-      .from("ingresos_programados")
-      .select("*")
-      .eq("espacio_id", datosHogar.espacio_id)
-      .eq("activo", true)
-      .order("dia_recurrencia", { ascending: true });
-    if (data) setProgramados(data);
+    try {
+      const { data, error } = await supabase
+        .from("ingresos_programados")
+        .select("*")
+        .eq("espacio_id", datosHogar.espacio_id)
+        .eq("activo", true)
+        .order("dia_recurrencia", { ascending: true });
+      
+      if (error) throw error;
+      setProgramados(data || []);
+    } catch (e) {
+      console.error("Error cargando programados:", e);
+    }
   }
 
   async function cargarHistorialSalarios() {
-    const { data } = await supabase
-      .from("historial_salarios")
-      .select("*")
-      .eq("espacio_id", datosHogar.espacio_id)
-      .order("created_at", { ascending: false });
-    if (data) setHistorialSalarios(data);
+    try {
+      const { data, error } = await supabase
+        .from("historial_salarios")
+        .select("*")
+        .eq("espacio_id", datosHogar.espacio_id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      setHistorialSalarios(data || []);
+    } catch (e) {
+      console.error("Error cargando historial:", e);
+    }
   }
 
   async function registrarIngreso(e) {
@@ -217,7 +229,7 @@ export default function Ingresos({
 
       <AnimatePresence mode="wait">
         {activeTab === 'historial' && (
-          <motion.div key="historial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div key="historial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             {ingresos.length === 0 ? (
               <div className="glass-card py-12 text-center opacity-40"><Wallet size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">No hay ingresos registrados</p></div>
             ) : (
@@ -240,7 +252,7 @@ export default function Ingresos({
         )}
 
         {activeTab === 'programados' && (
-          <motion.div key="programados" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div key="programados" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             {programados.length === 0 ? (
               <div className="glass-card py-12 text-center opacity-40"><Clock size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">Sin sueldos programados</p></div>
             ) : (
@@ -273,7 +285,7 @@ export default function Ingresos({
         )}
 
         {activeTab === 'historial_salarios' && (
-          <motion.div key="salarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div key="salarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Línea del Tiempo Salarial</h3>
             {historialSalarios.length === 0 ? (
               <div className="glass-card py-12 text-center opacity-40"><TrendingUp size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">Sin ajustes previos</p></div>
