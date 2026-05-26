@@ -6,19 +6,28 @@ export function formatearNumero(num, mon = "PYG") {
 
 // Para formatear mientras se escribe (ej: 1.000.000)
 export function formatarInput(valor) {
-  if (!valor) return "";
-  const num = valor.toString().replace(/\D/g, "");
-  return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (valor === "" || valor === null || valor === undefined) return "";
+  
+  // 1. Eliminar todo lo que no sea dígito
+  const soloNumeros = valor.toString().replace(/\D/g, "");
+  
+  // 2. Si el resultado es vacío, retornar string vacío
+  if (!soloNumeros) return "";
+  
+  // 3. Convertir a número y aplicar formato de miles con puntos
+  return new Intl.NumberFormat("es-PY").format(parseInt(soloNumeros, 10));
 }
 
 // Para obtener el número puro para la base de datos
 export function desformatearInput(valor) {
   if (!valor) return 0;
-  return parseFloat(valor.toString().replace(/\./g, "")) || 0;
+  // Eliminar todos los puntos y convertir a número
+  const stringLimpio = valor.toString().replace(/\./g, "");
+  return parseInt(stringLimpio, 10) || 0;
 }
 
 export function formatearFecha(fechaStr) {
-...
+  if (!fechaStr) return "";
   const f = new Date(fechaStr);
   return (
     f.toLocaleDateString("es-PY") +
