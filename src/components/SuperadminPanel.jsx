@@ -7,7 +7,7 @@ import {
   Search, ShieldCheck, Trash2, ChevronLeft, ChevronRight 
 } from "lucide-react";
 
-export default function SuperadminPanel() {
+export default function SuperadminPanel({ datosHogar }) {
   const [espacios, setEspacios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -27,19 +27,26 @@ export default function SuperadminPanel() {
 
   async function cargarEspacios() {
     setCargando(true);
-    const { data } = await supabase
-      .from("espacios")
-      .select("*, perfiles(id)")
-      .order("created_at", { ascending: false });
-    
-    if (data) {
-      const formateados = data.map(e => ({
-        ...e,
-        miembros_count: e.perfiles?.length || 0
-      }));
-      setEspacios(formateados);
+    try {
+      const { data, error } = await supabase
+        .from("espacios")
+        .select("*, perfiles(id)")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+
+      if (data) {
+        const formateados = data.map(e => ({
+          ...e,
+          miembros_count: e.perfiles?.length || 0
+        }));
+        setEspacios(formateados);
+      }
+    } catch (err) {
+      toast.error("Error al cargar espacios");
+    } finally {
+      setCargando(false);
     }
-    setCargando(false);
   }
 
   async function crearEspacio(e) {
@@ -60,21 +67,28 @@ export default function SuperadminPanel() {
       toast.success("¡Espacio creado!", { id: toastId });
       setNuevoNombre(""); setLimiteUsuarios(2); setMostrarModalCrear(false);
       cargarEspacios();
-    } catch (err) { toast.error("Error: " + err.message, { id: toastId }); }
+    } catch (err) { toast.error(err.message, { id: toastId }); }
     finally { setGuardando(false); }
   }
 
-  // --- NUEVA FUNCIÓN: ELIMINAR ESPACIO ---
   async function eliminarEspacio(id, nombre) {
+    // Salvaguarda: No permitir borrar el espacio donde el admin está logueado
+    if (id === datosHogar?.espacio_id) {
+      toast.error("⚠️ No podés borrar tu propio hogar donde estás ahora. ¡Cuidado, kape!");
+      return;
+    }
+
     if (window.confirm(`¿Seguro que querés eliminar el hogar "${nombre}"? Se borrarán todos los datos asociados (gastos, deudas, perfiles). Esta acción es irreversible.`)) {
       const toastId = toast.loading("Eliminando espacio del sistema...");
       try {
         const { error } = await supabase.from("espacios").delete().eq("id", id);
         if (error) throw error;
+        
         toast.success("Espacio borrado permanentemente.", { id: toastId });
-        cargarEspacios();
+        await cargarEspacios();
       } catch (err) {
         toast.error("No se pudo eliminar: " + err.message, { id: toastId });
+        console.error("Error al eliminar espacio:", err);
       }
     }
   }
@@ -90,7 +104,6 @@ export default function SuperadminPanel() {
     e.codigo_invitacion?.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  // Lógica de Paginación
   const totalPaginas = Math.ceil(filtrados.length / itemsPorPagina);
   const indexInicio = (paginaActual - 1) * itemsPorPagina;
   const espaciosPaginados = filtrados.slice(indexInicio, indexInicio + itemsPorPagina);
@@ -114,7 +127,6 @@ export default function SuperadminPanel() {
         </motion.button>
       </header>
 
-      {/* BÚSQUEDA */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
         <input 
@@ -126,7 +138,6 @@ export default function SuperadminPanel() {
         />
       </div>
 
-      {/* LISTADO CON PAGINACIÓN */}
       <div className="space-y-4">
         {cargando ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-50">
@@ -141,25 +152,27 @@ export default function SuperadminPanel() {
               key={e.id} 
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
-              className="glass-card border-l-4 border-l-indigo-500 group relative"
+              className={`glass-card border-l-4 ${e.id === datosHogar?.espacio_id ? 'border-l-emerald-500' : 'border-l-indigo-500'} group relative`}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${e.id === datosHogar?.espacio_id ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
                     <Home size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-sm">{e.nombre_familia}</h3>
+                    <h3 className="font-bold text-white text-sm">{e.nombre_familia} {e.id === datosHogar?.espacio_id && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full ml-1 font-black">MI HOGAR</span>}</h3>
                     <p className="text-[9px] text-slate-500 uppercase font-black">Plan {e.limite_usuarios} Usuarios</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => eliminarEspacio(e.id, e.nombre_familia)} 
-                  className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                  title="Eliminar Hogar"
-                >
-                  <Trash2 size={16}/>
-                </button>
+                {e.id !== datosHogar?.espacio_id && (
+                  <button 
+                    onClick={() => eliminarEspacio(e.id, e.nombre_familia)} 
+                    className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                    title="Eliminar Hogar"
+                  >
+                    <Trash2 size={16}/>
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-4 pt-4 border-t border-white/5">
@@ -184,7 +197,6 @@ export default function SuperadminPanel() {
         )}
       </div>
 
-      {/* CONTROLES DE PAGINACIÓN */}
       {totalPaginas > 1 && (
         <div className="flex items-center justify-between glass-card py-3 px-6">
           <button 
@@ -208,13 +220,14 @@ export default function SuperadminPanel() {
       {/* MODAL CREAR HOGAR */}
       <AnimatePresence>
         {mostrarModalCrear && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }} 
               animate={{ opacity: 1, scale: 1 }} 
               exit={{ opacity: 0, scale: 0.95 }} 
               className="w-full max-w-sm glass-panel p-6 rounded-3xl relative"
             >
+              <button onClick={() => setMostrarModalCrear(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
               <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
                 <Plus className="w-5 h-5 text-indigo-400" /> Nuevo Espacio
               </h2>

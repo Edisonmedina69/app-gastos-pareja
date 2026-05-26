@@ -110,7 +110,7 @@ export default function Ingresos({
           categoria: "Sueldo"
         }]);
         if (error) throw error;
-        toast.success("¡Ingreso programado con éxito! 📅", { id: toastId });
+        toast.success("¡Ingreso programado! 📅", { id: toastId });
         cargarProgramados();
       } else if (tipoRegistro === 'edicion') {
         const nuevoMonto = montoLimpio;
@@ -132,7 +132,7 @@ export default function Ingresos({
           }]);
         }
 
-        toast.success("¡Ingreso actualizado! 📈", { id: toastId });
+        toast.success("¡Ajuste guardado! Recalculando... 📈", { id: toastId });
         cargarProgramados();
         cargarHistorialSalarios();
       }
@@ -161,16 +161,16 @@ export default function Ingresos({
         anio: new Date().getFullYear()
       }]);
       if (error) throw error;
-      toast.success("¡Acreditado! 🏦", { id: toastId });
+      toast.success("¡Cobro confirmado! 🏦", { id: toastId });
       obtenerDatos();
-    } catch (e) { toast.error("Error"); }
+    } catch (e) { toast.error("Error al cobrar"); }
   }
 
   async function eliminarProgramado(id) {
-    if (confirm("¿Eliminar?")) {
+    if (confirm("¿Eliminar este ingreso fijo?")) {
       await supabase.from("ingresos_programados").delete().eq("id", id);
       cargarProgramados();
-      toast.success("Eliminado");
+      toast.success("Programación eliminada");
     }
   }
 
@@ -192,9 +192,15 @@ export default function Ingresos({
           <TrendingUp className="w-5 h-5 text-emerald-400" /> Motor de Ingresos
         </h2>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 backdrop-blur-md">
-          <button onClick={() => setActiveTab('historial')} className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'historial' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500'}`}>Efectivos</button>
-          <button onClick={() => setActiveTab('programados')} className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'programados' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>Fijos</button>
-          <button onClick={() => setActiveTab('historial_salarios')} className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === 'historial_salarios' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}><History size={14}/></button>
+          {['historial', 'programados', 'historial_salarios'].map(tab => (
+            <button 
+              key={tab} 
+              onClick={() => setActiveTab(tab)} 
+              className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}
+            >
+              {tab === 'historial' ? 'Efectivos' : (tab === 'programados' ? 'Fijos' : <History size={14}/>)}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -213,7 +219,7 @@ export default function Ingresos({
         {activeTab === 'historial' && (
           <motion.div key="historial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {ingresos.length === 0 ? (
-              <div className="glass-card py-12 text-center opacity-40"><Wallet size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">Sin ingresos</p></div>
+              <div className="glass-card py-12 text-center opacity-40"><Wallet size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">No hay ingresos registrados</p></div>
             ) : (
               ingresos.map((i) => (
                 <div key={i.id} className="glass-card flex items-center justify-between border-l-4 border-l-emerald-500">
@@ -236,14 +242,14 @@ export default function Ingresos({
         {activeTab === 'programados' && (
           <motion.div key="programados" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {programados.length === 0 ? (
-              <div className="glass-card py-12 text-center opacity-40"><Clock size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">No hay fijos</p></div>
+              <div className="glass-card py-12 text-center opacity-40"><Clock size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">Sin sueldos programados</p></div>
             ) : (
               programados.map((p) => (
                 <div key={p.id} className="glass-card border-l-4 border-l-indigo-500">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h4 className="font-black text-white text-sm uppercase">{p.descripcion}</h4>
-                      <p className="text-[10px] text-slate-500 font-black">Día {p.dia_recurrencia} • {getNombreUsuario(p.usuario_id)}</p>
+                      <p className="text-[10px] text-slate-500 font-black">Día de cobro: {p.dia_recurrencia} • {getNombreUsuario(p.usuario_id)}</p>
                     </div>
                     <div className="flex gap-1">
                       {(p.usuario_id === usuarioActual?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'admin_hogar') && (
@@ -268,12 +274,24 @@ export default function Ingresos({
 
         {activeTab === 'historial_salarios' && (
           <motion.div key="salarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            {historialSalarios.map((h) => (
-              <div key={h.id} className="glass-card bg-white/5 border-white/5 flex items-center justify-between">
-                <div><div className="text-[10px] font-black text-indigo-400 uppercase">{h.motivo}</div><div className="text-xs font-bold text-white mt-1">{new Date(h.created_at).toLocaleDateString()}</div></div>
-                <div className="text-right"><div className="text-[10px] text-slate-500 line-through">{formatearNumero(h.monto_anterior, h.moneda)}</div><div className="text-sm font-black text-emerald-400">→ {formatearNumero(h.monto_nuevo, h.moneda)}</div></div>
-              </div>
-            ))}
+             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Línea del Tiempo Salarial</h3>
+            {historialSalarios.length === 0 ? (
+              <div className="glass-card py-12 text-center opacity-40"><TrendingUp size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">Sin ajustes previos</p></div>
+            ) : (
+              historialSalarios.map((h) => (
+                <div key={h.id} className="glass-card bg-white/5 border-white/5 flex items-center justify-between relative overflow-hidden">
+                  <div className="relative z-10">
+                    <div className="text-[10px] font-black text-indigo-400 uppercase">{h.motivo}</div>
+                    <div className="text-xs font-bold text-white mt-1">{new Date(h.created_at).toLocaleDateString()}</div>
+                  </div>
+                  <div className="text-right relative z-10">
+                    <div className="text-[10px] text-slate-500 line-through">{formatearNumero(h.monto_anterior, h.moneda)}</div>
+                    <div className="text-sm font-black text-emerald-400">→ {formatearNumero(h.monto_nuevo, h.moneda)}</div>
+                  </div>
+                  <div className="absolute top-0 right-0 opacity-5 -mr-4 -mt-4"><TrendingUp size={64}/></div>
+                </div>
+              ))
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -283,26 +301,46 @@ export default function Ingresos({
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl relative">
               <button onClick={() => { setMostrarModal(false); resetForm(); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
-              <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
+              <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2 tracking-tighter">
                 {tipoRegistro === 'variable' ? <Plus className="text-emerald-400"/> : <Clock className="text-indigo-400"/>}
-                {tipoRegistro === 'variable' ? 'Registrar Ingreso' : 'Ingreso Fijo'}
+                {tipoRegistro === 'variable' ? 'Registrar Ingreso' : (tipoRegistro === 'fijo' ? 'Programar Sueldo' : 'Ajustar Sueldo')}
               </h2>
               <form onSubmit={registrarIngreso} className="space-y-4">
-                <input type="text" placeholder="Descripción" value={concepto} onChange={(e) => setConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" required />
-                <div className="grid grid-cols-2 gap-4">
-                  <input type="text" value={montoFormateado} onChange={(e) => setMontoFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-lg font-black" placeholder="Monto" required />
-                  <select value={moneda} onChange={(e) => setMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" disabled={tipoRegistro === 'edicion'}><option value="PYG">PYG</option><option value="BRL">BRL</option></select>
+                <input type="text" placeholder="Concepto (Ej: Sueldo, Venta...)" value={concepto} onChange={(e) => setConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-500/50" required />
+                
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={montoFormateado} 
+                    onChange={(e) => setMontoFormateado(formatarInput(e.target.value))} 
+                    className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-emerald-400 outline-none" 
+                    placeholder="0"
+                    required 
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{moneda}</span>
                 </div>
-                {(tipoRegistro === 'fijo' || tipoRegistro === 'edicion') && (
+
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1">Día de Cobro</label>
-                    <input type="number" min="1" max="31" value={diaRecurrencia} onChange={(e) => setDiaRecurrencia(e.target.value)} className="w-full bg-indigo-500/5 border border-indigo-500/20 rounded-xl px-4 py-3 text-white font-black" required />
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
+                    <select value={moneda} onChange={(e) => setMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" disabled={tipoRegistro === 'edicion'}>
+                      <option value="PYG">PYG</option>
+                      <option value="BRL">BRL</option>
+                    </select>
                   </div>
-                )}
+                  {(tipoRegistro === 'fijo' || tipoRegistro === 'edicion') && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1">Día de Cobro</label>
+                      <input type="number" min="1" max="31" value={diaRecurrencia} onChange={(e) => setDiaRecurrencia(e.target.value)} className="w-full bg-indigo-500/5 border border-indigo-500/20 rounded-xl px-4 py-3 text-white font-black" required />
+                    </div>
+                  )}
+                </div>
+
                 {tipoRegistro === 'edicion' && desformatearInput(montoFormateado) > montoAnterior && (
-                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3"><TrendingUp className="text-emerald-500" size={18} /><p className="text-[10px] text-emerald-200 font-bold uppercase">¡Crecimiento salarial detectado!</p></div>
+                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3"><TrendingUp className="text-emerald-500" size={18} /><p className="text-[10px] text-emerald-200 font-bold uppercase tracking-tighter">¡Crecimiento salarial detectado! 🚀</p></div>
                 )}
-                <button type="submit" disabled={guardando} className={`w-full py-4 font-black rounded-2xl ${tipoRegistro === 'variable' ? 'bg-emerald-600' : 'bg-indigo-600'} text-white shadow-xl`}>
+                
+                <button type="submit" disabled={guardando} className={`w-full py-4 font-black rounded-2xl ${tipoRegistro === 'variable' ? 'bg-emerald-600' : 'bg-indigo-600'} text-white shadow-xl shadow-indigo-900/20 active:scale-95 transition-all`}>
                   {guardando ? <Loader2 className="animate-spin mx-auto" /> : "REGISTRAR"}
                 </button>
               </form>
