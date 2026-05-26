@@ -213,12 +213,16 @@ export default function Historial({
                         {esIngreso ? '+' : '-'} {formatearNumero(m.monto, m.moneda)}
                       </div>
                       <div className="flex gap-2 mt-2 justify-end">
-                        <button onClick={() => editarMontoMovimiento(m)} className="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-colors">
-                          <Edit3 size={14} />
-                        </button>
-                        <button onClick={() => eliminarMovimiento(m.id, m.tipo)} className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
-                          <Trash2 size={14} />
-                        </button>
+                        {(m.usuarioRef === datosHogar?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'jefe' || datosHogar?.rol === 'admin_hogar') && (
+                          <>
+                            <button onClick={() => editarMontoMovimiento(m)} className="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-colors">
+                              <Edit3 size={14} />
+                            </button>
+                            <button onClick={() => eliminarMovimiento(m.id, m.tipo)} className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

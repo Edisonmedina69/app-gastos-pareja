@@ -383,7 +383,7 @@ export default function Cuentas({
                         <Calendar size={10}/> VENCE {new Date(cuotaActual.fecha_vencimiento).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                       </div>
                     )}
-                    {(esMia || datosHogar.rol === 'superadmin') && (
+                    {(esMia || datosHogar.rol === 'superadmin' || datosHogar.rol === 'jefe' || datosHogar.rol === 'admin_hogar') && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); eliminarDeuda(d); }} 
                         className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"

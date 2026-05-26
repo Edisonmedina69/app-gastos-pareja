@@ -254,8 +254,12 @@ export default function Ingresos({
                       <p className="text-[10px] text-slate-500 font-black">Cobra los días {p.dia_recurrencia} • {getNombreUsuario(p.usuario_id)}</p>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => abrirEdicion(p)} className="p-2 text-slate-600 hover:text-indigo-400"><Edit2 size={16}/></button>
-                      <button onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-600 hover:text-red-400"><Trash2 size={16}/></button>
+                      {(p.usuario_id === usuarioActual?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'jefe' || datosHogar?.rol === 'admin_hogar') && (
+                        <>
+                          <button onClick={() => abrirEdicion(p)} className="p-2 text-slate-600 hover:text-indigo-400"><Edit2 size={16}/></button>
+                          <button onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-600 hover:text-red-400"><Trash2 size={16}/></button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center justify-between">

@@ -257,7 +257,8 @@ function App() {
               { id: "cuentas", icon: CreditCard, label: "Deudas Pro" },
               { id: "ingresos", icon: PlusCircle, label: "Mis Ingresos" },
               { id: "historial", icon: History, label: "Transacciones" },
-              { id: "asistente", icon: Bot, label: "Asistente IA" }
+              { id: "asistente", icon: Bot, label: "Asistente IA" },
+              ...(datosHogar?.rol === 'superadmin' ? [{ id: "admin", icon: Shield, label: "Admin" }] : [])
             ].map(link => (
               <button key={link.id} onClick={() => setActiveTab(link.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === link.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>
                 <link.icon size={20} /> {link.label}
