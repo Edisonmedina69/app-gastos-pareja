@@ -11,88 +11,56 @@ serve(async (req) => {
   }
 
   try {
-    const { input, foto, mimeType, monedaGlobal } = await req.json()
+    const { input, foto, monedaGlobal } = await req.json()
+    const apiKey = Deno.env.get('DEEPSEEK_API_KEY')
     
-    // Obtenemos la API Key de Gemini desde secretos de Supabase o usamos la de respaldo proporcionada
-    const apiKey = Deno.env.get('GEMINI_API_KEY') || 'AIzaSyAvIsxrdRN8xOAZQg1w_DoIfprJrooeC-M'
-    
-    if (!apiKey) {
-      throw new Error("Falta configurar la GEMINI_API_KEY en Supabase Secrets");
+    if(!apiKey) throw new Error("Falta la DEEPSEEK_API_KEY en Supabase Secrets");
+
+    // DeepSeek-Chat es excelente para texto, pero NO soporta fotos (Vision) por ahora.
+    if (foto) {
+      throw new Error("DeepSeek por ahora solo soporta texto. Para tickets, escribí el monto che kape.");
     }
 
     const prompt = `
-      Sos un asistente experto en finanzas paraguayas. Tu tarea es analizar el texto o la imagen de un ticket/gasto y extraer los datos en formato JSON.
+      Sos un asistente experto en finanzas paraguayas. Analizá el siguiente texto de un gasto y extraé los datos en formato JSON.
       
       REGLAS:
       1. Si el monto dice "150mil" o "150k", convertilo a número: 150000.
       2. La categoría debe ser una de estas: Casa, Supermercado, Combustible, Salidas, Salud, Ahorro, Otros.
-      3. Si no se especifica moneda, asumí que es "${monedaGlobal || 'PYG'}".
+      3. Si no se especifica moneda, asumí que es "${monedaGlobal}".
       4. Retorná ÚNICAMENTE un objeto JSON con esta estructura: 
          {"concepto": string, "monto": number, "categoria": string, "moneda": string}
-      5. Si es una imagen de un ticket, busca el nombre del comercio (concepto), la fecha y el monto total pagado de la factura o comprobante.
+      
+      TEXTO DEL USUARIO: "${input}"
     `;
 
-    let requestBody;
-    if (foto) {
-      requestBody = {
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  mimeType: mimeType || 'image/jpeg',
-                  data: foto
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: "application/json"
-        }
-      };
-    } else {
-      if (!input || !input.trim()) {
-        throw new Error("Falta el texto o la foto para poder analizar el gasto.");
-      }
-      requestBody = {
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              { text: `TEXTO DEL USUARIO: "${input}"` }
-            ]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: "application/json"
-        }
-      };
-    }
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(requestBody)
-    });
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: prompt }],
+        stream: false,
+        response_format: { type: "json_object" } // DeepSeek soporta formato JSON
+      })
+    })
 
-    const data = await response.json();
+    const data = await response.json()
     if (data.error) throw new Error(data.error.message);
-
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error("No recibí respuesta de Gemini.");
-
+    
+    const text = data.choices[0].message.content
     const jsonMatch = text.match(/\{.*\}/s);
+    
     if (jsonMatch) {
       return new Response(
         JSON.stringify(JSON.parse(jsonMatch[0])),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } else {
-      throw new Error("No pude interpretar el gasto en la respuesta de la IA.");
+      throw new Error("No pude interpretar el gasto.");
     }
 
   } catch (error) {
