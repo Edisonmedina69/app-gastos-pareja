@@ -33,6 +33,7 @@ export default function Cuentas({
   const [lineaCreditoFormateada, setLineaCreditoFormateada] = useState('');
   const [pagoMinimoFormateado, setPagoMinimoFormateado] = useState('');
   const [cantidadCuotas, setCantidadCuotas] = useState(1);
+  const [cuotasPagadas, setCuotasPagadas] = useState(0); 
   const [diaVencimiento, setDiaVencimiento] = useState("5");
   const [fechaCierreTarjeta, setFechaCierreTarjeta] = useState("25");
   const [monedaDeuda, setMonedaDeuda] = useState(monedaGlobal);
@@ -74,7 +75,7 @@ export default function Cuentas({
   }
 
   const resetForm = () => {
-    setTitulo(''); setNroTarjeta(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCantidadCuotas(1); 
+    setTitulo(''); setNroTarjeta(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCantidadCuotas(1); setCuotasPagadas(0);
     setTipoDeuda("fija"); setAlcanceDeuda("familiar"); setDiaVencimiento("5"); setFechaCierreTarjeta("25");
   };
 
@@ -87,6 +88,7 @@ export default function Cuentas({
     try {
       const eid = datosHogar.espacio_id;
       const numCuotas = parseInt(cantidadCuotas) || 1;
+      const yaPagadas = parseInt(cuotasPagadas) || 0;
       const totalMonto = desformatearInput(montoTotalFormateado);
       const lineaTotal = desformatearInput(lineaCreditoFormateada);
       const montoCuota = totalMonto / numCuotas;
@@ -99,7 +101,8 @@ export default function Cuentas({
           linea_credito_total: lineaTotal || 0,
           linea_credito_disponible: (lineaTotal || 0) - (tipoDeuda === 'tarjeta_credito' ? totalMonto : 0),
           fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
-          nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null
+          nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
+          estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa'
         }])
         .select().single();
 
@@ -110,10 +113,17 @@ export default function Cuentas({
       for (let i = 1; i <= numCuotas; i++) {
         let fv = new Date(fechaBase.getFullYear(), fechaBase.getMonth() + (i - 1), parseInt(diaVencimiento));
         fv = ajustarDiaHabil(fv);
+        
+        const esPagada = i <= yaPagadas;
+
         cuotas.push({
           deuda_maestra_id: maestra.id, espacio_id: eid, numero_cuota: i, monto_cuota: montoCuota,
+          monto_abonado: esPagada ? montoCuota : 0,
           pago_minimo: i === 1 ? (desformatearInput(pagoMinimoFormateado) || 0) : 0,
-          fecha_vencimiento: fv.toISOString().split('T')[0], estado: 'pendiente'
+          fecha_vencimiento: fv.toISOString().split('T')[0], 
+          estado: esPagada ? 'pagado' : 'pendiente',
+          fecha_pago: esPagada ? new Date().toISOString() : null,
+          pagador_id: esPagada ? usuarioActual.id : null
         });
       }
 
@@ -163,16 +173,6 @@ export default function Cuentas({
       await supabase.from('deudas_maestras').delete().eq('id', maestra.id);
       toast.success("Eliminada"); obtenerDatos();
     }
-  }
-
-  async function pedirConsejoIA(maestra, cuota) {
-    setAnalizandoIA(true);
-    try {
-      const { data } = await supabase.functions.invoke('chat-ia', {
-        body: { mensaje: `Contexto Deuda: "${maestra.titulo}". Mi endeudamiento es ${saludFinanciera.indice.toFixed(1)}%.`, contexto_financiero: { salud: saludFinanciera, deudas } }
-      });
-      setSugerenciaIA(data.respuesta);
-    } catch (e) {} finally { setAnalizandoIA(false); }
   }
 
   function ModalAbono() {
@@ -331,24 +331,24 @@ export default function Cuentas({
                       <input type="number" min="1" value={cantidadCuotas} onChange={(e) => setCantidadCuotas(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
-                      <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Cuotas ya Pagadas</label>
+                      <input type="number" min="0" max={cantidadCuotas} value={cuotasPagadas} onChange={(e) => setCuotasPagadas(e.target.value)} className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-5 py-4 text-white outline-none" />
                     </div>
                   </div>
                 )}
 
-                {tipoDeuda === 'tarjeta_credito' && (
-                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
-                      <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
+                    <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                  </div>
+                  {tipoDeuda === 'tarjeta_credito' && (
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Cierre</label>
                       <input type="number" min="1" max="31" value={fechaCierreTarjeta} onChange={(e) => setFechaCierreTarjeta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
                     </div>
-                   </div>
-                )}
+                  )}
+                </div>
 
                 {zonaPeligro && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4"><AlertTriangle className="text-red-500 shrink-0" /><p className="text-[11px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP.</p></div>}
                 <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : "REGISTRAR DEUDA"}</button>

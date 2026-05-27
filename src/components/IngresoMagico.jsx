@@ -21,12 +21,21 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
         body: { input, monedaGlobal }
       });
 
-      if (error) throw error;
+      if (error) {
+        let msg = error.message;
+        if (error.context && typeof error.context.json === 'function') {
+          try {
+            const body = await error.context.json();
+            if (body && body.error) msg = body.error;
+          } catch (e) {}
+        }
+        throw new Error(msg);
+      }
 
       setResultado(data);
       toast.success("¡Gasto interpretado con éxito! ✨", { id: toastId });
     } catch (err) {
-      toast.error(err.message, { id: toastId });
+      toast.error(err.message || "Error al interpretar el gasto.", { id: toastId });
     } finally {
       setCargando(false);
     }
@@ -57,13 +66,22 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        let msg = error.message;
+        if (error.context && typeof error.context.json === 'function') {
+          try {
+            const body = await error.context.json();
+            if (body && body.error) msg = body.error;
+          } catch (e) {}
+        }
+        throw new Error(msg);
+      }
 
       setResultado(data);
       toast.success("¡Ticket procesado! Revisa los datos.", { id: toastId });
     } catch (err) {
       console.error("Error procesando foto:", err);
-      toast.error("No pude leer el ticket. Intentá de nuevo.", { id: toastId });
+      toast.error(err.message || "No pude leer el ticket. Intentá de nuevo.", { id: toastId });
     } finally {
       setCargando(false);
     }

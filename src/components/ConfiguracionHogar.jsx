@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../supabase'; 
 import { Key, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
   const [codigo, setCodigo] = useState('');
@@ -15,6 +16,7 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
     if (!codigo.trim() || !nombreUsuario.trim()) return;
 
     setGuardando(true);
+    const toastId = toast.loading("Vinculando hogar...");
     try {
       // 1. Buscar el espacio por código y traer su límite y miembros actuales
       const { data: espacio, error: errorEspacio } = await supabase
@@ -48,9 +50,10 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
         throw errorPerfil;
       }
 
+      toast.success("¡Hogar vinculado con éxito! 🏠", { id: toastId });
       if (onHogarCreado) onHogarCreado();
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message, { id: toastId });
     } finally {
       setGuardando(false);
     }
@@ -61,6 +64,7 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
     if (!nuevoHogarNombre.trim() || !nombreUsuario.trim()) return;
 
     setGuardando(true);
+    const toastId = toast.loading("Creando tu nuevo hogar...");
     try {
       // 1. Crear el espacio
       const { data: nuevoEspacio, error: errorEspacio } = await supabase
@@ -86,9 +90,10 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
 
       if (errorPerfil) throw errorPerfil;
 
+      toast.success("¡Hogar creado con éxito! ✨", { id: toastId });
       if (onHogarCreado) onHogarCreado();
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message, { id: toastId });
     } finally {
       setGuardando(false);
     }
@@ -165,6 +170,15 @@ const ConfiguracionHogar = ({ usuario, onHogarCreado }) => {
               {guardando ? <Loader2 className="animate-spin" /> : <>{modo === 'unirse' ? 'VINCULAR MI CUENTA' : 'EMPEZAR ÑANDEFINANZA'} <ArrowRight size={18} /></>}
             </button>
           </form>
+          
+          <div className="mt-6 pt-4 border-t border-white/5 text-center">
+            <button 
+              onClick={() => supabase.auth.signOut()} 
+              className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-red-400 transition-colors"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -4,7 +4,8 @@ import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, Home, Plus, Key, Copy, Check, ArrowRight, Loader2, 
-  Search, ShieldCheck, Trash2, ChevronLeft, ChevronRight 
+  Search, ShieldCheck, Trash2, ChevronLeft, ChevronRight, X,
+  Edit2
 } from "lucide-react";
 
 export default function SuperadminPanel({ datosHogar }) {
@@ -16,6 +17,10 @@ export default function SuperadminPanel({ datosHogar }) {
   const [limiteUsuarios, setLimiteUsuarios] = useState(2);
   const [guardando, setGuardando] = useState(false);
   const [copiadoId, setCopiadoId] = useState(null);
+  const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
+  const [espacioAEditar, setEspacioAEditar] = useState(null);
+  const [editNombreFamilia, setEditNombreFamilia] = useState("");
+  const [editLimiteUsuarios, setEditLimiteUsuarios] = useState(2);
 
   // --- PAGINACIÓN ---
   const [paginaActual, setPaginaActual] = useState(1);
@@ -31,7 +36,7 @@ export default function SuperadminPanel({ datosHogar }) {
       // Cargamos espacios con conteo de perfiles para ver actividad real
       const { data, error } = await supabase
         .from("espacios")
-        .select("*, perfiles(id)")
+        .select("*, perfiles(id, nombre)")
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -39,7 +44,8 @@ export default function SuperadminPanel({ datosHogar }) {
       if (data) {
         const formateados = data.map(e => ({
           ...e,
-          miembros_count: e.perfiles?.length || 0
+          miembros_count: e.perfiles?.length || 0,
+          perfiles: e.perfiles || []
         }));
         setEspacios(formateados);
       }
@@ -73,6 +79,51 @@ export default function SuperadminPanel({ datosHogar }) {
       toast.error("No se pudo crear: " + err.message, { id: toastId }); 
     } finally { 
       setGuardando(false); 
+    }
+  }
+
+  async function guardarEdicionEspacio(e) {
+    e.preventDefault();
+    if (!espacioAEditar || !editNombreFamilia.trim()) return;
+    setGuardando(true);
+    const toastId = toast.loading("Guardando cambios del espacio...");
+    try {
+      const { error } = await supabase
+        .from("espacios")
+        .update({
+          nombre_familia: editNombreFamilia.trim(),
+          limite_usuarios: parseInt(editLimiteUsuarios)
+        })
+        .eq("id", espacioAEditar.id);
+      if (error) throw error;
+      toast.success("¡Hogar actualizado con éxito! 🏠✨", { id: toastId });
+      setMostrarModalEditar(false);
+      setEspacioAEditar(null);
+      await cargarEspacios();
+    } catch (err) {
+      toast.error("No se pudo actualizar: " + err.message, { id: toastId });
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function desvincularMiembro(perfilId, nombreMiembro, nombreFamilia) {
+    const confirmar = window.confirm(`¿Seguro que querés desvincular a "${nombreMiembro}" del espacio "${nombreFamilia}"?\n\nEl usuario perderá acceso a los datos de este hogar y volverá a la pantalla de configuración.`);
+    if (!confirmar) return;
+
+    const toastId = toast.loading(`Desvinculando a ${nombreMiembro}...`);
+    try {
+      const { error } = await supabase
+        .from("perfiles")
+        .update({ espacio_id: null })
+        .eq("id", perfilId);
+
+      if (error) throw error;
+
+      toast.success(`Se desvinculó a ${nombreMiembro} con éxito.`, { id: toastId });
+      await cargarEspacios();
+    } catch (err) {
+      toast.error(`Error al desvincular: ${err.message}`, { id: toastId });
     }
   }
 
@@ -113,10 +164,44 @@ export default function SuperadminPanel({ datosHogar }) {
   }
 
   const copiarCodigo = (id, codigo) => {
-    navigator.clipboard.writeText(codigo);
-    setCopiadoId(id);
-    toast.success("Código copiado al portapapeles 📋");
-    setTimeout(() => setCopiadoId(null), 2000);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(codigo)
+        .then(() => {
+          setCopiadoId(id);
+          toast.success("Código copiado al portapapeles 📋");
+          setTimeout(() => setCopiadoId(null), 2000);
+        })
+        .catch(err => {
+          console.error("Clipboard error:", err);
+          fallbackCopiar(id, codigo);
+        });
+    } else {
+      fallbackCopiar(id, codigo);
+    }
+  };
+
+  const fallbackCopiar = (id, codigo) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = codigo;
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const exito = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (exito) {
+        setCopiadoId(id);
+        toast.success("Código copiado al portapapeles 📋");
+        setTimeout(() => setCopiadoId(null), 2000);
+      } else {
+        throw new Error("No se pudo copiar");
+      }
+    } catch (err) {
+      toast.error(`Código: ${codigo} (copialo manualmente)`);
+    }
   };
 
   const filtrados = espacios.filter(e => 
@@ -189,16 +274,52 @@ export default function SuperadminPanel({ datosHogar }) {
                     <p className="text-[9px] text-slate-500 uppercase font-black">Plan {e.limite_usuarios} Usuarios</p>
                   </div>
                 </div>
-                {e.id !== datosHogar?.espacio_id && (
+                <div className="flex items-center gap-1">
                   <button 
-                    onClick={() => eliminarEspacio(e.id, e.nombre_familia)} 
-                    className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                    title="Eliminar Hogar permanentemente"
+                    onClick={() => {
+                      setEspacioAEditar(e);
+                      setEditNombreFamilia(e.nombre_familia);
+                      setEditLimiteUsuarios(e.limite_usuarios);
+                      setMostrarModalEditar(true);
+                    }}
+                    className="p-2 text-slate-600 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-all"
+                    title="Editar Hogar"
                   >
-                    <Trash2 size={18}/>
+                    <Edit2 size={18}/>
                   </button>
-                )}
+                  {e.id !== datosHogar?.espacio_id && (
+                    <button 
+                      onClick={() => eliminarEspacio(e.id, e.nombre_familia)} 
+                      className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                      title="Eliminar Hogar permanentemente"
+                    >
+                      <Trash2 size={18}/>
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {e.perfiles && e.perfiles.length > 0 && (
+                <div className="mb-4 bg-black/10 p-2.5 rounded-xl border border-white/5">
+                  <div className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mb-1.5">Miembros Activos</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {e.perfiles.map(p => (
+                      <span key={p.id} className="text-[9px] font-bold bg-white/5 border border-white/10 text-slate-300 px-2 py-1 rounded-lg flex items-center gap-1.5">
+                        {p.nombre}
+                        {p.id !== datosHogar?.id && (
+                          <button 
+                            onClick={() => desvincularMiembro(p.id, p.nombre, e.nombre_familia)}
+                            className="text-slate-500 hover:text-red-400 p-0.5 rounded-md hover:bg-white/10 transition-all focus:outline-none"
+                            title={`Desvincular a ${p.nombre}`}
+                          >
+                            <X size={10} />
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-4 pt-4 border-t border-white/5">
                 <div className="flex-1">
@@ -286,6 +407,72 @@ export default function SuperadminPanel({ datosHogar }) {
                   <button type="button" onClick={() => setMostrarModalCrear(false)} className="flex-1 py-4 bg-white/5 text-slate-400 font-bold rounded-2xl hover:bg-white/10 transition-all">CANCELAR</button>
                   <button type="submit" disabled={guardando} className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition-all">
                     {guardando ? <Loader2 className="animate-spin mx-auto"/> : "CREAR HOGAR"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL EDITAR HOGAR */}
+      <AnimatePresence>
+        {mostrarModalEditar && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="w-full max-w-sm glass-panel p-6 rounded-3xl relative"
+            >
+              <button 
+                onClick={() => { setMostrarModalEditar(false); setEspacioAEditar(null); }} 
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+              <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-indigo-400" /> Editar Espacio
+              </h2>
+              <form onSubmit={guardarEdicionEspacio} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre de la Familia / Cliente</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Familia Medina..." 
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50" 
+                    value={editNombreFamilia} 
+                    onChange={(e) => setEditNombreFamilia(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Plan / Límite de Usuarios</label>
+                  <select 
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" 
+                    value={editLimiteUsuarios} 
+                    onChange={(e) => setEditLimiteUsuarios(e.target.value)}
+                  >
+                    <option value="1">Plan 1 Usuario</option>
+                    <option value="2">Plan 2 Usuarios</option>
+                    <option value="5">Plan 5 Usuarios</option>
+                    <option value="10">Plan 10 Usuarios</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => { setMostrarModalEditar(false); setEspacioAEditar(null); }} 
+                    className="flex-1 py-4 bg-white/5 text-slate-400 font-bold rounded-2xl hover:bg-white/10 transition-all"
+                  >
+                    CANCELAR
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={guardando} 
+                    className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition-all"
+                  >
+                    {guardando ? <Loader2 className="animate-spin mx-auto"/> : "GUARDAR CAMBIOS"}
                   </button>
                 </div>
               </form>
