@@ -58,7 +58,10 @@ function App() {
         setSession(s);
         if (s) {
           const perfil = await verificarPerfil(s.user.id);
-          if (montado) setDatosHogar(perfil);
+          if (montado) {
+            setDatosHogar(perfil);
+            setUsuarioActual(perfil);
+          }
         }
       } catch (err) {} finally {
         if (montado) { setVerificandoHogar(false); clearTimeout(timerCierre); }
@@ -66,11 +69,18 @@ function App() {
     };
     inicializar();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      if (event === 'SIGNED_OUT') { setSession(null); setDatosHogar(null); }
+      if (event === 'SIGNED_OUT') { 
+        setSession(null); 
+        setDatosHogar(null); 
+        setUsuarioActual(null); 
+      }
       else if (s && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         setSession(s);
         const perfil = await verificarPerfil(s.user.id);
-        if (montado) setDatosHogar(perfil);
+        if (montado) {
+          setDatosHogar(perfil);
+          setUsuarioActual(perfil);
+        }
       }
     });
     return () => { montado = false; subscription.unsubscribe(); clearTimeout(timerCierre); };
@@ -195,6 +205,7 @@ function App() {
           onHogarCreado={async () => {
             const perfil = await verificarPerfil(session.user.id);
             setDatosHogar(perfil);
+            setUsuarioActual(perfil);
           }} 
         />
       ) : (
@@ -211,10 +222,11 @@ function App() {
             <div className="relative">
               <button 
                 onClick={() => setMostrarMenuPerfilMovil(!mostrarMenuPerfilMovil)}
-                className="flex items-center gap-2 focus:outline-none"
+                className="flex items-center gap-1.5 focus:outline-none p-1 hover:bg-white/5 rounded-full transition-all"
+                aria-label="Menú de perfil"
               >
-                <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-xs font-bold text-indigo-400 border border-indigo-500/30">
-                  {usuarioActual?.nombre?.charAt(0)}
+                <div className="w-9 h-9 bg-slate-800 rounded-full flex items-center justify-center text-xs font-bold text-indigo-400 border border-indigo-500/30 shadow-inner">
+                  {usuarioActual?.nombre?.charAt(0) || <User size={16} />}
                 </div>
               </button>
 
@@ -228,17 +240,17 @@ function App() {
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       className="absolute right-0 mt-2 z-50 w-64 bg-slate-900/95 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex flex-col gap-3"
                     >
-                      <div className="pb-3 border-b border-white/5">
-                        <div className="text-xs font-bold text-white leading-none">{usuarioActual?.nombre}</div>
+                      <div className="pb-3 border-b border-white/5 px-1">
+                        <div className="text-xs font-black text-white leading-none">{usuarioActual?.nombre || 'Usuario'}</div>
                         <div className="text-[9px] text-slate-500 font-bold uppercase mt-1 tracking-tighter">
-                          {datosHogar?.nombre_familia} • {datosHogar?.rol}
+                          {datosHogar?.nombre_familia || 'Mi Hogar'} • {datosHogar?.rol || 'miembro'}
                         </div>
                       </div>
                       <button 
                         onClick={() => { setMostrarMenuPerfilMovil(false); supabase.auth.signOut(); }}
-                        className="w-full flex items-center justify-start gap-3 py-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
+                        className="w-full flex items-center justify-start gap-3 py-3 px-4 rounded-xl text-sm font-black text-red-400 bg-red-500/5 hover:bg-red-500/10 active:scale-95 transition-all border border-red-500/10"
                       >
-                        <LogOut size={16} className="text-slate-500" /> Cerrar Sesión
+                        <LogOut size={16} /> Cerrar Sesión
                       </button>
                       <button 
                         onClick={async () => {
@@ -255,9 +267,9 @@ function App() {
                             }
                           }
                         }}
-                        className="w-full flex items-center justify-start gap-3 py-2 text-xs font-bold text-red-400 hover:text-red-300 transition-colors border-t border-white/5 pt-3"
+                        className="w-full flex items-center justify-start gap-2.5 py-2 px-3 text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors border-t border-white/5 pt-3 mt-1"
                       >
-                        <Shield size={16} className="text-red-500/80" /> Cerrar en todos los dispositivos
+                        <Shield size={14} className="text-slate-500" /> Cerrar en todos los dispositivos
                       </button>
                     </motion.div>
                   </>

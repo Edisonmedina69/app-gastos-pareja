@@ -5,7 +5,7 @@ import { formatearNumero, formatarInput, desformatearInput } from '../utils/form
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2
 } from 'lucide-react';
 
 export default function Cuentas({
@@ -46,6 +46,219 @@ export default function Cuentas({
   // IA State
   const [analizandoIA, setAnalizandoIA] = useState(false);
   const [sugerenciaIA, setSugerenciaIA] = useState(null);
+
+  // Gastos Fijos State
+  const [gastosProgramados, setGastosProgramados] = useState([]);
+  const [cargandoFijos, setCargandoFijos] = useState(false);
+  const [mostrarModalFijo, setMostrarModalFijo] = useState(false);
+  const [idFijoEditando, setIdFijoEditando] = useState(null);
+  
+  // Form State Gasto Fijo
+  const [fijoConcepto, setFijoConcepto] = useState('');
+  const [fijoMontoFormateado, setFijoMontoFormateado] = useState('');
+  const [fijoMoneda, setFijoMoneda] = useState(monedaGlobal);
+  const [fijoDiaRecurrencia, setFijoDiaRecurrencia] = useState('5');
+  const [fijoCategoria, setFijoCategoria] = useState('Casa');
+  const [fijoParaQuien, setFijoParaQuien] = useState('Ambos');
+
+  // Pago Gasto Fijo State
+  const [mostrarModalPagarFijo, setMostrarModalPagarFijo] = useState(false);
+  const [gastoFijoAPagar, setGastoFijoAPagar] = useState(null);
+  const [pagarMontoFormateado, setPagarMontoFormateado] = useState('');
+  const [pagarMoneda, setPagarMoneda] = useState('PYG');
+  const [pagarPagadorId, setPagarPagadorId] = useState('');
+  const [pagarParaQuien, setPagarParaQuien] = useState('Ambos');
+
+  useEffect(() => {
+    if (mostrarModalFijo && !idFijoEditando) {
+      setFijoMoneda(monedaGlobal);
+    }
+  }, [mostrarModalFijo, monedaGlobal, idFijoEditando]);
+
+  const cargarGastosProgramados = async () => {
+    if (!datosHogar?.espacio_id) return;
+    const timeoutId = setTimeout(() => {
+      setCargandoFijos(false);
+      console.warn("cargarGastosProgramados timed out after 5s.");
+    }, 5000);
+    try {
+      setCargandoFijos(true);
+      const { data, error } = await supabase
+        .from("gastos_programados")
+        .select("*")
+        .eq("espacio_id", datosHogar.espacio_id)
+        .order("dia_recurrencia", { ascending: true });
+      
+      clearTimeout(timeoutId);
+      if (error) throw error;
+      setGastosProgramados(data || []);
+    } catch (e) {
+      clearTimeout(timeoutId);
+      console.error("Error cargando gastos fijos:", e);
+    } finally {
+      setCargandoFijos(false);
+    }
+  };
+
+  useEffect(() => {
+    if (pestana === 'fijos' && datosHogar?.espacio_id) {
+      cargarGastosProgramados();
+    }
+  }, [pestana, datosHogar?.espacio_id]);
+
+  const preCargarPlantillas = async () => {
+    if (!datosHogar?.espacio_id || !usuarioActual?.id) return;
+    const toastId = toast.loading("Cargando plantilla de supervivencia...");
+    const defaults = [
+      { concepto: "💧 Agua (ESSAP)", monto: 0, moneda: "PYG", dia_recurrencia: 10, categoria: "Casa", para_quien: "Ambos", espacio_id: datosHogar.espacio_id, usuario_id: usuarioActual.id },
+      { concepto: "⚡ Luz (ANDE)", monto: 0, moneda: "PYG", dia_recurrencia: 10, categoria: "Casa", para_quien: "Ambos", espacio_id: datosHogar.espacio_id, usuario_id: usuarioActual.id },
+      { concepto: "🗑️ Tasa de Basura", monto: 30000, moneda: "PYG", dia_recurrencia: 5, categoria: "Casa", para_quien: "Ambos", espacio_id: datosHogar.espacio_id, usuario_id: usuarioActual.id },
+      { concepto: "🌐 Internet", monto: 150000, moneda: "PYG", dia_recurrencia: 5, categoria: "Casa", para_quien: "Ambos", espacio_id: datosHogar.espacio_id, usuario_id: usuarioActual.id },
+      { concepto: "🛒 Supermercado / Comida", monto: 0, moneda: "PYG", dia_recurrencia: 5, categoria: "Supermercado", para_quien: "Ambos", espacio_id: datosHogar.espacio_id, usuario_id: usuarioActual.id }
+    ];
+    const timeoutId = setTimeout(() => {
+      toast.error("Tiempo de espera agotado al pre-cargar plantilla.", { id: toastId });
+    }, 8000);
+    try {
+      const { error } = await supabase.from('gastos_programados').insert(defaults);
+      clearTimeout(timeoutId);
+      if (error) throw error;
+      toast.success("¡Plantilla básica cargada! 🏠✨", { id: toastId });
+      cargarGastosProgramados();
+    } catch (e) {
+      clearTimeout(timeoutId);
+      toast.error("Error al cargar: " + e.message, { id: toastId });
+    }
+  };
+
+  const guardarGastoFijo = async (e) => {
+    e.preventDefault();
+    const montoLimpio = fijoMontoFormateado ? desformatearInput(fijoMontoFormateado) : 0;
+    if (guardando || !usuarioActual || !datosHogar) return;
+    setGuardando(true);
+    const toastId = toast.loading("Procesando compromiso fijo...");
+    const timeoutId = setTimeout(() => {
+      setGuardando(false);
+      toast.error("Tiempo de espera agotado. Intentá de nuevo.", { id: toastId });
+    }, 8000);
+    try {
+      if (idFijoEditando) {
+        const { error } = await supabase
+          .from("gastos_programados")
+          .update({
+            concepto: fijoConcepto.trim(),
+            monto: montoLimpio,
+            dia_recurrencia: parseInt(fijoDiaRecurrencia),
+            categoria: fijoCategoria,
+            para_quien: fijoParaQuien
+          })
+          .eq("id", idFijoEditando);
+        clearTimeout(timeoutId);
+        if (error) throw error;
+        toast.success("¡Gasto fijo ajustado! 📈", { id: toastId });
+      } else {
+        const { error } = await supabase
+          .from("gastos_programados")
+          .insert([{
+            espacio_id: datosHogar.espacio_id,
+            usuario_id: usuarioActual.id,
+            concepto: fijoConcepto.trim(),
+            monto: montoLimpio,
+            moneda: fijoMoneda,
+            dia_recurrencia: parseInt(fijoDiaRecurrencia),
+            categoria: fijoCategoria,
+            para_quien: fijoParaQuien
+          }]);
+        clearTimeout(timeoutId);
+        if (error) throw error;
+        toast.success("¡Gasto fijo programado! 📅", { id: toastId });
+      }
+      setMostrarModalFijo(false);
+      resetFormFijo();
+      cargarGastosProgramados();
+    } catch (err) {
+      clearTimeout(timeoutId);
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const eliminarGastoFijo = async (id, concepto) => {
+    if (window.confirm(`¿Eliminar la programación del gasto "${concepto}"?`)) {
+      try {
+        const { error } = await supabase.from("gastos_programados").delete().eq("id", id);
+        if (error) throw error;
+        toast.success("Programación eliminada");
+        cargarGastosProgramados();
+      } catch (e) {
+        toast.error("Error al eliminar");
+      }
+    }
+  };
+
+  const abrirEdicionFijo = (f) => {
+    setIdFijoEditando(f.id);
+    setFijoConcepto(f.concepto);
+    setFijoMontoFormateado(formatarInput(f.monto));
+    setFijoMoneda(f.moneda);
+    setFijoDiaRecurrencia(f.dia_recurrencia.toString());
+    setFijoCategoria(f.categoria);
+    setFijoParaQuien(f.para_quien);
+    setMostrarModalFijo(true);
+  };
+
+  const resetFormFijo = () => {
+    setIdFijoEditando(null);
+    setFijoConcepto('');
+    setFijoMontoFormateado('');
+    setFijoDiaRecurrencia('5');
+    setFijoCategoria('Casa');
+    setFijoParaQuien('Ambos');
+  };
+
+  const abrirPagoFijo = (f) => {
+    setGastoFijoAPagar(f);
+    setPagarMontoFormateado(f.monto > 0 ? formatarInput(f.monto) : '');
+    setPagarMoneda(f.moneda);
+    setPagarPagadorId(usuarioActual?.id || '');
+    setPagarParaQuien(f.para_quien);
+    setMostrarModalPagarFijo(true);
+  };
+
+  const registrarPagoGastoFijo = async (e) => {
+    e.preventDefault();
+    const montoLimpio = desformatearInput(pagarMontoFormateado);
+    if (!montoLimpio || !gastoFijoAPagar || !usuarioActual || !datosHogar) return;
+    const toastId = toast.loading("Registrando pago de servicio...");
+    try {
+      const { error } = await supabase.from("gastos").insert([{
+        espacio_id: datosHogar.espacio_id,
+        usuario_id: usuarioActual.id,
+        pagador_id: pagarPagadorId,
+        concepto: `[FIJO] ${gastoFijoAPagar.concepto}`,
+        monto: montoLimpio,
+        moneda: pagarMoneda,
+        categoria: gastoFijoAPagar.categoria,
+        para_quien: pagarParaQuien
+      }]);
+      if (error) throw error;
+      toast.success("¡Pago registrado y guardado! 💸", { id: toastId });
+      setMostrarModalPagarFijo(false);
+      setGastoFijoAPagar(null);
+      obtenerDatos();
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
+    }
+  };
+
+  const verificarSiFuePagadoEsteMes = (fijo) => {
+    return gastos?.some(g => 
+      g.concepto === `[FIJO] ${fijo.concepto}` && 
+      new Date(g.fecha || g.created_at).getMonth() === new Date().getMonth() &&
+      new Date(g.fecha || g.created_at).getFullYear() === new Date().getFullYear()
+    );
+  };
 
   useEffect(() => {
     if (mostrarModal) {
@@ -208,16 +421,37 @@ export default function Cuentas({
     <div className="space-y-6 pb-20">
       <header className="flex items-center justify-between">
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 backdrop-blur-md">
-          {['activas', 'archivadas'].map(p => <button key={p} onClick={() => setPestana(p)} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${pestana === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>{p}</button>)}
+          {['activas', 'archivadas', 'fijos'].map(p => (
+            <button 
+              key={p} 
+              onClick={() => setPestana(p)} 
+              className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${pestana === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}
+            >
+              {p === 'fijos' ? 'Fijos' : p}
+            </button>
+          ))}
         </div>
-        <button onClick={() => setMostrarModal(true)} className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg"><Plus size={24} /></button>
+        <button 
+          onClick={() => {
+            if (pestana === 'fijos') {
+              resetFormFijo();
+              setMostrarModalFijo(true);
+            } else {
+              setMostrarModal(true);
+            }
+          }} 
+          className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg"
+        >
+          <Plus size={24} />
+        </button>
       </header>
 
       <div className="space-y-4">
-        {deudasFiltradas.map((d) => {
+        {pestana !== 'fijos' ? (
+          deudasFiltradas.map((d) => {
           const cuotaActual = d.cuotas_detalle?.filter(c => c.estado === 'pendiente').sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))[0];
           const estaExpandida = deudaExpandida === d.id;
-          const esMia = d.creador_id === usuarioActual.id;
+          const esMia = d.creador_id === usuarioActual?.id;
           const totalPagado = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_abonado), 0) || 0;
           const totalMontoDeuda = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_cuota), 0) || 0;
           const porcProgreso = totalMontoDeuda > 0 ? (totalPagado / totalMontoDeuda) * 100 : 0;
@@ -273,7 +507,113 @@ export default function Cuentas({
               )}
             </motion.div>
           );
-        })}
+        })
+        ) : (
+          /* GASTOS FIJOS */
+          cargandoFijos ? (
+            <div className="text-center py-12 text-slate-500 text-xs font-black uppercase flex items-center justify-center gap-2">
+              <Loader2 className="animate-spin" size={16}/> Cargando compromisos fijos...
+            </div>
+          ) : gastosProgramados.length === 0 ? (
+            <div className="glass-card py-12 text-center">
+              <Calendar size={40} className="mx-auto mb-3 text-slate-500 opacity-40" />
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Sin gastos fijos programados</p>
+              <p className="text-[10px] text-slate-500 mt-2 max-w-xs mx-auto px-4">
+                Registrá tus servicios indispensables (agua, luz, internet) para tenerlos siempre a mano y simplificar tu control mensual.
+              </p>
+              <div className="flex flex-col gap-2 mt-6 max-w-xs mx-auto px-4">
+                <button 
+                  onClick={preCargarPlantillas} 
+                  className="py-3 px-4 bg-indigo-600 text-white text-[10px] font-black rounded-xl uppercase hover:bg-indigo-500 active:scale-95 transition-all shadow-lg"
+                >
+                  Pre-cargar Plantilla de Supervivencia 🏠
+                </button>
+                <button 
+                  onClick={() => { resetFormFijo(); setMostrarModalFijo(true); }} 
+                  className="py-3 px-4 bg-white/5 border border-white/10 text-white text-[10px] font-black rounded-xl uppercase hover:bg-white/10 active:scale-95 transition-all"
+                >
+                  Agregar Gasto Fijo Manual
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                  Servicios y Compras Recurrentes ({gastosProgramados.length})
+                </span>
+                <button 
+                  onClick={preCargarPlantillas} 
+                  className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter hover:underline"
+                >
+                  + Recargar Plantilla Básica
+                </button>
+              </div>
+
+              {gastosProgramados.map((f) => {
+                const pagado = verificarSiFuePagadoEsteMes(f);
+                return (
+                  <div 
+                    key={f.id} 
+                    className={`glass-card border-l-4 transition-all duration-300 ${
+                      pagado ? 'border-l-emerald-500 bg-emerald-500/[0.02] opacity-75' : 'border-l-indigo-500 bg-white/[0.01]'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-white text-sm uppercase">{f.concepto}</h4>
+                          {pagado && (
+                            <span className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase border border-emerald-500/20">
+                              PAGADO ESTE MES
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-tighter">
+                          Categoría: {f.categoria} • Vence el: {f.dia_recurrencia} de cada mes • {f.para_quien === 'Ambos' ? 'Familia' : `Para: ${f.para_quien}`}
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => abrirEdicionFijo(f)} 
+                          className="p-1.5 text-slate-500 hover:text-indigo-400 transition-colors"
+                          disabled={pagado}
+                        >
+                          <Edit2 size={15}/>
+                        </button>
+                        <button 
+                          onClick={() => eliminarGastoFijo(f.id, f.concepto)} 
+                          className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={15}/>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-xl font-black text-white">
+                        {f.monto > 0 ? formatearNumero(f.monto, f.moneda) : 'Monto Variable 📊'}
+                      </div>
+                      
+                      {!pagado ? (
+                        <button 
+                          onClick={() => abrirPagoFijo(f)} 
+                          className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg hover:bg-indigo-500"
+                        >
+                          <CheckCircle size={14}/> COBRAR / REGISTRAR
+                        </button>
+                      ) : (
+                        <div className="text-[9px] font-black text-emerald-400 flex items-center gap-1">
+                          <CheckCircle size={12}/> ABONADO EN EL MES
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
       </div>
 
       <AnimatePresence>
@@ -359,6 +699,136 @@ export default function Cuentas({
       </AnimatePresence>
       <AnimatePresence>{mostrarModalPago && <ModalAbono />}</AnimatePresence>
       <AnimatePresence>{sugerenciaIA && <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"><motion.div className="w-full max-w-sm glass-panel p-8 rounded-3xl text-center"><Sparkles className="text-indigo-400 mx-auto mb-4" size={48}/><p className="text-slate-300 italic mb-8">"{sugerenciaIA}"</p><button onClick={() => setSugerenciaIA(null)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase">ENTENDIDO</button></motion.div></div>}</AnimatePresence>
+
+      {/* MODAL CREAR/EDITAR GASTO FIJO */}
+      <AnimatePresence>
+        {mostrarModalFijo && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl relative">
+              <button onClick={() => { setMostrarModalFijo(false); resetFormFijo(); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
+              <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
+                {idFijoEditando ? 'Ajustar Gasto Fijo' : 'Programar Gasto Fijo'}
+              </h2>
+              <form onSubmit={guardarGastoFijo} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Concepto / Servicio</label>
+                  <input type="text" placeholder="Ej: Luz (ANDE), Agua, Alquiler..." value={fijoConcepto} onChange={(e) => setFijoConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50" required />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Monto Estimado (Opcional)</label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={fijoMontoFormateado} 
+                      onChange={(e) => setFijoMontoFormateado(formatarInput(e.target.value))} 
+                      className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-indigo-400 outline-none" 
+                      placeholder="Variable / Sin monto fijo"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{fijoMoneda}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
+                    <select value={fijoMoneda} onChange={(e) => setFijoMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" disabled={!!idFijoEditando}>
+                      <option value="PYG">PYG</option>
+                      <option value="BRL">BRL</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día de Cobro/Venc.</label>
+                    <input type="number" min="1" max="31" value={fijoDiaRecurrencia} onChange={(e) => setFijoDiaRecurrencia(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white font-black" required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Categoría</label>
+                    <select value={fijoCategoria} onChange={(e) => setFijoCategoria(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white">
+                      {["Casa", "Supermercado", "Salud", "Transporte", "Otros"].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Alcance</label>
+                    <select value={fijoParaQuien} onChange={(e) => setFijoParaQuien(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white">
+                      <option value="Ambos">Ambos (Familiar)</option>
+                      <option value="Yo">Solo Yo</option>
+                      <option value="Pareja">Pareja</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 active:scale-95 transition-all mt-4">
+                  {guardando ? <Loader2 className="animate-spin mx-auto" /> : "PROGRAMAR GASTO"}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL REGISTRAR PAGO DE GASTO FIJO */}
+      <AnimatePresence>
+        {mostrarModalPagarFijo && gastoFijoAPagar && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl relative">
+              <button onClick={() => { setMostrarModalPagarFijo(false); setGastoFijoAPagar(null); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
+              <h2 className="text-xl font-black text-white mb-2 uppercase flex items-center gap-2">
+                Pagar Servicio 💸
+              </h2>
+              <p className="text-[11px] text-slate-400 mb-4">{gastoFijoAPagar.concepto}</p>
+              <form onSubmit={registrarPagoGastoFijo} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Monto Real a Pagar (Factura)</label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={pagarMontoFormateado} 
+                      onChange={(e) => setPagarMontoFormateado(formatarInput(e.target.value))} 
+                      className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-emerald-400 outline-none" 
+                      placeholder="0"
+                      required 
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{pagarMoneda}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
+                    <select value={pagarMoneda} onChange={(e) => setPagarMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white">
+                      <option value="PYG">PYG</option>
+                      <option value="BRL">BRL</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Quién Pagó</label>
+                    <select value={pagarPagadorId} onChange={(e) => setPagarPagadorId(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white">
+                      <option value={usuarioActual?.id}>{usuarioActual?.nombre} (Yo)</option>
+                      {otroUsuario && <option value={otroUsuario.id}>{otroUsuario.nombre}</option>}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Alcance del Gasto</label>
+                  <select value={pagarParaQuien} onChange={(e) => setPagarParaQuien(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white">
+                    <option value="Ambos">Ambos (Compartido 50/50)</option>
+                    <option value="Yo">Solo Yo</option>
+                    <option value="Pareja">Pareja</option>
+                  </select>
+                </div>
+
+                <button type="submit" className="w-full py-4 font-black rounded-2xl bg-emerald-600 text-white shadow-xl shadow-emerald-950/30 active:scale-95 transition-all mt-4">
+                  CONFIRMAR PAGO
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
