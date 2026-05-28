@@ -197,6 +197,15 @@ export default function Ingresos({
     setMontoFormateado(""); setConcepto(""); setDiaRecurrencia("5"); setIdEditando(null); setMontoAnterior(0);
   };
 
+  const verificarSiFueCobradoEsteMes = (prog) => {
+    return ingresos?.some(i => 
+      i.concepto === `[FIJO] ${prog.descripcion}` && 
+      Number(i.mes) === (new Date().getMonth() + 1) &&
+      Number(i.anio) === new Date().getFullYear() &&
+      i.usuario_id === prog.usuario_id
+    ) || false;
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <header className="flex items-center justify-between">
@@ -230,6 +239,12 @@ export default function Ingresos({
       <AnimatePresence mode="wait">
         {activeTab === 'historial' && (
           <motion.div key="historial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+            <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex gap-3 items-center">
+              <Landmark size={20} className="text-emerald-400 shrink-0" />
+              <p className="text-[10px] text-slate-400 font-bold leading-normal">
+                Aquí figuran los ingresos de caja **efectivos** recibidos en el mes en curso. Podés registrar ingresos variables directamente o confirmar el cobro de tus sueldos fijos desde la pestaña "Fijos".
+              </p>
+            </div>
             {ingresos.length === 0 ? (
               <div className="glass-card py-12 text-center opacity-40"><Wallet size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">No hay ingresos registrados</p></div>
             ) : (
@@ -253,33 +268,48 @@ export default function Ingresos({
 
         {activeTab === 'programados' && (
           <motion.div key="programados" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+            <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex gap-3 items-center">
+              <Clock size={20} className="text-indigo-400 shrink-0" />
+              <p className="text-[10px] text-slate-400 font-bold leading-normal">
+                Aquí podés configurar tus **sueldos y rentas recurrentes**. Hacé clic en **COBRAR** cada mes cuando se acrediten para sumarlos a tus ingresos efectivos del mes.
+              </p>
+            </div>
             {programados.length === 0 ? (
               <div className="glass-card py-12 text-center opacity-40"><Clock size={40} className="mx-auto mb-3" /><p className="text-xs font-bold uppercase tracking-widest">Sin sueldos programados</p></div>
             ) : (
-              programados.map((p) => (
-                <div key={p.id} className="glass-card border-l-4 border-l-indigo-500">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="font-black text-white text-sm uppercase">{p.descripcion}</h4>
-                      <p className="text-[10px] text-slate-500 font-black">Día de cobro: {p.dia_recurrencia} • {getNombreUsuario(p.usuario_id)}</p>
+              programados.map((p) => {
+                const cobrado = verificarSiFueCobradoEsteMes(p);
+                return (
+                  <div key={p.id} className="glass-card border-l-4 border-l-indigo-500">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-black text-white text-sm uppercase">{p.descripcion}</h4>
+                        <p className="text-[10px] text-slate-500 font-black">Día de cobro: {p.dia_recurrencia} • {getNombreUsuario(p.usuario_id)}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        {(p.usuario_id === usuarioActual?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'admin_hogar') && (
+                          <>
+                            <button onClick={() => abrirEdicion(p)} className="p-2 text-slate-600 hover:text-indigo-400" disabled={cobrado}><Edit2 size={16}/></button>
+                            <button onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-600 hover:text-red-400"><Trash2 size={16}/></button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      {(p.usuario_id === usuarioActual?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'admin_hogar') && (
-                        <>
-                          <button onClick={() => abrirEdicion(p)} className="p-2 text-slate-600 hover:text-indigo-400"><Edit2 size={16}/></button>
-                          <button onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-600 hover:text-red-400"><Trash2 size={16}/></button>
-                        </>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xl font-black text-white">{formatearNumero(p.monto, p.moneda)}</div>
+                      {cobrado ? (
+                        <div className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-xl flex items-center gap-1.5 cursor-default">
+                          <CheckCircle size={14} /> COBRADO ✓
+                        </div>
+                      ) : (
+                        <button onClick={() => confirmarRecepcion(p)} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-emerald-900/20">
+                          <CheckCircle size={14}/> COBRAR
+                        </button>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-xl font-black text-white">{formatearNumero(p.monto, p.moneda)}</div>
-                    <button onClick={() => confirmarRecepcion(p)} className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-emerald-900/20">
-                      <CheckCircle size={14}/> COBRAR
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </motion.div>
         )}

@@ -27,6 +27,7 @@ export default function Historial({
   usuarios,
   obtenerDatos,
   getNombreUsuario,
+  datosHogar,
 }) {
   const [filtroUsuario, setFiltroUsuario] = useState("todos");
   const [fechaInicio, setFechaInicio] = useState("");

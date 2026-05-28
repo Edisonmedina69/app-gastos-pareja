@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { toast } from 'react-hot-toast';
-import { formatearNumero, formatarInput, desformatearInput } from '../utils/formatters';
+import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta, obtenerFechaCierreExacta } from '../utils/formatters';
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent
 } from 'lucide-react';
 
 export default function Cuentas({
@@ -23,12 +23,14 @@ export default function Cuentas({
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarModalPago, setMostrarModalPago] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState(null);
+  const [deudaEditandoId, setDeudaEditandoId] = useState(null);
   
   // New Debt Fields
   const [tipoDeuda, setTipoDeuda] = useState("fija"); 
   const [alcanceDeuda, setAlcanceDeuda] = useState("familiar"); // individual | familiar
   const [titulo, setTitulo] = useState('');
   const [nroTarjeta, setNroTarjeta] = useState('');
+  const [tasaInteres, setTasaInteres] = useState(''); // Tasa de interés anual (%)
   const [montoTotalFormateado, setMontoTotalFormateado] = useState('');
   const [lineaCreditoFormateada, setLineaCreditoFormateada] = useState('');
   const [pagoMinimoFormateado, setPagoMinimoFormateado] = useState('');
@@ -288,15 +290,51 @@ export default function Cuentas({
   }
 
   const resetForm = () => {
-    setTitulo(''); setNroTarjeta(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCantidadCuotas(1); setCuotasPagadas(0);
+    setTitulo(''); setNroTarjeta(''); setTasaInteres(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCantidadCuotas(1); setCuotasPagadas(0);
     setTipoDeuda("fija"); setAlcanceDeuda("familiar"); setDiaVencimiento("5"); setFechaCierreTarjeta("25");
+    setDeudaEditandoId(null);
+  };
+
+  const iniciarEdicionDeuda = (d) => {
+    setDeudaEditandoId(d.id);
+    setTitulo(d.titulo);
+    setTipoDeuda(d.tipo);
+    setAlcanceDeuda(d.alcance);
+    setNroTarjeta(d.nro_tarjeta || '');
+    setTasaInteres(d.tasa_interes?.toString() || '');
+    setMonedaDeuda(d.moneda);
+    
+    // Dia vencimiento
+    const primerVencimiento = d.cuotas_detalle?.[0]?.fecha_vencimiento;
+    if (primerVencimiento) {
+      const parts = primerVencimiento.split("-");
+      if (parts.length === 3) {
+        setDiaVencimiento(parseInt(parts[2], 10).toString());
+      }
+    } else {
+      setDiaVencimiento("5");
+    }
+
+    setFechaCierreTarjeta(d.fecha_cierre_tarjeta?.toString() || "25");
+
+    const totalMontoVal = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_cuota), 0) || 0;
+    setMontoTotalFormateado(formatarInput(totalMontoVal));
+
+    setLineaCreditoFormateada(formatarInput(d.linea_credito_total));
+    setPagoMinimoFormateado(formatarInput(d.cuotas_detalle?.[0]?.pago_minimo || 0));
+    setCantidadCuotas(d.cuotas_detalle?.length || 1);
+    
+    const yaPagadasCount = d.cuotas_detalle?.filter(c => c.estado === 'pagado').length || 0;
+    setCuotasPagadas(yaPagadasCount);
+
+    setMostrarModal(true);
   };
 
   async function guardarDeudaPro(e) {
     e.preventDefault();
     if (!usuarioActual || !datosHogar) return;
     setGuardando(true);
-    const toastId = toast.loading("Registrando compromiso financiero...");
+    const toastId = toast.loading(deudaEditandoId ? "Actualizando compromiso..." : "Registrando compromiso financiero...");
 
     try {
       const eid = datosHogar.espacio_id;
@@ -306,20 +344,49 @@ export default function Cuentas({
       const lineaTotal = desformatearInput(lineaCreditoFormateada);
       const montoCuota = totalMonto / numCuotas;
 
-      const { data: maestra, error: errM } = await supabase
-        .from("deudas_maestras")
-        .insert([{
-          espacio_id: eid, creador_id: usuarioActual.id, titulo: titulo.trim(), tipo: tipoDeuda,
-          alcance: alcanceDeuda, permite_pago_parcial: tipoDeuda !== 'fija', moneda: monedaDeuda,
-          linea_credito_total: lineaTotal || 0,
-          linea_credito_disponible: (lineaTotal || 0) - (tipoDeuda === 'tarjeta_credito' ? totalMonto : 0),
-          fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
-          nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
-          estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa'
-        }])
-        .select().single();
+      let maestraId = deudaEditandoId;
 
-      if (errM) throw errM;
+      if (deudaEditandoId) {
+        const { error: errM } = await supabase
+          .from("deudas_maestras")
+          .update({
+            titulo: titulo.trim(), tipo: tipoDeuda,
+            alcance: alcanceDeuda, permite_pago_parcial: tipoDeuda !== 'fija', moneda: monedaDeuda,
+            linea_credito_total: lineaTotal || 0,
+            linea_credito_disponible: (lineaTotal || 0) - (tipoDeuda === 'tarjeta_credito' ? totalMonto : 0),
+            fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
+            nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
+            estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa',
+            tasa_interes: tipoDeuda === 'tarjeta_credito' ? parseFloat(tasaInteres) || 0 : 0
+          })
+          .eq("id", deudaEditandoId);
+
+        if (errM) throw errM;
+
+        const { error: errDel } = await supabase
+          .from("cuotas_detalle")
+          .delete()
+          .eq("deuda_maestra_id", deudaEditandoId);
+
+        if (errDel) throw errDel;
+      } else {
+        const { data: maestra, error: errM } = await supabase
+          .from("deudas_maestras")
+          .insert([{
+            espacio_id: eid, creador_id: usuarioActual.id, titulo: titulo.trim(), tipo: tipoDeuda,
+            alcance: alcanceDeuda, permite_pago_parcial: tipoDeuda !== 'fija', moneda: monedaDeuda,
+            linea_credito_total: lineaTotal || 0,
+            linea_credito_disponible: (lineaTotal || 0) - (tipoDeuda === 'tarjeta_credito' ? totalMonto : 0),
+            fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
+            nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
+            estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa',
+            tasa_interes: tipoDeuda === 'tarjeta_credito' ? parseFloat(tasaInteres) || 0 : 0
+          }])
+          .select().single();
+
+        if (errM) throw errM;
+        maestraId = maestra.id;
+      }
 
       const cuotas = [];
       const fechaBase = new Date();
@@ -330,7 +397,7 @@ export default function Cuentas({
         const esPagada = i <= yaPagadas;
 
         cuotas.push({
-          deuda_maestra_id: maestra.id, espacio_id: eid, numero_cuota: i, monto_cuota: montoCuota,
+          deuda_maestra_id: maestraId, espacio_id: eid, numero_cuota: i, monto_cuota: montoCuota,
           monto_abonado: esPagada ? montoCuota : 0,
           pago_minimo: i === 1 ? (desformatearInput(pagoMinimoFormateado) || 0) : 0,
           fecha_vencimiento: fv.toISOString().split('T')[0], 
@@ -341,7 +408,7 @@ export default function Cuentas({
       }
 
       await supabase.from("cuotas_detalle").insert(cuotas);
-      toast.success("¡Deuda Pro registrada con éxito! 📝", { id: toastId });
+      toast.success(deudaEditandoId ? "¡Deuda Pro actualizada con éxito! 📝" : "¡Deuda Pro registrada con éxito! 📝", { id: toastId });
       setMostrarModal(false); obtenerDatos(); resetForm();
     } catch (err) { toast.error("Error: " + err.message, { id: toastId }); }
     finally { setGuardando(false); }
@@ -389,20 +456,58 @@ export default function Cuentas({
   }
 
   function ModalAbono() {
-    const [mFormateado, setMFormateado] = useState('');
-    const [mon, setMon] = useState(monedaGlobal);
+    const [mFormateado, setMFormateado] = useState(() => {
+      if (!pagoSeleccionado) return '';
+      const { cuota } = pagoSeleccionado;
+      return formatarInput(cuota.monto_cuota - cuota.monto_abonado);
+    });
+    const [mon, setMon] = useState(() => {
+      if (!pagoSeleccionado) return monedaGlobal;
+      return pagoSeleccionado.maestra.moneda;
+    });
     const [t, setT] = useState('');
+
     if (!pagoSeleccionado) return null;
-    const { cuota, maestra } = pagoSeleccionado;
+    const { maestra } = pagoSeleccionado;
+    const esFija = maestra.tipo === 'fija';
     const reqT = mon !== maestra.moneda;
+
     return (
       <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl border border-white/10 shadow-2xl">
-          <h3 className="text-white font-bold text-lg mb-2">Abonar a {maestra.titulo}</h3>
+          <h3 className="text-white font-bold text-lg mb-1">Abonar a {maestra.titulo}</h3>
+          <p className="text-[10px] text-slate-400 font-bold mb-3 uppercase tracking-wider">
+            Cuota {pagoSeleccionado.cuota.numero_cuota} • Vence: {formatearFechaCorta(pagoSeleccionado.cuota.fecha_vencimiento)}
+          </p>
           <div className="space-y-4">
-            <input type="text" value={mFormateado} onChange={(e) => setMFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-white outline-none" placeholder="0" />
+            <div>
+              <input 
+                type="text" 
+                value={mFormateado} 
+                onChange={(e) => setMFormateado(formatarInput(e.target.value))} 
+                disabled={esFija}
+                className={`w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black outline-none transition-all ${esFija ? 'text-slate-400 bg-slate-950/60 cursor-not-allowed opacity-75' : 'text-white'}`} 
+                placeholder="0" 
+              />
+              {esFija && (
+                <p className="text-[9px] text-slate-500 italic mt-1.5 pl-1">
+                  Las deudas con cuota fija requieren el pago del monto exacto de la cuota.
+                </p>
+              )}
+            </div>
+            
             <div className="grid grid-cols-3 gap-2">
-              {['PYG', 'BRL', 'USD'].map(m => <button key={m} onClick={() => setMon(m)} className={`py-2 rounded-xl text-xs font-black border ${mon === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-slate-500'}`}>{m}</button>)}
+              {['PYG', 'BRL', 'USD'].map(m => (
+                <button 
+                  key={m} 
+                  type="button"
+                  disabled={esFija}
+                  onClick={() => setMon(m)} 
+                  className={`py-2 rounded-xl text-xs font-black border transition-all ${mon === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-slate-500'} ${esFija && mon !== m ? 'opacity-30 cursor-not-allowed' : ''}`}
+                >
+                  {m}
+                </button>
+              ))}
             </div>
             {reqT && <input type="number" step="0.0001" value={t} onChange={(e) => setT(e.target.value)} className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-white font-bold" placeholder="Cotización aplicada" />}
             <div className="flex gap-2 pt-4">
@@ -414,6 +519,15 @@ export default function Cuentas({
       </div>
     );
   }
+
+  const verificarSiFuePagadaEsteMes = (deuda) => {
+    return deuda.cuotas_detalle?.some(c => 
+      c.estado === 'pagado' &&
+      c.fecha_vencimiento &&
+      new Date(c.fecha_vencimiento).getMonth() === new Date().getMonth() &&
+      new Date(c.fecha_vencimiento).getFullYear() === new Date().getFullYear()
+    ) || false;
+  };
 
   const deudasFiltradas = deudas?.filter(d => pestana === 'activas' ? d.estado === 'activa' : d.estado === 'cerrada') || [];
 
@@ -437,6 +551,7 @@ export default function Cuentas({
               resetFormFijo();
               setMostrarModalFijo(true);
             } else {
+              resetForm();
               setMostrarModal(true);
             }
           }} 
@@ -455,6 +570,10 @@ export default function Cuentas({
           const totalPagado = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_abonado), 0) || 0;
           const totalMontoDeuda = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_cuota), 0) || 0;
           const porcProgreso = totalMontoDeuda > 0 ? (totalPagado / totalMontoDeuda) * 100 : 0;
+          
+          const cuotasPagadasCount = d.cuotas_detalle?.filter(c => c.estado === 'pagado').length || 0;
+          const cuotasTotalesCount = d.cuotas_detalle?.length || 0;
+          const pagadaEsteMes = verificarSiFuePagadaEsteMes(d);
 
           return (
             <motion.div key={d.id} layout className={`glass-card border-l-4 ${pestana === 'activas' ? 'border-l-indigo-500' : 'border-l-slate-600 opacity-80'}`}>
@@ -467,23 +586,67 @@ export default function Cuentas({
                     ) : (
                       <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-indigo-500/20"><Users size={10}/> Familiar</div>
                     )}
+                    {pagadaEsteMes && (
+                      <div className="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-emerald-500/25">
+                        ✓ Este mes pagado
+                      </div>
+                    )}
                   </div>
-                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-tighter">{d.tipo} {d.nro_tarjeta && `• Term. ${d.nro_tarjeta}`} • {d.alcance}</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-tighter mt-1">
+                    {d.tipo === 'tarjeta_credito' ? '💳 Tarjeta de Crédito' : (d.tipo === 'fija' ? '🏦 Préstamo Fijo' : '📈 Crédito Flexible')}
+                    {d.nro_tarjeta && ` • Term. ${d.nro_tarjeta}`}
+                    {d.tasa_interes > 0 && ` • Interés: ${d.tasa_interes}%`}
+                    {` • ${d.alcance}`}
+                  </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  {cuotaActual && <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {new Date(cuotaActual.fecha_vencimiento).toLocaleDateString()}</div>}
-                  {(esMia || datosHogar.rol === 'superadmin' || datosHogar.rol === 'admin_hogar') && <button onClick={() => eliminarDeuda(d)} className="p-1.5 text-slate-600 hover:text-red-400 rounded-lg"><Trash2 size={14} /></button>}
+                  {cuotaActual && <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</div>}
+                  <div className="flex items-center gap-1">
+                    {!d.cuotas_detalle?.some(c => c.estado === 'pagado' || Number(c.monto_abonado) > 0) && (esMia || datosHogar.rol === 'superadmin' || datosHogar.rol === 'admin_hogar') && (
+                      <button 
+                        onClick={() => iniciarEdicionDeuda(d)} 
+                        className="p-1.5 text-slate-600 hover:text-indigo-400 rounded-lg transition-colors"
+                        title="Editar compromiso"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
+                    {(esMia || datosHogar.rol === 'superadmin' || datosHogar.rol === 'admin_hogar') && (
+                      <button 
+                        onClick={() => eliminarDeuda(d)} 
+                        className="p-1.5 text-slate-600 hover:text-red-400 rounded-lg transition-colors"
+                        title="Eliminar compromiso"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {d.tipo === 'tarjeta_credito' ? (
-                <div className="p-3 bg-white/5 rounded-2xl mb-4 grid grid-cols-2 gap-4">
-                  <div><div className="text-[9px] text-slate-500 uppercase font-bold">Disponible</div><div className="text-lg font-black text-indigo-400">{formatearNumero(d.linea_credito_disponible, d.moneda)}</div></div>
-                  <div className="text-right"><div className="text-[9px] text-slate-500 uppercase font-bold">Línea Total</div><div className="text-sm font-bold text-slate-300">{formatearNumero(d.linea_credito_total, d.moneda)}</div></div>
+                <div className="p-3 bg-white/5 rounded-2xl mb-4">
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div><div className="text-[9px] text-slate-500 uppercase font-bold">Disponible</div><div className="text-lg font-black text-indigo-400">{formatearNumero(d.linea_credito_disponible, d.moneda)}</div></div>
+                    <div className="text-right"><div className="text-[9px] text-slate-500 uppercase font-bold">Línea Total</div><div className="text-sm font-bold text-slate-300">{formatearNumero(d.linea_credito_total, d.moneda)}</div></div>
+                  </div>
+                  <div className="border-t border-white/5 pt-2 flex justify-between text-[9px] text-slate-400 font-bold uppercase tracking-tight">
+                    <span>
+                      📅 Cierre: {
+                        (cuotaActual && d.fecha_cierre_tarjeta)
+                        ? formatearFechaCorta(obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta))
+                        : `${d.fecha_cierre_tarjeta || '--'} de cada mes`
+                      }
+                    </span>
+                    {cuotaActual && <span>⏳ Vence: {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</span>}
+                  </div>
                 </div>
               ) : (
                 <div className="mb-4">
-                  <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-1"><span>Progreso</span><span>{porcProgreso.toFixed(0)}%</span></div>
+                  <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    <span>Progreso ({cuotasPagadasCount}/{cuotasTotalesCount} cuotas)</span>
+                    <span>{porcProgreso.toFixed(0)}%</span>
+                  </div>
                   <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden"><div style={{ width: `${porcProgreso}%` }} className="h-full bg-indigo-500" /></div>
                 </div>
               )}
@@ -498,7 +661,9 @@ export default function Cuentas({
                   <div className="space-y-1">
                     {d.cuotas_detalle?.sort((a,b)=>a.numero_cuota-b.numero_cuota).map(c => (
                       <div key={c.id} className="flex justify-between text-[10px] bg-white/5 p-2 rounded-xl">
-                        <span className={c.estado==='pagado'?'text-emerald-400':'text-slate-400'}>Cuota {c.numero_cuota}</span>
+                        <span className={c.estado==='pagado'?'text-emerald-400':'text-slate-400'}>
+                          Cuota {c.numero_cuota} • {c.estado === 'pagado' ? 'Pagado' : `Vence: ${formatearFechaCorta(c.fecha_vencimiento)}`}
+                        </span>
                         <span className="text-white font-bold">{formatearNumero(c.monto_cuota, d.moneda)}</span>
                       </div>
                     ))}
@@ -621,7 +786,7 @@ export default function Cuentas({
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg glass-panel p-6 rounded-3xl relative max-h-[90vh] overflow-y-auto">
               <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
-              <h2 className="text-xl font-black text-white mb-6 uppercase">Nuevo Compromiso Pro</h2>
+              <h2 className="text-xl font-black text-white mb-6 uppercase">{deudaEditandoId ? 'Editar Compromiso Pro' : 'Nuevo Compromiso Pro'}</h2>
               <form onSubmit={guardarDeudaPro} className="space-y-5">
                 <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                   {['familiar', 'individual'].map(a => <button key={a} type="button" onClick={() => setAlcanceDeuda(a)} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>{a}</button>)}
@@ -636,9 +801,15 @@ export default function Cuentas({
                 </div>
 
                 {tipoDeuda === 'tarjeta_credito' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos de la Tarjeta</label>
-                    <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white font-black tracking-widest outline-none focus:border-indigo-500/50" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos</label>
+                      <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white font-black tracking-widest outline-none focus:border-indigo-500/50" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                      <input type="number" step="0.01" min="0" placeholder="Ej: 15" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
+                    </div>
                   </div>
                 )}
 
@@ -691,7 +862,7 @@ export default function Cuentas({
                 </div>
 
                 {zonaPeligro && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4"><AlertTriangle className="text-red-500 shrink-0" /><p className="text-[11px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP.</p></div>}
-                <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : "REGISTRAR DEUDA"}</button>
+                <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : (deudaEditandoId ? "GUARDAR CAMBIOS" : "REGISTRAR DEUDA")}</button>
               </form>
             </motion.div>
           </div>

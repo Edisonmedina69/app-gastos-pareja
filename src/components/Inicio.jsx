@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { supabase } from "../supabase";
 import { toast } from "react-hot-toast";
-import { formatearNumero, formatarInput, desformatearInput } from "../utils/formatters";
+import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta } from "../utils/formatters";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Wallet, TrendingUp, AlertTriangle, Users, 
-  Sparkles, CreditCard, HeartPulse, Activity, User, X
+  Sparkles, CreditCard, HeartPulse, Activity, User, X, Loader2
 } from "lucide-react";
 import IngresoMagico from "./IngresoMagico";
 
@@ -122,7 +122,9 @@ export default function Inicio({
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-black text-white">{formatearNumero(v.monto_cuota - v.monto_abonado, v.moneda)}</div>
-                    <div className="text-[8px] text-amber-500 font-black uppercase tracking-tighter">Vence en {Math.ceil((new Date(v.fecha_vencimiento)-new Date())/(1000*60*60*24))} días</div>
+                    <div className="text-[8px] text-amber-500 font-black uppercase tracking-tighter">
+                      Vence: {formatearFechaCorta(v.fecha_vencimiento)} ({Math.ceil((new Date(v.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24)) === 0 ? 'hoy' : `en ${Math.ceil((new Date(v.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24))} días`})
+                    </div>
                   </div>
                 </div>
               ))}

@@ -35,3 +35,50 @@ export function formatearFecha(fechaStr) {
     f.toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit" })
   );
 }
+
+export function formatearFechaCorta(fechaStr) {
+  if (!fechaStr) return "";
+  const parts = fechaStr.split("T")[0].split("-");
+  if (parts.length === 3) {
+    const date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    return `${parseInt(parts[2], 10)} ${meses[date.getMonth()]} ${parts[0]}`;
+  }
+  const f = new Date(fechaStr);
+  if (isNaN(f.getTime())) return "";
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  return `${f.getDate()} ${meses[f.getMonth()]} ${f.getFullYear()}`;
+}
+
+export function obtenerFechaCierreExacta(fechaVencimientoStr, diaCierre) {
+  if (!fechaVencimientoStr || !diaCierre) return null;
+  const parts = fechaVencimientoStr.split("T")[0].split("-");
+  if (parts.length !== 3) return null;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1; // 0-based month
+  const d = parseInt(parts[2], 10);
+
+  const due = new Date(y, m, d);
+  
+  // Safe helper to construct a date clamping the day of month to avoid rollover
+  const constructSafeDate = (year, month, targetDay) => {
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const day = Math.min(targetDay, lastDay);
+    return new Date(year, month, day);
+  };
+
+  const closingSameMonth = constructSafeDate(y, m, diaCierre);
+
+  let closing;
+  if (closingSameMonth >= due) {
+    closing = constructSafeDate(y, m - 1, diaCierre);
+  } else {
+    closing = constructSafeDate(y, m, diaCierre);
+  }
+  
+  const cy = closing.getFullYear();
+  const cm = String(closing.getMonth() + 1).padStart(2, "0");
+  const cd = String(closing.getDate()).padStart(2, "0");
+  return `${cy}-${cm}-${cd}`;
+}
+
