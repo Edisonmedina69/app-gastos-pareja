@@ -11,6 +11,7 @@ import {
 export default function Cuentas({
   usuarioActual,
   otroUsuario,
+  usuarios,
   deudas,
   gastos,
   ingresos,
@@ -567,6 +568,9 @@ export default function Cuentas({
           const cuotaActual = d.cuotas_detalle?.filter(c => c.estado === 'pendiente').sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))[0];
           const estaExpandida = deudaExpandida === d.id;
           const esMia = d.creador_id === usuarioActual?.id;
+          const creador = usuarios?.find(u => u.id === d.creador_id);
+          const nombreCreador = creador ? creador.nombre : 'Pareja';
+
           const totalPagado = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_abonado), 0) || 0;
           const totalMontoDeuda = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_cuota), 0) || 0;
           const porcProgreso = totalMontoDeuda > 0 ? (totalPagado / totalMontoDeuda) * 100 : 0;
@@ -582,7 +586,7 @@ export default function Cuentas({
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-white text-lg">{d.titulo}</h4>
                     {d.alcance === 'individual' ? (
-                      <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-amber-500/20"><Lock size={10}/> {esMia ? 'Mía' : `De ${otroUsuario?.nombre || 'Pareja'}`}</div>
+                      <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-amber-500/20"><Lock size={10}/> {esMia ? 'Mía' : `De ${nombreCreador}`}</div>
                     ) : (
                       <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-indigo-500/20"><Users size={10}/> Familiar</div>
                     )}
