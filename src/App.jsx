@@ -119,7 +119,14 @@ function App() {
   }, [datosHogar, session]);
 
   const saludFinanciera = useMemo(() => {
-    if (!usuarioActual) return { carga: 0, ingresos: 0, indice: 0, balanceHogar: 0 };
+    if (!usuarioActual) return {
+      carga: 0,
+      ingresos: 0,
+      indice: 0,
+      balanceHogar: 0,
+      individual: { carga: 0, ingresos: 0, indice: 0 },
+      familiar: { carga: 0, ingresos: 0, indice: 0 }
+    };
     const totalIngresosYo = ingresos?.filter(i => i.usuario_id === usuarioActual.id)?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
     const totalIngresosHogar = ingresos?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
     const totalGastosHogar = gastos?.reduce((acc, g) => acc + (Number(g.monto) * (g.tasa_cambio || 1)), 0) || 0;
@@ -128,14 +135,31 @@ function App() {
       if (d.estado === 'cerrada') return;
       const cuotaActual = d.cuotas_detalle?.find(c => c.estado === 'pendiente');
       if (!cuotaActual) return;
-      const montoCuotaPYG = (cuotaActual.monto_cuota - cuotaActual.monto_abonado) * (d.tasa_cambio || 1);
+
+      let montoCuotaRestante = 0;
+      if (d.tipo === 'tarjeta_credito') {
+        const minPago = cuotaActual.pago_minimo || cuotaActual.monto_cuota;
+        montoCuotaRestante = Math.max(0, minPago - Number(cuotaActual.monto_abonado));
+      } else {
+        montoCuotaRestante = Math.max(0, cuotaActual.monto_cuota - Number(cuotaActual.monto_abonado));
+      }
+
+      const montoCuotaPYG = montoCuotaRestante * (d.tasa_cambio || 1);
       if (d.alcance === 'individual' && d.creador_id === usuarioActual.id) cargaIndividual += montoCuotaPYG;
       else if (d.alcance === 'familiar') cargaIndividual += (montoCuotaPYG * 0.5);
       cargaTotalHogar += montoCuotaPYG;
     });
     const indice = totalIngresosYo > 0 ? (cargaIndividual / totalIngresosYo) * 100 : (cargaIndividual > 0 ? 100 : 0);
+    const indiceFamiliar = totalIngresosHogar > 0 ? (cargaTotalHogar / totalIngresosHogar) * 100 : (cargaTotalHogar > 0 ? 100 : 0);
     const balanceHogar = totalIngresosHogar - totalGastosHogar - cargaTotalHogar;
-    return { carga: cargaIndividual, ingresos: totalIngresosYo, indice, balanceHogar };
+    return { 
+      carga: cargaIndividual, 
+      ingresos: totalIngresosYo, 
+      indice, 
+      balanceHogar,
+      individual: { carga: cargaIndividual, ingresos: totalIngresosYo, indice },
+      familiar: { carga: cargaTotalHogar, ingresos: totalIngresosHogar, indice: indiceFamiliar }
+    };
   }, [usuarioActual, deudas, ingresos, gastos]);
 
   async function verificarVencimientos(deudasData, eid, notisActuales) {

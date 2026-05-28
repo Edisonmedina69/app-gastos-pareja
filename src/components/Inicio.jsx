@@ -21,10 +21,13 @@ export default function Inicio({
   const [categoria, setCategoria] = useState("Casa");
   const [guardando, setGuardando] = useState(false);
 
+  const [filtroSalud, setFiltroSalud] = useState("individual");
+
   // Lógica Semáforo (HU-10)
-  const getColorSalud = () => {
-    if (saludFinanciera.indice <= 30) return "text-emerald-400";
-    if (saludFinanciera.indice <= 40) return "text-amber-400";
+  const getColorSalud = (indice) => {
+    const val = indice !== undefined ? indice : (saludFinanciera?.indice || 0);
+    if (val <= 30) return "text-emerald-400";
+    if (val <= 40) return "text-amber-400";
     return "text-red-400";
   };
 
@@ -71,6 +74,8 @@ export default function Inicio({
     finally { setGuardando(false); }
   }
 
+  const metricasActivas = saludFinanciera[filtroSalud] || saludFinanciera.individual || { carga: 0, ingresos: 0, indice: 0 };
+
   return (
     <div className="space-y-6 pb-20">
       {/* Selector Moneda */}
@@ -85,14 +90,38 @@ export default function Inicio({
       {/* DASHBOARD PRINCIPAL */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* SALUD FINANCIERA */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card flex items-center gap-4 relative overflow-hidden">
-          <div className={`w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center ${getColorSalud()}`}><Activity size={32} /></div>
-          <div>
-            <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Salud Financiera</div>
-            <div className={`text-2xl font-black ${getColorSalud()}`}>{saludFinanciera.indice.toFixed(1)}%</div>
-            <p className="text-[9px] text-slate-400 font-bold uppercase">{saludFinanciera.indice <= 35 ? '¡Excelente control!' : 'Cuidado con las cuotas.'}</p>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card flex flex-col justify-between p-4 relative overflow-hidden min-h-[110px]">
+          <div className="flex justify-between items-start w-full">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${getColorSalud(metricasActivas.indice)}`}><Activity size={20} /></div>
+              <div>
+                <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mb-1">Endeudamiento</div>
+                <div className={`text-2xl font-black leading-none ${getColorSalud(metricasActivas.indice)}`}>{metricasActivas.indice.toFixed(1)}%</div>
+              </div>
+            </div>
+            
+            {/* Selector de Filtro */}
+            <div className="flex bg-white/5 p-0.5 rounded-lg border border-white/5 backdrop-blur-md">
+              {['individual', 'familiar'].map(f => (
+                <button 
+                  key={f}
+                  type="button"
+                  onClick={() => setFiltroSalud(f)}
+                  className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase transition-all ${filtroSalud === f ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'}`}
+                >
+                  {f === 'individual' ? 'Yo' : 'Hogar'}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="absolute top-0 right-0 p-2 opacity-10"><HeartPulse size={48} /></div>
+          
+          <div className="mt-3 border-t border-white/5 pt-2 flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+            <span>Carga: {formatearNumero(metricasActivas.carga, monedaGlobal)}</span>
+            <span>Ingresos: {formatearNumero(metricasActivas.ingresos, monedaGlobal)}</span>
+          </div>
+          
+          <p className="text-[9px] text-slate-500 italic mt-1.5">{metricasActivas.indice <= 35 ? '✅ ¡Excelente control!' : '⚠️ Cuidado con las cuotas.'}</p>
+          <div className="absolute -bottom-2 -right-2 opacity-5"><HeartPulse size={56} /></div>
         </motion.div>
 
         {/* SALDOS */}

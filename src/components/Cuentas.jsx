@@ -459,7 +459,11 @@ export default function Cuentas({
   function ModalAbono() {
     const [mFormateado, setMFormateado] = useState(() => {
       if (!pagoSeleccionado) return '';
-      const { cuota } = pagoSeleccionado;
+      const { cuota, maestra } = pagoSeleccionado;
+      if (maestra.tipo === 'tarjeta_credito') {
+        const minPago = cuota.pago_minimo || cuota.monto_cuota;
+        return formatarInput(Math.max(0, minPago - Number(cuota.monto_abonado)));
+      }
       return formatarInput(cuota.monto_cuota - cuota.monto_abonado);
     });
     const [mon, setMon] = useState(() => {
@@ -655,10 +659,38 @@ export default function Cuentas({
                 </div>
               )}
 
-              <div className="flex justify-between items-end">
-                <div><div className="text-[10px] text-slate-500 uppercase font-bold mb-1">{pestana === 'activas' ? 'Cuota Actual' : 'Total'}</div><div className="text-2xl font-black text-white">{formatearNumero(cuotaActual ? (cuotaActual.monto_cuota - cuotaActual.monto_abonado) : totalPagado, d.moneda)}</div></div>
-                {pestana === 'activas' && cuotaActual && (d.alcance === 'familiar' || esMia) && <button onClick={() => { setPagoSeleccionado({ cuota: cuotaActual, maestra: d }); setMostrarModalPago(true); }} className="bg-indigo-600 text-white text-xs font-black px-6 py-3 rounded-xl shadow-lg">ABONAR</button>}
-              </div>
+              {(() => {
+                let montoAPagar = 0;
+                let etiquetaMonto = 'Cuota Actual';
+                if (pestana === 'activas' && cuotaActual) {
+                  if (d.tipo === 'tarjeta_credito') {
+                    etiquetaMonto = 'Pago Mínimo';
+                    const minPago = cuotaActual.pago_minimo || cuotaActual.monto_cuota;
+                    montoAPagar = Math.max(0, minPago - Number(cuotaActual.monto_abonado));
+                  } else {
+                    montoAPagar = cuotaActual.monto_cuota - cuotaActual.monto_abonado;
+                  }
+                } else {
+                  etiquetaMonto = 'Total Pagado';
+                  montoAPagar = totalPagado;
+                }
+                return (
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">{etiquetaMonto}</div>
+                      <div className="text-2xl font-black text-white">{formatearNumero(montoAPagar, d.moneda)}</div>
+                    </div>
+                    {pestana === 'activas' && cuotaActual && (d.alcance === 'familiar' || esMia) && (
+                      <button 
+                        onClick={() => { setPagoSeleccionado({ cuota: cuotaActual, maestra: d }); setMostrarModalPago(true); }} 
+                        className="bg-indigo-600 text-white text-xs font-black px-6 py-3 rounded-xl shadow-lg"
+                      >
+                        ABONAR
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
               {estaExpandida && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-6 pt-6 border-t border-white/5 space-y-4">
