@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert";
-import { formatearNumero, formatearFecha, formatearFechaCorta, obtenerFechaCierreExacta } from "./formatters.js";
+import { formatearNumero, formatearFecha, formatearFechaCorta, obtenerFechaCierreExacta, obtenerPlanAmortizacion } from "./formatters.js";
 
 test("formatearNumero should format PYG by default", () => {
   const result = formatearNumero(10000);
@@ -54,4 +54,24 @@ test("obtenerFechaCierreExacta should compute credit card closing dates correctl
   // Due date March 5, 2026, closing day 31 -> Previous month is Feb, which has 28 days in 2026 -> Closing date Feb 28, 2026
   assert.strictEqual(obtenerFechaCierreExacta("2026-03-05", 31), "2026-02-28");
 });
+
+test("obtenerPlanAmortizacion should calculate principal and interest correctly", () => {
+  const plan = obtenerPlanAmortizacion(300000, 12, 24);
+  assert.strictEqual(plan.length, 12);
+  const sumCuotas = plan.reduce((acc, p) => acc + p.cuota, 0);
+  assert.strictEqual(sumCuotas, 3600000);
+  assert.ok(plan[0].interes > 63000 && plan[0].interes < 64000);
+  assert.ok(plan[0].capital > 236000 && plan[0].capital < 237000);
+});
+
+test("obtenerPlanAmortizacion should calculate principal, interest, and charges correctly", () => {
+  const plan = obtenerPlanAmortizacion(345878, 12, 24, 4501);
+  assert.strictEqual(plan.length, 12);
+  const p6 = plan[5]; // Cuota 6 (index 5)
+  assert.strictEqual(p6.cargos, 4501);
+  // Verify math close to GNB sample values
+  assert.ok(p6.interes > 40000 && p6.interes < 50000);
+  assert.ok(p6.capital > 290000 && p6.capital < 300000);
+});
+
 

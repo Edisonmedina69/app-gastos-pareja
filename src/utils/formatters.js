@@ -82,3 +82,43 @@ export function obtenerFechaCierreExacta(fechaVencimientoStr, diaCierre) {
   return `${cy}-${cm}-${cd}`;
 }
 
+export function obtenerPlanAmortizacion(montoCuota, totalCuotas, tasaInteresAnual, cargos = 0) {
+  const plan = [];
+  const r = (tasaInteresAnual || 0) / 100 / 12;
+  const cuotaNeto = Math.max(0, montoCuota - (cargos || 0));
+  
+  if (r === 0) {
+    for (let i = 1; i <= totalCuotas; i++) {
+      plan.push({
+        numero: i,
+        cuota: montoCuota,
+        capital: cuotaNeto,
+        interes: 0,
+        cargos: cargos || 0,
+        saldo: cuotaNeto * (totalCuotas - i)
+      });
+    }
+    return plan;
+  }
+  
+  // P = A * (1 - (1 + r)^-n) / r
+  let saldoPendiente = cuotaNeto * ((1 - Math.pow(1 + r, -totalCuotas)) / r);
+  
+  for (let i = 1; i <= totalCuotas; i++) {
+    const interes = saldoPendiente * r;
+    const capital = Math.max(0, cuotaNeto - interes);
+    saldoPendiente = Math.max(0, saldoPendiente - capital);
+    
+    plan.push({
+      numero: i,
+      cuota: montoCuota,
+      capital: capital,
+      interes: interes,
+      cargos: cargos || 0,
+      saldo: saldoPendiente
+    });
+  }
+  return plan;
+}
+
+

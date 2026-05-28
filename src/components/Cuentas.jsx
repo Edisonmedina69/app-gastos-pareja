@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { toast } from 'react-hot-toast';
-import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta, obtenerFechaCierreExacta } from '../utils/formatters';
+import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta, obtenerFechaCierreExacta, obtenerPlanAmortizacion } from '../utils/formatters';
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent, Clock
 } from 'lucide-react';
 
 export default function Cuentas({
@@ -25,6 +25,11 @@ export default function Cuentas({
   const [mostrarModalPago, setMostrarModalPago] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState(null);
   const [deudaEditandoId, setDeudaEditandoId] = useState(null);
+  const [mostrarModalCompra, setMostrarModalCompra] = useState(false);
+  const [compraSeleccionada, setCompraSeleccionada] = useState(null);
+  const [compraConcepto, setCompraConcepto] = useState('');
+  const [compraMontoFormateado, setCompraMontoFormateado] = useState('');
+  const [compraCategoria, setCompraCategoria] = useState('Otros');
   
   // New Debt Fields
   const [tipoDeuda, setTipoDeuda] = useState("fija"); 
@@ -35,6 +40,7 @@ export default function Cuentas({
   const [montoTotalFormateado, setMontoTotalFormateado] = useState('');
   const [lineaCreditoFormateada, setLineaCreditoFormateada] = useState('');
   const [pagoMinimoFormateado, setPagoMinimoFormateado] = useState('');
+  const [cargosMensualesFormateado, setCargosMensualesFormateado] = useState('');
   const [cantidadCuotas, setCantidadCuotas] = useState(1);
   const [cuotasPagadas, setCuotasPagadas] = useState(0); 
   const [diaVencimiento, setDiaVencimiento] = useState("5");
@@ -291,7 +297,7 @@ export default function Cuentas({
   }
 
   const resetForm = () => {
-    setTitulo(''); setNroTarjeta(''); setTasaInteres(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCantidadCuotas(1); setCuotasPagadas(0);
+    setTitulo(''); setNroTarjeta(''); setTasaInteres(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCargosMensualesFormateado(''); setCantidadCuotas(1); setCuotasPagadas(0);
     setTipoDeuda("fija"); setAlcanceDeuda("familiar"); setDiaVencimiento("5"); setFechaCierreTarjeta("25");
     setDeudaEditandoId(null);
   };
@@ -323,6 +329,7 @@ export default function Cuentas({
 
     setLineaCreditoFormateada(formatarInput(d.linea_credito_total));
     setPagoMinimoFormateado(formatarInput(d.cuotas_detalle?.[0]?.pago_minimo || 0));
+    setCargosMensualesFormateado(formatarInput(d.cuotas_detalle?.[0]?.cargos || 0));
     setCantidadCuotas(d.cuotas_detalle?.length || 1);
     
     const yaPagadasCount = d.cuotas_detalle?.filter(c => c.estado === 'pagado').length || 0;
@@ -358,7 +365,7 @@ export default function Cuentas({
             fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
             nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
             estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa',
-            tasa_interes: tipoDeuda === 'tarjeta_credito' ? parseFloat(tasaInteres) || 0 : 0
+            tasa_interes: (tipoDeuda === 'tarjeta_credito' || tipoDeuda === 'fija') ? parseFloat(tasaInteres) || 0 : 0
           })
           .eq("id", deudaEditandoId);
 
@@ -381,7 +388,7 @@ export default function Cuentas({
             fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
             nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
             estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa',
-            tasa_interes: tipoDeuda === 'tarjeta_credito' ? parseFloat(tasaInteres) || 0 : 0
+            tasa_interes: (tipoDeuda === 'tarjeta_credito' || tipoDeuda === 'fija') ? parseFloat(tasaInteres) || 0 : 0
           }])
           .select().single();
 
@@ -391,8 +398,12 @@ export default function Cuentas({
 
       const cuotas = [];
       const fechaBase = new Date();
+      const hoyDia = fechaBase.getDate();
+      const mesProximo = parseInt(diaVencimiento) < hoyDia ? 1 : 0;
+      const mesInicio = fechaBase.getMonth() + mesProximo - yaPagadas;
+
       for (let i = 1; i <= numCuotas; i++) {
-        let fv = new Date(fechaBase.getFullYear(), fechaBase.getMonth() + (i - 1), parseInt(diaVencimiento));
+        let fv = new Date(fechaBase.getFullYear(), mesInicio + (i - 1), parseInt(diaVencimiento));
         fv = ajustarDiaHabil(fv);
         
         const esPagada = i <= yaPagadas;
@@ -400,8 +411,9 @@ export default function Cuentas({
         cuotas.push({
           deuda_maestra_id: maestraId, espacio_id: eid, numero_cuota: i, monto_cuota: montoCuota,
           monto_abonado: esPagada ? montoCuota : 0,
+          cargos: tipoDeuda === 'fija' ? (desformatearInput(cargosMensualesFormateado) || 0) : 0,
           pago_minimo: i === 1 ? (desformatearInput(pagoMinimoFormateado) || 0) : 0,
-          fecha_vencimiento: fv.toISOString().split('T')[0], 
+          fecha_vencimiento: `${fv.getFullYear()}-${String(fv.getMonth() + 1).padStart(2, '0')}-${String(fv.getDate()).padStart(2, '0')}`,
           estado: esPagada ? 'pagado' : 'pendiente',
           fecha_pago: esPagada ? new Date().toISOString() : null,
           pagador_id: esPagada ? usuarioActual.id : null
@@ -441,12 +453,203 @@ export default function Cuentas({
         usuario_id: usuarioActual.id, pagador_id: usuarioActual.id, para_quien: "Ambos", moneda: monedaAbono, espacio_id: datosHogar.espacio_id
       }]);
       const { data: check } = await supabase.from('cuotas_detalle').select('estado').eq('deuda_maestra_id', maestra.id);
-      if (check.every(c => c.estado === 'pagado')) {
+      if (maestra.tipo !== 'tarjeta_credito' && check.every(c => c.estado === 'pagado')) {
         await supabase.from('deudas_maestras').update({ estado: 'cerrada' }).eq('id', maestra.id);
       }
       toast.success("Pago registrado!", { id: toastId });
       setMostrarModalPago(false); setPagoSeleccionado(null); obtenerDatos();
     } catch (err) { toast.error(err.message, { id: toastId }); }
+  }
+
+  const resetFormCompra = () => {
+    setCompraConcepto('');
+    setCompraMontoFormateado('');
+    setCompraCategoria('Otros');
+    setCompraSeleccionada(null);
+  };
+
+  async function procesarCompraTarjeta(e) {
+    e.preventDefault();
+    if (!compraSeleccionada || !usuarioActual || !datosHogar) return;
+    const montoCompra = desformatearInput(compraMontoFormateado);
+    if (!montoCompra || montoCompra <= 0) return;
+    
+    const toastId = toast.loading("Registrando compra con tarjeta...");
+    setGuardando(true);
+    
+    try {
+      const eid = datosHogar.espacio_id;
+      const { error: errG } = await supabase.from("gastos").insert([{
+        concepto: `${compraConcepto.trim()} (Tarjeta: ${compraSeleccionada.titulo})`,
+        monto: montoCompra,
+        categoria: compraCategoria,
+        usuario_id: usuarioActual.id,
+        pagador_id: usuarioActual.id,
+        para_quien: compraSeleccionada.alcance === 'familiar' ? 'Ambos' : 'Yo',
+        moneda: compraSeleccionada.moneda,
+        espacio_id: eid,
+        tasa_cambio: 1
+      }]);
+      
+      if (errG) throw errG;
+      
+      const nuevoDisponible = Number(compraSeleccionada.linea_credito_disponible) - montoCompra;
+      const { error: errDM } = await supabase.from("deudas_maestras")
+        .update({ linea_credito_disponible: nuevoDisponible })
+        .eq("id", compraSeleccionada.id);
+        
+      if (errDM) throw errDM;
+      
+      const cuotaActual = compraSeleccionada.cuotas_detalle?.find(c => c.estado === 'pendiente');
+      if (cuotaActual) {
+        const nuevoMontoCuota = Number(cuotaActual.monto_cuota) + montoCompra;
+        const { error: errC } = await supabase.from("cuotas_detalle")
+          .update({ monto_cuota: nuevoMontoCuota })
+          .eq("id", cuotaActual.id);
+          
+        if (errC) throw errC;
+      }
+      
+      toast.success("¡Compra registrada y disponible actualizado! 💳", { id: toastId });
+      setMostrarModalCompra(false);
+      resetFormCompra();
+      obtenerDatos();
+    } catch (err) {
+      toast.error("Error: " + err.message, { id: toastId });
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function cerrarCicloTarjeta(deuda, cuota) {
+    if (!deuda || !cuota) return;
+    const saldoPendiente = Math.max(0, Number(cuota.monto_cuota) - Number(cuota.monto_abonado));
+    const interesGenerado = saldoPendiente > 0 && deuda.tasa_interes > 0 
+      ? Math.round(saldoPendiente * (deuda.tasa_interes / 100 / 12)) 
+      : 0;
+      
+    const confirmar = window.confirm(
+      `¿Confirmas cerrar este ciclo de facturación de "${deuda.titulo}"?\n\n` +
+      `• Saldo no pagado: ${formatearNumero(saldoPendiente, deuda.moneda)}\n` +
+      (interesGenerado > 0 ? `• Interés generado (${deuda.tasa_interes}%): ${formatearNumero(interesGenerado, deuda.moneda)}\n` : '') +
+      `• Nuevo saldo inicial: ${formatearNumero(saldoPendiente + interesGenerado, deuda.moneda)}\n\n` +
+      `Se generará la cuota del siguiente mes y se archivará este ciclo.`
+    );
+    
+    if (!confirmar) return;
+    
+    const toastId = toast.loading("Cerrando ciclo de facturación...");
+    try {
+      // 1. Mark current cuota as pagado (archived)
+      await supabase.from("cuotas_detalle").update({
+        estado: 'pagado',
+        fecha_pago: new Date().toISOString(),
+        pagador_id: usuarioActual.id
+      }).eq("id", cuota.id);
+      
+      // 2. Generate next month's due date safely
+      const parts = cuota.fecha_vencimiento.split("-");
+      let nextYear = parseInt(parts[0], 10);
+      let nextMonth = parseInt(parts[1], 10); // this is 1-based, which represents the next month's 0-based index
+      if (nextMonth > 11) {
+        nextMonth = 0;
+        nextYear += 1;
+      }
+      
+      const rawDay = Math.min(parseInt(parts[2], 10), new Date(nextYear, nextMonth + 1, 0).getDate());
+      let nextVenc = new Date(nextYear, nextMonth, rawDay);
+      nextVenc = ajustarDiaHabil(nextVenc);
+      
+      // 3. Insert new cuota
+      const nuevaCuota = {
+        deuda_maestra_id: deuda.id,
+        espacio_id: datosHogar.espacio_id,
+        numero_cuota: cuota.numero_cuota + 1,
+        monto_cuota: saldoPendiente + interesGenerado,
+        monto_abonado: 0,
+        pago_minimo: (saldoPendiente + interesGenerado) * 0.1, // 10% default
+        fecha_vencimiento: `${nextVenc.getFullYear()}-${String(nextVenc.getMonth() + 1).padStart(2, '0')}-${String(nextVenc.getDate()).padStart(2, '0')}`,
+        estado: 'pendiente'
+      };
+      
+      const { error: errIns } = await supabase.from("cuotas_detalle").insert([nuevaCuota]);
+      if (errIns) throw errIns;
+      
+      toast.success("¡Periodo cerrado y nuevo ciclo iniciado! 💳✨", { id: toastId });
+      obtenerDatos();
+    } catch (e) {
+      toast.error("Error al cerrar ciclo: " + e.message, { id: toastId });
+    }
+  }
+
+  function ModalCompra() {
+    if (!compraSeleccionada) return null;
+    return (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl border border-white/10 shadow-2xl">
+          <h3 className="text-white font-bold text-lg mb-1">Cargar Compra</h3>
+          <p className="text-[10px] text-slate-400 font-bold mb-4 uppercase tracking-wider">
+            Tarjeta: {compraSeleccionada.titulo}
+          </p>
+          <form onSubmit={procesarCompraTarjeta} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Concepto / Comercio</label>
+              <input 
+                type="text" 
+                placeholder="Ej: Supermercado, Biggie, combustible..." 
+                value={compraConcepto} 
+                onChange={(e) => setCompraConcepto(e.target.value)} 
+                className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50" 
+                required 
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Monto de la Compra</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={compraMontoFormateado} 
+                  onChange={(e) => setCompraMontoFormateado(formatarInput(e.target.value))} 
+                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-indigo-400 outline-none" 
+                  placeholder="0"
+                  required
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{compraSeleccionada.moneda}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Categoría</label>
+              <select 
+                value={compraCategoria} 
+                onChange={(e) => setCompraCategoria(e.target.value)} 
+                className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white"
+              >
+                {["Supermercado", "Casa", "Salud", "Transporte", "Otros"].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <button 
+                type="button" 
+                onClick={() => { setMostrarModalCompra(false); resetFormCompra(); }} 
+                className="flex-1 py-4 bg-white/5 text-slate-400 font-bold rounded-2xl"
+              >
+                CANCELAR
+              </button>
+              <button 
+                type="submit" 
+                disabled={guardando || !compraConcepto || !compraMontoFormateado} 
+                className="flex-[2] py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-600/30"
+              >
+                REGISTRAR
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    );
   }
 
   async function eliminarDeuda(maestra) {
@@ -498,6 +701,29 @@ export default function Cuentas({
                 <p className="text-[9px] text-slate-500 italic mt-1.5 pl-1">
                   Las deudas con cuota fija requieren el pago del monto exacto de la cuota.
                 </p>
+              )}
+              {maestra.tipo === 'tarjeta_credito' && (
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const minPago = pagoSeleccionado.cuota.pago_minimo || pagoSeleccionado.cuota.monto_cuota;
+                      setMFormateado(formatarInput(Math.max(0, minPago - Number(pagoSeleccionado.cuota.monto_abonado))));
+                    }}
+                    className="flex-1 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-[9px] font-black uppercase border border-indigo-500/20 transition-all"
+                  >
+                    Mínimo: {formatearNumero(Math.max(0, (pagoSeleccionado.cuota.pago_minimo || pagoSeleccionado.cuota.monto_cuota) - Number(pagoSeleccionado.cuota.monto_abonado)), maestra.moneda)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMFormateado(formatarInput(Math.max(0, pagoSeleccionado.cuota.monto_cuota - Number(pagoSeleccionado.cuota.monto_abonado))));
+                    }}
+                    className="flex-1 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 rounded-xl text-[9px] font-black uppercase border border-emerald-500/20 transition-all"
+                  >
+                    Total: {formatearNumero(Math.max(0, pagoSeleccionado.cuota.monto_cuota - Number(pagoSeleccionado.cuota.monto_abonado)), maestra.moneda)}
+                  </button>
+                </div>
               )}
             </div>
             
@@ -633,21 +859,223 @@ export default function Cuentas({
               </div>
 
               {d.tipo === 'tarjeta_credito' ? (
-                <div className="p-3 bg-white/5 rounded-2xl mb-4">
-                  <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div><div className="text-[9px] text-slate-500 uppercase font-bold">Disponible</div><div className="text-lg font-black text-indigo-400">{formatearNumero(d.linea_credito_disponible, d.moneda)}</div></div>
-                    <div className="text-right"><div className="text-[9px] text-slate-500 uppercase font-bold">Línea Total</div><div className="text-sm font-bold text-slate-300">{formatearNumero(d.linea_credito_total, d.moneda)}</div></div>
+                <div className={`p-4 rounded-2xl mb-4 transition-all border ${d.linea_credito_disponible < 0 ? 'bg-red-500/5 border-red-500/20' : 'bg-white/5 border-white/5'}`}>
+                  {/* Resumen Principal (Siempre visible) */}
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-[8px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Uso de Línea</div>
+                      <div className="text-sm font-black text-white">
+                        {formatearNumero(Math.max(0, d.linea_credito_total - d.linea_credito_disponible), d.moneda)}
+                        <span className="text-slate-500 font-bold text-xs"> / {formatearNumero(d.linea_credito_total, d.moneda)}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDeudaExpandida(estaExpandida ? null : d.id)}
+                      className="text-[9px] font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 bg-indigo-500/5 hover:bg-indigo-500/10 px-3.5 py-2 rounded-xl border border-indigo-500/15 transition-all active:scale-95 shadow-sm"
+                    >
+                      <span>{estaExpandida ? 'Ocultar Detalles' : 'Ver Detalles'}</span>
+                      {estaExpandida ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
                   </div>
-                  <div className="border-t border-white/5 pt-2 flex justify-between text-[9px] text-slate-400 font-bold uppercase tracking-tight">
-                    <span>
-                      📅 Cierre: {
-                        (cuotaActual && d.fecha_cierre_tarjeta)
-                        ? formatearFechaCorta(obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta))
-                        : `${d.fecha_cierre_tarjeta || '--'} de cada mes`
-                      }
-                    </span>
-                    {cuotaActual && <span>⏳ Vence: {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</span>}
-                  </div>
+
+                  {/* Detalle Expandible */}
+                  <AnimatePresence>
+                    {estaExpandida && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 pt-4 border-t border-white/5 space-y-4 overflow-hidden"
+                      >
+                        {/* ALERTAS INTELIGENTES */}
+                        {(() => {
+                          const alertas = [];
+                          const hoy = new Date();
+                          hoy.setHours(0, 0, 0, 0);
+
+                          // 1. Sobregiro
+                          if (d.linea_credito_disponible < 0) {
+                            alertas.push({
+                              id: 'sobregiro',
+                              icono: <AlertTriangle size={12} />,
+                              texto: `Sobregirado por ${formatearNumero(Math.abs(d.linea_credito_disponible), d.moneda)}`,
+                              clase: 'bg-red-500/10 border-red-500/20 text-red-400'
+                            });
+                          }
+
+                          // 2. Uso elevado
+                          if (d.linea_credito_disponible >= 0 && d.linea_credito_total > 0 && (d.linea_credito_total - d.linea_credito_disponible) / d.linea_credito_total > 0.8) {
+                            alertas.push({
+                              id: 'uso_elevado',
+                              icono: <AlertTriangle size={12} />,
+                              texto: `Uso elevado: ${(((d.linea_credito_total - d.linea_credito_disponible) / d.linea_credito_total) * 100).toFixed(0)}% de tu línea`,
+                              clase: 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                            });
+                          }
+
+                          if (cuotaActual) {
+                            // 3. Vencimiento
+                            if (cuotaActual.estado === 'pendiente') {
+                              const venc = new Date(cuotaActual.fecha_vencimiento);
+                              venc.setHours(0, 0, 0, 0);
+                              const diffVencDays = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+
+                              if (diffVencDays === 0) {
+                                alertas.push({
+                                  id: 'vence_hoy',
+                                  icono: <AlertTriangle size={12} className="animate-pulse" />,
+                                  texto: 'PAGO VENCE HOY 🚨',
+                                  clase: 'bg-red-500/15 border-red-500/35 text-red-400 font-extrabold'
+                                });
+                              } else if (diffVencDays > 0 && diffVencDays <= 3) {
+                                alertas.push({
+                                  id: 'vence_pronto',
+                                  icono: <Clock size={12} />,
+                                  texto: `Vence en ${diffVencDays} ${diffVencDays === 1 ? 'día' : 'días'} ⏳`,
+                                  clase: 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                                });
+                              } else if (diffVencDays < 0) {
+                                alertas.push({
+                                  id: 'vencido',
+                                  icono: <AlertTriangle size={12} className="animate-bounce" />,
+                                  texto: `PAGO VENCIDO hace ${Math.abs(diffVencDays)} días 🚨`,
+                                  clase: 'bg-red-600/20 border-red-600/45 text-red-400 font-black'
+                                });
+                              }
+                            }
+
+                            // 4. Cierre
+                            if (d.fecha_cierre_tarjeta) {
+                              const cierreActualStr = obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta);
+                              if (cierreActualStr) {
+                                const cierre = new Date(cierreActualStr);
+                                cierre.setHours(0, 0, 0, 0);
+                                const diffCierreDays = Math.ceil((cierre - hoy) / (1000 * 60 * 60 * 24));
+
+                                if (diffCierreDays === 0) {
+                                  alertas.push({
+                                    id: 'cierra_hoy',
+                                    icono: <Sparkles size={12} />,
+                                    texto: 'Hoy cierra el periodo de facturación 🔔',
+                                    clase: 'bg-indigo-500/15 border-indigo-500/35 text-indigo-300'
+                                  });
+                                } else if (diffCierreDays > 0 && diffCierreDays <= 3) {
+                                  alertas.push({
+                                    id: 'cierra_pronto',
+                                    icono: <Calendar size={12} />,
+                                    texto: `Cierre de periodo en ${diffCierreDays} ${diffCierreDays === 1 ? 'día' : 'días'} 📅`,
+                                    clase: 'bg-indigo-500/10 border-indigo-500/25 text-indigo-300/80'
+                                  });
+                                } else if (diffCierreDays < 0 && diffCierreDays >= -3) {
+                                  alertas.push({
+                                    id: 'recien_cerrado',
+                                    icono: <CheckCircle size={12} />,
+                                    texto: `Periodo cerró hace ${Math.abs(diffCierreDays)} días 📄`,
+                                    clase: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                                  });
+                                }
+                              }
+                            }
+                          }
+
+                          if (alertas.length === 0) return null;
+
+                          return (
+                            <div className="space-y-1.5">
+                              {alertas.map(al => (
+                                <div key={al.id} className={`p-2 border rounded-xl flex items-center gap-2 text-[8px] font-bold uppercase ${al.clase}`}>
+                                  {al.icono}
+                                  <span>{al.texto}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
+                        {/* DETALLE DE LÍNEA DE CRÉDITO */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="bg-white/[0.02] border border-white/5 p-2 rounded-xl">
+                            <div className="text-[7px] text-slate-500 uppercase font-bold">Disponible</div>
+                            <div className={`text-xs font-black ${d.linea_credito_disponible < 0 ? 'text-red-400' : 'text-indigo-400'}`}>
+                              {formatearNumero(d.linea_credito_disponible, d.moneda)}
+                            </div>
+                          </div>
+                          <div className="bg-white/[0.02] border border-white/5 p-2 rounded-xl">
+                            <div className="text-[7px] text-slate-500 uppercase font-bold">Consumido</div>
+                            <div className="text-xs font-black text-slate-300">
+                              {formatearNumero(Math.max(0, d.linea_credito_total - d.linea_credito_disponible), d.moneda)}
+                            </div>
+                          </div>
+                          <div className="bg-white/[0.02] border border-white/5 p-2 rounded-xl text-right">
+                            <div className="text-[7px] text-slate-500 uppercase font-bold">Línea Total</div>
+                            <div className="text-xs font-black text-slate-400">
+                              {formatearNumero(d.linea_credito_total, d.moneda)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* LÍNEA DE FECHAS DE CIERRE */}
+                        {(() => {
+                          if (!cuotaActual || !d.fecha_cierre_tarjeta) return null;
+                          const cierreActualStr = obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta);
+                          if (!cierreActualStr) return null;
+
+                          const parts = cierreActualStr.split("-");
+                          const cy = parseInt(parts[0], 10);
+                          const cm = parseInt(parts[1], 10) - 1;
+                          const cd = parseInt(parts[2], 10);
+
+                          const prevCierre = new Date(cy, cm - 1, cd);
+                          const nextCierre = new Date(cy, cm + 1, cd);
+
+                          const formatLocalYMD = (date) => {
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                            const d = String(date.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${d}`;
+                          };
+
+                          const prevCierreStr = formatLocalYMD(prevCierre);
+                          const nextCierreStr = formatLocalYMD(nextCierre);
+
+                          return (
+                            <div className="border-t border-white/5 pt-3 space-y-1.5 text-[8px] text-slate-400 font-bold uppercase tracking-tight">
+                              <div className="flex justify-between">
+                                <span>📅 Cierre Anterior:</span>
+                                <span className="text-slate-500">{formatearFechaCorta(prevCierreStr)}</span>
+                              </div>
+                              <div className="flex justify-between text-indigo-400 font-black">
+                                <span>📅 Cierre Actual:</span>
+                                <span>{formatearFechaCorta(cierreActualStr)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>📅 Próximo Cierre:</span>
+                                <span className="text-slate-500">{formatearFechaCorta(nextCierreStr)}</span>
+                              </div>
+                              <div className="flex justify-between text-red-400 font-black border-t border-white/5 pt-1.5 mt-1">
+                                <span>⏳ Vence el:</span>
+                                <span>{formatearFechaCorta(cuotaActual.fecha_vencimiento)}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* WIDGET PROYECCIÓN DE INTERESES (SUDAMERIS STYLE) */}
+                        {d.tasa_interes > 0 && cuotaActual && (d.linea_credito_total - d.linea_credito_disponible) > 0 && (() => {
+                          const saldoConsumido = d.linea_credito_total - d.linea_credito_disponible;
+                          const minPagoVal = cuotaActual.pago_minimo || (saldoConsumido * 0.1);
+                          const mesesProyeccion = 10;
+                          const interesTotalEstimado = (saldoConsumido * (d.tasa_interes / 100)) * (mesesProyeccion / 12);
+                          return (
+                            <div className="p-2.5 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-[8px] text-indigo-300/80 leading-relaxed normal-case">
+                              💡 <strong>Proyección:</strong> Si pagás solo el pago mínimo ({formatearNumero(minPagoVal, d.moneda)}), te llevará aprox. <strong>{mesesProyeccion} meses</strong> liquidar el saldo total y pagarás un aproximado de <strong>{formatearNumero(interesTotalEstimado, d.moneda)}</strong> en intereses.
+                            </div>
+                          );
+                        })()}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ) : (
                 <div className="mb-4">
@@ -680,30 +1108,109 @@ export default function Cuentas({
                       <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">{etiquetaMonto}</div>
                       <div className="text-2xl font-black text-white">{formatearNumero(montoAPagar, d.moneda)}</div>
                     </div>
-                    {pestana === 'activas' && cuotaActual && (d.alcance === 'familiar' || esMia) && (
-                      <button 
-                        onClick={() => { setPagoSeleccionado({ cuota: cuotaActual, maestra: d }); setMostrarModalPago(true); }} 
-                        className="bg-indigo-600 text-white text-xs font-black px-6 py-3 rounded-xl shadow-lg"
-                      >
-                        ABONAR
-                      </button>
-                    )}
+                    {pestana === 'activas' && cuotaActual && (d.alcance === 'familiar' || esMia) && (() => {
+                      let mostrarCerrarCiclo = false;
+                      if (d.tipo === 'tarjeta_credito' && d.fecha_cierre_tarjeta) {
+                        const cierreActualStr = obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta);
+                        if (cierreActualStr) {
+                          const hoy = new Date();
+                          hoy.setHours(0,0,0,0);
+                          const cierre = new Date(cierreActualStr);
+                          cierre.setHours(0,0,0,0);
+                          mostrarCerrarCiclo = hoy >= cierre;
+                        }
+                      }
+                      return (
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          {d.tipo === 'tarjeta_credito' && (
+                            <button 
+                              type="button"
+                              onClick={() => { setCompraSeleccionada(d); setMostrarModalCompra(true); }}
+                              className="bg-white/5 border border-white/10 hover:bg-white/10 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg transition-all"
+                            >
+                              CARGAR COMPRA
+                            </button>
+                          )}
+                          {mostrarCerrarCiclo && (
+                            <button 
+                              type="button"
+                              onClick={() => cerrarCicloTarjeta(d, cuotaActual)}
+                              className="bg-amber-600/10 border border-amber-500/20 hover:bg-amber-600/20 text-amber-400 text-xs font-black px-4 py-3 rounded-xl shadow-lg transition-all"
+                            >
+                              🔄 CERRAR CICLO
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => { setPagoSeleccionado({ cuota: cuotaActual, maestra: d }); setMostrarModalPago(true); }} 
+                            className="bg-indigo-600 text-white text-xs font-black px-6 py-3 rounded-xl shadow-lg"
+                          >
+                            ABONAR
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
 
               {estaExpandida && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-6 pt-6 border-t border-white/5 space-y-4">
-                  <div className="space-y-1">
-                    {d.cuotas_detalle?.sort((a,b)=>a.numero_cuota-b.numero_cuota).map(c => (
-                      <div key={c.id} className="flex justify-between text-[10px] bg-white/5 p-2 rounded-xl">
-                        <span className={c.estado==='pagado'?'text-emerald-400':'text-slate-400'}>
-                          Cuota {c.numero_cuota} • {c.estado === 'pagado' ? 'Pagado' : `Vence: ${formatearFechaCorta(c.fecha_vencimiento)}`}
-                        </span>
-                        <span className="text-white font-bold">{formatearNumero(c.monto_cuota, d.moneda)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {d.tipo === 'fija' && d.tasa_interes > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[9px] text-slate-400">
+                        <thead>
+                          <tr className="border-b border-white/5 uppercase text-[8px] text-slate-500 font-bold">
+                            <th className="pb-2">Cuota</th>
+                            <th className="pb-2">Vencimiento</th>
+                            <th className="pb-2">Capital</th>
+                            <th className="pb-2">Interés</th>
+                            <th className="pb-2">Cargos/Seguros</th>
+                            <th className="pb-2 text-right">Cuota Total</th>
+                            <th className="pb-2 text-right">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const plan = obtenerPlanAmortizacion(
+                              d.cuotas_detalle?.[0]?.monto_cuota || 0,
+                              d.cuotas_detalle?.length || 1,
+                              d.tasa_interes,
+                              d.cuotas_detalle?.[0]?.cargos || 0
+                            );
+                            return d.cuotas_detalle?.sort((a,b)=>a.numero_cuota-b.numero_cuota).map((c, idx) => {
+                              const amort = plan[idx] || { capital: c.monto_cuota, interes: 0, cargos: 0 };
+                              return (
+                                <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                  <td className="py-2.5 font-bold text-slate-300">{c.numero_cuota}</td>
+                                  <td className="py-2.5">{formatearFechaCorta(c.fecha_vencimiento)}</td>
+                                  <td className="py-2.5 text-indigo-400 font-bold">{formatearNumero(amort.capital, d.moneda)}</td>
+                                  <td className="py-2.5 text-amber-500/95 font-bold">{formatearNumero(amort.interes, d.moneda)}</td>
+                                  <td className="py-2.5 text-slate-500 font-bold">{formatearNumero(c.cargos || 0, d.moneda)}</td>
+                                  <td className="py-2.5 text-right text-white font-black">{formatearNumero(c.monto_cuota, d.moneda)}</td>
+                                  <td className="py-2.5 text-right">
+                                    <span className={`px-2 py-0.5 rounded-md font-black uppercase text-[7px] border ${c.estado === 'pagado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                      {c.estado}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {d.cuotas_detalle?.sort((a,b)=>a.numero_cuota-b.numero_cuota).map(c => (
+                        <div key={c.id} className="flex justify-between text-[10px] bg-white/5 p-2 rounded-xl">
+                          <span className={c.estado==='pagado'?'text-emerald-400':'text-slate-400'}>
+                            Cuota {c.numero_cuota} • {c.estado === 'pagado' ? 'Pagado' : `Vence: ${formatearFechaCorta(c.fecha_vencimiento)}`}
+                          </span>
+                          <span className="text-white font-bold">{formatearNumero(c.monto_cuota, d.moneda)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </motion.div>
@@ -849,6 +1356,19 @@ export default function Cuentas({
                   </div>
                 )}
 
+                {tipoDeuda === 'fija' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                      <input type="number" step="0.01" min="0" placeholder="Ej: 24" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">🛡️ Cargos / Seguros por Cuota</label>
+                      <input type="text" placeholder="Ej: 4.500" value={cargosMensualesFormateado} onChange={(e) => setCargosMensualesFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">{tipoDeuda === 'tarjeta_credito' ? 'Deuda Actual' : 'Monto Total'}</label>
@@ -905,6 +1425,7 @@ export default function Cuentas({
         )}
       </AnimatePresence>
       <AnimatePresence>{mostrarModalPago && <ModalAbono />}</AnimatePresence>
+      <AnimatePresence>{mostrarModalCompra && <ModalCompra />}</AnimatePresence>
       <AnimatePresence>{sugerenciaIA && <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"><motion.div className="w-full max-w-sm glass-panel p-8 rounded-3xl text-center"><Sparkles className="text-indigo-400 mx-auto mb-4" size={48}/><p className="text-slate-300 italic mb-8">"{sugerenciaIA}"</p><button onClick={() => setSugerenciaIA(null)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase">ENTENDIDO</button></motion.div></div>}</AnimatePresence>
 
       {/* MODAL CREAR/EDITAR GASTO FIJO */}
