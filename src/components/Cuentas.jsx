@@ -47,6 +47,7 @@ export default function Cuentas({
   const [diaVencimiento, setDiaVencimiento] = useState("5");
   const [fechaCierreTarjeta, setFechaCierreTarjeta] = useState("25");
   const [monedaDeuda, setMonedaDeuda] = useState(monedaGlobal);
+  const [modoMonto, setModoMonto] = useState('cuota'); // cuota | total
   
   // UI State
   const [guardando, setGuardando] = useState(false);
@@ -364,14 +365,46 @@ export default function Cuentas({
   useEffect(() => {
     if (mostrarModal) {
       setMonedaDeuda(monedaGlobal);
-      if (tipoDeuda === 'tarjeta_credito') setCantidadCuotas(1);
+      if (tipoDeuda === 'tarjeta_credito') {
+        setCantidadCuotas(1);
+        setModoMonto('total');
+      } else {
+        if (modoMonto === 'total' && cantidadCuotas === 1) {
+          setModoMonto('cuota');
+        }
+      }
     }
   }, [mostrarModal, monedaGlobal, tipoDeuda]);
 
+  const cambiarModoMonto = (nuevoModo) => {
+    if (nuevoModo === modoMonto) return;
+    const valorActual = desformatearInput(montoTotalFormateado) || 0;
+    const numCuotas = parseInt(cantidadCuotas) || 1;
+    let nuevoValor = 0;
+    if (nuevoModo === 'total') {
+      nuevoValor = valorActual * numCuotas;
+    } else {
+      nuevoValor = valorActual / numCuotas;
+    }
+    setModoMonto(nuevoModo);
+    setMontoTotalFormateado(formatarInput(Math.round(nuevoValor)));
+  };
+
   const projectedHealth = () => {
-    const montoTotalNum = desformatearInput(montoTotalFormateado);
-    if (!montoTotalNum || !saludFinanciera.ingresos) return saludFinanciera.indice;
-    const cuotaNueva = montoTotalNum / (parseInt(cantidadCuotas) || 1);
+    const inputVal = desformatearInput(montoTotalFormateado) || 0;
+    if (!inputVal || !saludFinanciera.ingresos) return saludFinanciera.indice;
+    
+    let cuotaNueva = 0;
+    if (tipoDeuda === 'tarjeta_credito') {
+      cuotaNueva = inputVal / (parseInt(cantidadCuotas) || 1);
+    } else {
+      if (modoMonto === 'cuota') {
+        cuotaNueva = inputVal;
+      } else {
+        cuotaNueva = inputVal / (parseInt(cantidadCuotas) || 1);
+      }
+    }
+    
     const impact = alcanceDeuda === 'individual' ? cuotaNueva : cuotaNueva * 0.5;
     const cargaNueva = saludFinanciera.carga + impact;
     return (cargaNueva / saludFinanciera.ingresos) * 100;
@@ -391,6 +424,7 @@ export default function Cuentas({
   const resetForm = () => {
     setTitulo(''); setNroTarjeta(''); setTasaInteres(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCargosMensualesFormateado(''); setCantidadCuotas(1); setCuotasPagadas(0);
     setTipoDeuda("fija"); setAlcanceDeuda("familiar"); setDiaVencimiento("5"); setFechaCierreTarjeta("25");
+    setModoMonto('cuota');
     setDeudaEditandoId(null);
   };
 
@@ -418,7 +452,14 @@ export default function Cuentas({
 
     const totalMontoVal = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_cuota), 0) || 0;
     const cuotaMontoVal = d.cuotas_detalle?.[0]?.monto_cuota || 0;
-    setMontoTotalFormateado(formatarInput(d.tipo === 'tarjeta_credito' ? totalMontoVal : cuotaMontoVal));
+    
+    if (d.tipo === 'tarjeta_credito') {
+      setModoMonto('total');
+      setMontoTotalFormateado(formatarInput(totalMontoVal));
+    } else {
+      setModoMonto('cuota');
+      setMontoTotalFormateado(formatarInput(cuotaMontoVal));
+    }
 
     setLineaCreditoFormateada(formatarInput(d.linea_credito_total));
     setPagoMinimoFormateado(formatarInput(d.cuotas_detalle?.[0]?.pago_minimo || 0));
@@ -444,8 +485,21 @@ export default function Cuentas({
       const inputMonto = desformatearInput(montoTotalFormateado) || 0;
       const lineaTotal = desformatearInput(lineaCreditoFormateada);
       
-      const montoCuota = tipoDeuda === 'tarjeta_credito' ? (inputMonto / numCuotas) : inputMonto;
-      const totalMonto = tipoDeuda === 'tarjeta_credito' ? inputMonto : (montoCuota * numCuotas);
+      let montoCuota = 0;
+      let totalMonto = 0;
+
+      if (tipoDeuda === 'tarjeta_credito') {
+        montoCuota = inputMonto / numCuotas;
+        totalMonto = inputMonto;
+      } else {
+        if (modoMonto === 'cuota') {
+          montoCuota = inputMonto;
+          totalMonto = inputMonto * numCuotas;
+        } else {
+          totalMonto = inputMonto;
+          montoCuota = inputMonto / numCuotas;
+        }
+      }
 
       let maestraId = deudaEditandoId;
 
@@ -1574,9 +1628,36 @@ export default function Cuentas({
                   </div>
                 )}
 
+                {tipoDeuda !== 'tarjeta_credito' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Método de Registro de Monto</label>
+                    <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => cambiarModoMonto('cuota')}
+                        className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
+                      >
+                        Ingresar por Cuota
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cambiarModoMonto('total')}
+                        className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
+                      >
+                        Ingresar por Monto Total
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">{tipoDeuda === 'tarjeta_credito' ? 'Deuda Actual' : 'Monto de cada Cuota'}</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+                      {tipoDeuda === 'tarjeta_credito' 
+                        ? 'Deuda Actual' 
+                        : (modoMonto === 'cuota' ? 'Monto de cada Cuota' : 'Monto Total de la Deuda')
+                      }
+                    </label>
                     <input type="text" value={montoTotalFormateado} onChange={(e) => setMontoTotalFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" placeholder="0" required />
                   </div>
                   <div className="space-y-1">
@@ -1584,6 +1665,31 @@ export default function Cuentas({
                     <select value={monedaDeuda} onChange={(e) => setMonedaDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"><option value="PYG">PYG</option><option value="BRL">BRL</option></select>
                   </div>
                 </div>
+
+                {(() => {
+                  const inputVal = desformatearInput(montoTotalFormateado) || 0;
+                  const numCuotas = parseInt(cantidadCuotas) || 1;
+                  if (!inputVal) return null;
+                  
+                  if (tipoDeuda !== 'tarjeta_credito') {
+                    if (modoMonto === 'cuota') {
+                      const totalCalculado = inputVal * numCuotas;
+                      return (
+                        <div className="text-[10px] text-slate-400 font-bold ml-1 -mt-3">
+                          📊 Monto Total estimado: <span className="text-indigo-400">{formatearNumero(totalCalculado, monedaDeuda)}</span>
+                        </div>
+                      );
+                    } else {
+                      const cuotaCalculada = Math.round(inputVal / numCuotas);
+                      return (
+                        <div className="text-[10px] text-slate-400 font-bold ml-1 -mt-3">
+                          📊 Cuota estimada (lineal): <span className="text-indigo-400">{formatearNumero(cuotaCalculada, monedaDeuda)}</span>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
 
                 {tipoDeuda === 'tarjeta_credito' ? (
                   <div className="grid grid-cols-2 gap-4">
