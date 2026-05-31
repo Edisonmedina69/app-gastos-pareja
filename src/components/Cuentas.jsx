@@ -417,7 +417,8 @@ export default function Cuentas({
     setFechaCierreTarjeta(d.fecha_cierre_tarjeta?.toString() || "25");
 
     const totalMontoVal = d.cuotas_detalle?.reduce((acc, c) => acc + Number(c.monto_cuota), 0) || 0;
-    setMontoTotalFormateado(formatarInput(totalMontoVal));
+    const cuotaMontoVal = d.cuotas_detalle?.[0]?.monto_cuota || 0;
+    setMontoTotalFormateado(formatarInput(d.tipo === 'tarjeta_credito' ? totalMontoVal : cuotaMontoVal));
 
     setLineaCreditoFormateada(formatarInput(d.linea_credito_total));
     setPagoMinimoFormateado(formatarInput(d.cuotas_detalle?.[0]?.pago_minimo || 0));
@@ -440,9 +441,11 @@ export default function Cuentas({
       const eid = datosHogar.espacio_id;
       const numCuotas = parseInt(cantidadCuotas) || 1;
       const yaPagadas = parseInt(cuotasPagadas) || 0;
-      const totalMonto = desformatearInput(montoTotalFormateado);
+      const inputMonto = desformatearInput(montoTotalFormateado) || 0;
       const lineaTotal = desformatearInput(lineaCreditoFormateada);
-      const montoCuota = totalMonto / numCuotas;
+      
+      const montoCuota = tipoDeuda === 'tarjeta_credito' ? (inputMonto / numCuotas) : inputMonto;
+      const totalMonto = tipoDeuda === 'tarjeta_credito' ? inputMonto : (montoCuota * numCuotas);
 
       let maestraId = deudaEditandoId;
 
@@ -1573,7 +1576,7 @@ export default function Cuentas({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">{tipoDeuda === 'tarjeta_credito' ? 'Deuda Actual' : 'Monto Total'}</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">{tipoDeuda === 'tarjeta_credito' ? 'Deuda Actual' : 'Monto de cada Cuota'}</label>
                     <input type="text" value={montoTotalFormateado} onChange={(e) => setMontoTotalFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" placeholder="0" required />
                   </div>
                   <div className="space-y-1">
