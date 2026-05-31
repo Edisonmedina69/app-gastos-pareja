@@ -44,8 +44,8 @@ export default function Historial({
       usuarioRef: g.pagador_id,
     })),
     ...ingresos.map((i) => {
-      let fechaValida = i.created_at || new Date().toISOString();
-      if (i.anio && i.mes && !i.created_at) {
+      let fechaValida = i.fecha || i.created_at || new Date().toISOString();
+      if (i.anio && i.mes && !i.fecha && !i.created_at) {
         fechaValida = new Date(i.anio, i.mes - 1, 5).toISOString();
       }
       return {
@@ -188,6 +188,23 @@ export default function Historial({
           <AnimatePresence mode="popLayout">
             {movimientosPaginados.map((m) => {
               const esIngreso = m.tipo === "ingreso";
+              
+              let displayConcept = m.concepto;
+              let budgetName = null;
+              let isFijo = false;
+              if (m.concepto) {
+                if (m.concepto.startsWith("[B: ")) {
+                  const match = m.concepto.match(/^\[B:\s*([^\]]+)\]\s*(.*)$/);
+                  if (match) {
+                    budgetName = match[1];
+                    displayConcept = match[2] || "Gasto sin concepto";
+                  }
+                } else if (m.concepto.startsWith("[FIJO] ")) {
+                  displayConcept = m.concepto.replace("[FIJO] ", "");
+                  isFijo = true;
+                }
+              }
+
               return (
                 <motion.div
                   layout
@@ -203,7 +220,19 @@ export default function Historial({
                         {esIngreso ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
                       </div>
                       <div>
-                        <div className="font-bold text-white text-sm leading-none mb-1">{m.concepto}</div>
+                        <div className="font-bold text-white text-sm leading-none mb-1.5 flex items-center gap-2 flex-wrap">
+                          <span>{displayConcept}</span>
+                          {budgetName && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                              {budgetName}
+                            </span>
+                          )}
+                          {isFijo && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-slate-500/10 text-slate-400 border border-white/5">
+                              Fijo
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
                           {getNombreUsuario(m.usuarioRef)} • {formatearFecha(m.fechaRef)}
                         </div>

@@ -254,7 +254,7 @@ export default function Ingresos({
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400"><Landmark size={20} /></div>
                     <div>
                       <div className="text-xs font-black text-white uppercase">{i.concepto}</div>
-                      <div className="text-[10px] text-slate-500 font-bold">{getNombreUsuario(i.usuario_id)} • {new Date(i.created_at).toLocaleDateString()}</div>
+                      <div className="text-[10px] text-slate-500 font-bold">{getNombreUsuario(i.usuario_id)} • {new Date(i.fecha || i.created_at || new Date().toISOString()).toLocaleDateString("es-PY")}</div>
                     </div>
                   </div>
                   <div className="text-right">

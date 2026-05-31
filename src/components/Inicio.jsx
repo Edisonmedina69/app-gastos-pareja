@@ -12,7 +12,7 @@ import IngresoMagico from "./IngresoMagico";
 export default function Inicio({
   usuarioActual, otroUsuario, usuarios, gastos, ingresos, deudas,
   monedaGlobal, setMonedaGlobal, obtenerDatos, datosHogar, modoVista,
-  saludFinanciera
+  saludFinanciera, gastosProgramados
 }) {
   const [mostrarMagico, setMostrarMagico] = useState(false);
   const [mostrarModalManual, setMostrarModalManual] = useState(false);
@@ -20,6 +20,7 @@ export default function Inicio({
   const [montoFormateado, setMontoFormateado] = useState("");
   const [categoria, setCategoria] = useState("Casa");
   const [guardando, setGuardando] = useState(false);
+  const [previsionSeleccionada, setPrevisionSeleccionada] = useState("");
 
   const [filtroSalud, setFiltroSalud] = useState("individual");
 
@@ -54,6 +55,23 @@ export default function Inicio({
     } catch (err) { toast.error(err.message, { id: toastId }); }
   }
 
+  const calcularGastoPrevision = (nombrePrevision, monedaPrevision) => {
+    const ahora = new Date();
+    const mesActual = ahora.getMonth();
+    const anioActual = ahora.getFullYear();
+
+    return gastos?.filter(g => {
+      const fG = new Date(g.fecha || g.created_at);
+      const coincideMes = fG.getMonth() === mesActual && fG.getFullYear() === anioActual;
+      if (!coincideMes) return false;
+
+      const coincideConcepto = g.concepto && g.concepto.startsWith(`[B: ${nombrePrevision}]`);
+      const coincideMoneda = g.moneda === monedaPrevision;
+
+      return coincideConcepto && coincideMoneda;
+    }).reduce((acc, g) => acc + Number(g.monto), 0) || 0;
+  };
+
   async function guardarGastoManual(e) {
     e.preventDefault();
     const montoLimpio = desformatearInput(montoFormateado);
@@ -61,20 +79,55 @@ export default function Inicio({
     setGuardando(true);
     const toastId = toast.loading("Guardando gasto...");
     try {
+      const conceptoFinal = previsionSeleccionada 
+        ? `[B: ${previsionSeleccionada}] ${concepto.trim()}`
+        : concepto.trim();
+
+      // Check if budget limit is exceeded
+      let isExceeded = false;
+      if (previsionSeleccionada) {
+        const pObj = gastosProgramados?.find(g => g.concepto === `[PRESUPUESTO] ${previsionSeleccionada}` && g.moneda === monedaGlobal);
+        if (pObj && pObj.monto > 0) {
+          const currentSpent = calcularGastoPrevision(previsionSeleccionada, monedaGlobal);
+          if (currentSpent + montoLimpio > pObj.monto) {
+            isExceeded = true;
+          }
+        }
+      }
+
       const { error } = await supabase.from("gastos").insert([{
-        concepto: concepto.trim(), monto: montoLimpio, categoria,
+        concepto: conceptoFinal, monto: montoLimpio, categoria,
         usuario_id: usuarioActual.id, pagador_id: usuarioActual.id,
         para_quien: "Ambos", moneda: monedaGlobal, espacio_id: datosHogar.espacio_id
       }]);
       if (error) throw error;
       toast.success("¡Gasto registrado! 💸", { id: toastId });
+      
+      if (isExceeded) {
+        toast((t) => (
+          <span className="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-wider">
+            <AlertTriangle size={16} /> ¡Límite superado en previsión "{previsionSeleccionada}"!
+          </span>
+        ), { duration: 4000 });
+      }
+
       setMostrarModalManual(false); setConcepto(""); setMontoFormateado("");
+      setPrevisionSeleccionada("");
       obtenerDatos();
     } catch (err) { toast.error(err.message, { id: toastId }); }
     finally { setGuardando(false); }
   }
 
   const metricasActivas = saludFinanciera[filtroSalud] || saludFinanciera.individual || { carga: 0, ingresos: 0, indice: 0 };
+
+  const pObj = previsionSeleccionada
+    ? gastosProgramados?.find(g => g.concepto === `[PRESUPUESTO] ${previsionSeleccionada}` && g.moneda === monedaGlobal)
+    : null;
+  const limitePrevision = pObj ? pObj.monto : 0;
+  const consumidoPrevision = pObj ? calcularGastoPrevision(previsionSeleccionada, monedaGlobal) : 0;
+  const nuevoMontoGasto = desformatearInput(montoFormateado) || 0;
+  const superado = limitePrevision > 0 && (consumidoPrevision + nuevoMontoGasto > limitePrevision);
+  const exceso = (consumidoPrevision + nuevoMontoGasto) - limitePrevision;
 
   return (
     <div className="space-y-6 pb-20">
@@ -178,7 +231,7 @@ export default function Inicio({
         {mostrarModalManual && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl relative">
-              <button onClick={() => setMostrarModalManual(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
+              <button onClick={() => { setMostrarModalManual(false); setPrevisionSeleccionada(""); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
               <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2"><Plus className="text-emerald-400"/> Nuevo Gasto</h2>
               <form onSubmit={guardarGastoManual} className="space-y-4">
                 <input type="text" placeholder="¿En qué gastaste?" className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" value={concepto} onChange={(e) => setConcepto(e.target.value)} required />
@@ -186,10 +239,51 @@ export default function Inicio({
                   <input type="text" placeholder="0" className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-emerald-400 outline-none" value={montoFormateado} onChange={(e) => setMontoFormateado(formatarInput(e.target.value))} required />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">{monedaGlobal}</span>
                 </div>
-                <select className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-                   {["Casa", "Supermercado", "Ocio", "Salud", "Transporte", "Otros"].map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <button type="submit" disabled={guardando} className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Categoría</label>
+                    <select className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+                       {["Casa", "Supermercado", "Ocio", "Salud", "Transporte", "Otros"].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Previsión (Opcional)</label>
+                    <select 
+                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white"
+                      value={previsionSeleccionada} 
+                      onChange={(e) => setPrevisionSeleccionada(e.target.value)}
+                    >
+                      <option value="">Ninguna</option>
+                      {gastosProgramados
+                        ?.filter(g => g.concepto.startsWith("[PRESUPUESTO] ") && g.moneda === monedaGlobal)
+                        .map(g => {
+                          const nombreLimpio = g.concepto.replace("[PRESUPUESTO] ", "");
+                          const owner = g.para_quien === 'Ambos' ? '👥 Ambos' : `👤 ${g.para_quien}`;
+                          return (
+                            <option key={g.id} value={nombreLimpio}>
+                              {nombreLimpio} ({owner})
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </div>
+                </div>
+
+                {/* ALERTA DE LÍMITE EXCEDIDO */}
+                {superado && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-[10px] text-amber-400 font-bold uppercase tracking-tight flex items-center gap-2"
+                  >
+                    <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                    <span>¡Alerta! Este gasto superará el límite de la previsión por {formatearNumero(exceso, monedaGlobal)}.</span>
+                  </motion.div>
+                )}
+
+                <button type="submit" disabled={guardando} className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-900/20 active:scale-95 transition-all mt-2">
                   {guardando ? <Loader2 className="animate-spin mx-auto"/> : "GUARDAR GASTO"}
                 </button>
               </form>

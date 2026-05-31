@@ -18,7 +18,8 @@ export default function Cuentas({
   monedaGlobal,
   obtenerDatos,
   datosHogar,
-  saludFinanciera
+  saludFinanciera,
+  gastosProgramados
 }) {
   // Modal & Form State
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -57,8 +58,6 @@ export default function Cuentas({
   const [sugerenciaIA, setSugerenciaIA] = useState(null);
 
   // Gastos Fijos State
-  const [gastosProgramados, setGastosProgramados] = useState([]);
-  const [cargandoFijos, setCargandoFijos] = useState(false);
   const [mostrarModalFijo, setMostrarModalFijo] = useState(false);
   const [idFijoEditando, setIdFijoEditando] = useState(null);
   
@@ -78,42 +77,135 @@ export default function Cuentas({
   const [pagarPagadorId, setPagarPagadorId] = useState('');
   const [pagarParaQuien, setPagarParaQuien] = useState('Ambos');
 
+  // Previsiones State
+  const [mostrarModalPrevision, setMostrarModalPrevision] = useState(false);
+  const [idPrevisionEditando, setIdPrevisionEditando] = useState(null);
+  const [previsionConcepto, setPrevisionConcepto] = useState('');
+  const [previsionMontoFormateado, setPrevisionMontoFormateado] = useState('');
+  const [previsionMoneda, setPrevisionMoneda] = useState(monedaGlobal);
+  const [previsionParaQuien, setPrevisionParaQuien] = useState('Ambos');
+
   useEffect(() => {
     if (mostrarModalFijo && !idFijoEditando) {
       setFijoMoneda(monedaGlobal);
     }
   }, [mostrarModalFijo, monedaGlobal, idFijoEditando]);
 
-  const cargarGastosProgramados = async () => {
-    if (!datosHogar?.espacio_id) return;
-    const timeoutId = setTimeout(() => {
-      setCargandoFijos(false);
-      console.warn("cargarGastosProgramados timed out after 5s.");
-    }, 5000);
+  useEffect(() => {
+    if (mostrarModalPrevision && !idPrevisionEditando) {
+      setPrevisionMoneda(monedaGlobal);
+    }
+  }, [mostrarModalPrevision, monedaGlobal, idPrevisionEditando]);
+
+  const resetFormPrevision = () => {
+    setIdPrevisionEditando(null);
+    setPrevisionConcepto('');
+    setPrevisionMontoFormateado('');
+    setPrevisionMoneda(monedaGlobal);
+    setPrevisionParaQuien('Ambos');
+  };
+
+  const abrirEdicionPrevision = (prev) => {
+    const nombreLimpio = prev.concepto.replace("[PRESUPUESTO] ", "");
+    setIdPrevisionEditando(prev.id);
+    setPrevisionConcepto(nombreLimpio);
+    setPrevisionMontoFormateado(formatarInput(prev.monto));
+    setPrevisionMoneda(prev.moneda);
+    setPrevisionParaQuien(prev.para_quien);
+    setMostrarModalPrevision(true);
+  };
+
+  const guardarPrevision = async (e) => {
+    e.preventDefault();
+    const montoLimpio = previsionMontoFormateado ? desformatearInput(previsionMontoFormateado) : 0;
+    if (guardando || !usuarioActual || !datosHogar) return;
+    setGuardando(true);
+    const toastId = toast.loading("Guardando previsión...");
     try {
-      setCargandoFijos(true);
-      const { data, error } = await supabase
-        .from("gastos_programados")
-        .select("*")
-        .eq("espacio_id", datosHogar.espacio_id)
-        .order("dia_recurrencia", { ascending: true });
-      
-      clearTimeout(timeoutId);
-      if (error) throw error;
-      setGastosProgramados(data || []);
-    } catch (e) {
-      clearTimeout(timeoutId);
-      console.error("Error cargando gastos fijos:", e);
+      const conceptoFinal = `[PRESUPUESTO] ${previsionConcepto.trim()}`;
+      if (idPrevisionEditando) {
+        const { error } = await supabase
+          .from("gastos_programados")
+          .update({
+            concepto: conceptoFinal,
+            monto: montoLimpio,
+            moneda: previsionMoneda,
+            dia_recurrencia: 1,
+            categoria: "Otros",
+            para_quien: previsionParaQuien
+          })
+          .eq("id", idPrevisionEditando);
+        if (error) throw error;
+        toast.success("¡Previsión ajustada! 📊", { id: toastId });
+      } else {
+        const { error } = await supabase
+          .from("gastos_programados")
+          .insert([{
+            espacio_id: datosHogar.espacio_id,
+            usuario_id: usuarioActual.id,
+            concepto: conceptoFinal,
+            monto: montoLimpio,
+            moneda: previsionMoneda,
+            dia_recurrencia: 1,
+            categoria: "Otros",
+            para_quien: previsionParaQuien
+          }]);
+        if (error) throw error;
+        toast.success("¡Previsión creada! 🎯", { id: toastId });
+      }
+      setMostrarModalPrevision(false);
+      resetFormPrevision();
+      obtenerDatos();
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
     } finally {
-      setCargandoFijos(false);
+      setGuardando(false);
     }
   };
 
-  useEffect(() => {
-    if (pestana === 'fijos' && datosHogar?.espacio_id) {
-      cargarGastosProgramados();
+  const eliminarPrevision = async (id, concepto) => {
+    const nombreLimpio = concepto.replace("[PRESUPUESTO] ", "");
+    if (window.confirm(`¿Seguro que querés eliminar la previsión de gasto "${nombreLimpio}"?`)) {
+      try {
+        const { error } = await supabase.from("gastos_programados").delete().eq("id", id);
+        if (error) throw error;
+        toast.success("Previsión eliminada 🗑️");
+        obtenerDatos();
+      } catch (e) {
+        toast.error("Error al eliminar: " + e.message);
+      }
     }
-  }, [pestana, datosHogar?.espacio_id]);
+  };
+
+  const calcularGastoPrevision = (nombrePrevision, monedaPrevision) => {
+    const ahora = new Date();
+    const mesActual = ahora.getMonth();
+    const anioActual = ahora.getFullYear();
+
+    return gastos?.filter(g => {
+      const fG = new Date(g.fecha || g.created_at);
+      const coincideMes = fG.getMonth() === mesActual && fG.getFullYear() === anioActual;
+      if (!coincideMes) return false;
+
+      const coincideConcepto = g.concepto && g.concepto.startsWith(`[B: ${nombrePrevision}]`);
+      const coincideMoneda = g.moneda === monedaPrevision;
+
+      return coincideConcepto && coincideMoneda;
+    }).reduce((acc, g) => acc + Number(g.monto), 0) || 0;
+  };
+
+  const obtenerNombreDestinatario = (p) => {
+    if (p.para_quien === 'Ambos') return 'Ambos';
+    const creador = usuarios?.find(u => u.id === p.usuario_id);
+    const otro = usuarios?.find(u => u.id !== p.usuario_id);
+    if (p.para_quien === 'Yo') {
+      return creador ? creador.nombre : 'Yo';
+    }
+    if (p.para_quien === 'Pareja') {
+      return otro ? otro.nombre : 'Pareja';
+    }
+    return p.para_quien;
+  };
 
   const preCargarPlantillas = async () => {
     if (!datosHogar?.espacio_id || !usuarioActual?.id) return;
@@ -133,7 +225,7 @@ export default function Cuentas({
       clearTimeout(timeoutId);
       if (error) throw error;
       toast.success("¡Plantilla básica cargada! 🏠✨", { id: toastId });
-      cargarGastosProgramados();
+      obtenerDatos();
     } catch (e) {
       clearTimeout(timeoutId);
       toast.error("Error al cargar: " + e.message, { id: toastId });
@@ -184,7 +276,7 @@ export default function Cuentas({
       }
       setMostrarModalFijo(false);
       resetFormFijo();
-      cargarGastosProgramados();
+      obtenerDatos();
     } catch (err) {
       clearTimeout(timeoutId);
       toast.error(err.message, { id: toastId });
@@ -199,7 +291,7 @@ export default function Cuentas({
         const { error } = await supabase.from("gastos_programados").delete().eq("id", id);
         if (error) throw error;
         toast.success("Programación eliminada");
-        cargarGastosProgramados();
+        obtenerDatos();
       } catch (e) {
         toast.error("Error al eliminar");
       }
@@ -761,18 +853,20 @@ export default function Cuentas({
   };
 
   const deudasFiltradas = deudas?.filter(d => pestana === 'activas' ? d.estado === 'activa' : d.estado === 'cerrada') || [];
+  const deudasFijas = gastosProgramados?.filter(g => !g.concepto.startsWith("[PRESUPUESTO] ")) || [];
+  const previsiones = gastosProgramados?.filter(g => g.concepto.startsWith("[PRESUPUESTO] ")) || [];
 
   return (
     <div className="space-y-6 pb-20">
       <header className="flex items-center justify-between">
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 backdrop-blur-md">
-          {['activas', 'archivadas', 'fijos'].map(p => (
+          {['activas', 'archivadas', 'fijos', 'presupuestos'].map(p => (
             <button 
               key={p} 
               onClick={() => setPestana(p)} 
               className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${pestana === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}
             >
-              {p === 'fijos' ? 'Fijos' : p}
+              {p === 'fijos' ? 'Fijos' : p === 'presupuestos' ? 'Previsiones' : p}
             </button>
           ))}
         </div>
@@ -781,6 +875,9 @@ export default function Cuentas({
             if (pestana === 'fijos') {
               resetFormFijo();
               setMostrarModalFijo(true);
+            } else if (pestana === 'presupuestos') {
+              resetFormPrevision();
+              setMostrarModalPrevision(true);
             } else {
               resetForm();
               setMostrarModal(true);
@@ -793,7 +890,7 @@ export default function Cuentas({
       </header>
 
       <div className="space-y-4">
-        {pestana !== 'fijos' ? (
+        {(pestana === 'activas' || pestana === 'archivadas') && (
           deudasFiltradas.map((d) => {
           const cuotaActual = d.cuotas_detalle?.filter(c => c.estado === 'pendiente').sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))[0];
           const estaExpandida = deudaExpandida === d.id;
@@ -1216,13 +1313,10 @@ export default function Cuentas({
             </motion.div>
           );
         })
-        ) : (
-          /* GASTOS FIJOS */
-          cargandoFijos ? (
-            <div className="text-center py-12 text-slate-500 text-xs font-black uppercase flex items-center justify-center gap-2">
-              <Loader2 className="animate-spin" size={16}/> Cargando compromisos fijos...
-            </div>
-          ) : gastosProgramados.length === 0 ? (
+        )}
+
+        {pestana === 'fijos' && (
+          deudasFijas.length === 0 ? (
             <div className="glass-card py-12 text-center">
               <Calendar size={40} className="mx-auto mb-3 text-slate-500 opacity-40" />
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Sin gastos fijos programados</p>
@@ -1248,7 +1342,7 @@ export default function Cuentas({
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                  Servicios y Compras Recurrentes ({gastosProgramados.length})
+                  Servicios y Compras Recurrentes ({deudasFijas.length})
                 </span>
                 <button 
                   onClick={preCargarPlantillas} 
@@ -1258,7 +1352,7 @@ export default function Cuentas({
                 </button>
               </div>
 
-              {gastosProgramados.map((f) => {
+              {deudasFijas.map((f) => {
                 const pagado = verificarSiFuePagadoEsteMes(f);
                 return (
                   <div 
@@ -1313,6 +1407,114 @@ export default function Cuentas({
                       ) : (
                         <div className="text-[9px] font-black text-emerald-400 flex items-center gap-1">
                           <CheckCircle size={12}/> ABONADO EN EL MES
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
+
+        {pestana === 'presupuestos' && (
+          previsiones.length === 0 ? (
+            <div className="glass-card py-12 text-center">
+              <Calendar size={40} className="mx-auto mb-3 text-slate-500 opacity-40" />
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Sin previsiones de gasto definidas</p>
+              <p className="text-[10px] text-slate-500 mt-2 max-w-xs mx-auto px-4">
+                Establecé límites mensuales para categorías específicas (ocio, belleza, salidas) para controlar tus gastos de manera inteligente y ver tu progreso en tiempo real.
+              </p>
+              <div className="flex flex-col gap-2 mt-6 max-w-xs mx-auto px-4">
+                <button 
+                  onClick={() => { resetFormPrevision(); setMostrarModalPrevision(true); }} 
+                  className="py-3 px-4 bg-indigo-600 text-white text-[10px] font-black rounded-xl uppercase hover:bg-indigo-500 active:scale-95 transition-all shadow-lg"
+                >
+                  Definir Nueva Previsión 🎯
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                  Previsiones de Gasto Activas ({previsiones.length})
+                </span>
+                <button 
+                  onClick={() => { resetFormPrevision(); setMostrarModalPrevision(true); }} 
+                  className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter hover:underline"
+                >
+                  + Nueva Previsión
+                </button>
+              </div>
+
+              {previsiones.map((p) => {
+                const nombreLimpio = p.concepto.replace("[PRESUPUESTO] ", "");
+                const consumido = calcularGastoPrevision(nombreLimpio, p.moneda);
+                const limite = p.monto;
+                const porc = limite > 0 ? (consumido / limite) * 100 : 0;
+                
+                let colorClase = "text-emerald-400 bg-emerald-500/20 border-emerald-500/20";
+                let barColor = "bg-emerald-500";
+                if (porc >= 70 && porc <= 90) {
+                  colorClase = "text-amber-400 bg-amber-500/20 border-amber-500/20";
+                  barColor = "bg-amber-500";
+                } else if (porc > 90) {
+                  colorClase = "text-rose-400 bg-rose-500/20 border-rose-500/20";
+                  barColor = "bg-rose-500";
+                }
+
+                return (
+                  <div key={p.id} className="glass-card p-5 border-l-4 border-l-indigo-500 bg-white/[0.01] transition-all hover:bg-white/[0.03]">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-black text-white text-sm uppercase tracking-tight flex items-center gap-2">
+                          {nombreLimpio}
+                        </h4>
+                        <span className="inline-block mt-1 text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/5">
+                          {p.para_quien === 'Ambos' ? '👥 Compartido' : `👤 Para: ${obtenerNombreDestinatario(p)}`}
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => abrirEdicionPrevision(p)} 
+                          className="p-1.5 text-slate-500 hover:text-indigo-400 transition-colors"
+                        >
+                          <Edit2 size={15}/>
+                        </button>
+                        <button 
+                          onClick={() => eliminarPrevision(p.id, p.concepto)} 
+                          className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={15}/>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <div className="flex justify-between items-end">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">Consumido este mes</span>
+                        <span className="text-sm font-black text-white">
+                          {formatearNumero(consumido, p.moneda)} / <span className="text-slate-400 text-xs">{limite > 0 ? formatearNumero(limite, p.moneda) : 'Variable'}</span>
+                        </span>
+                      </div>
+
+                      {limite > 0 && (
+                        <div>
+                          <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-white/5">
+                            <div 
+                              className={`h-full ${barColor} transition-all duration-500 rounded-full`}
+                              style={{ width: `${Math.min(100, porc)}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center mt-2 text-[9px] font-bold uppercase tracking-wider">
+                            <span className={porc > 100 ? "text-rose-400" : "text-slate-500"}>
+                              {porc > 100 ? `Excedido por ${formatearNumero(consumido - limite, p.moneda)}` : `Disponible: ${formatearNumero(limite - consumido, p.moneda)}`}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black border ${colorClase}`}>
+                              {porc.toFixed(0)}%
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1551,6 +1753,65 @@ export default function Cuentas({
 
                 <button type="submit" className="w-full py-4 font-black rounded-2xl bg-emerald-600 text-white shadow-xl shadow-emerald-950/30 active:scale-95 transition-all mt-4">
                   CONFIRMAR PAGO
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL CREAR/EDITAR PREVISIÓN */}
+      <AnimatePresence>
+        {mostrarModalPrevision && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl relative">
+              <button onClick={() => { setMostrarModalPrevision(false); resetFormPrevision(); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
+              <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
+                {idPrevisionEditando ? 'Ajustar Previsión' : 'Nueva Previsión'}
+              </h2>
+              <form onSubmit={guardarPrevision} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre de la Previsión / Sobre</label>
+                  <input type="text" placeholder="Ej: Belleza, Ocio, Cine, Ropa..." value={previsionConcepto} onChange={(e) => setPrevisionConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50" required />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Monto Límite Mensual</label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={previsionMontoFormateado} 
+                      onChange={(e) => setPrevisionMontoFormateado(formatarInput(e.target.value))} 
+                      className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-indigo-400 outline-none" 
+                      placeholder="0"
+                      required
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{previsionMoneda}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
+                    <select value={previsionMoneda} onChange={(e) => setPrevisionMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" disabled={!!idPrevisionEditando}>
+                      <option value="PYG">PYG</option>
+                      <option value="BRL">BRL</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Destinado A</label>
+                    <select value={previsionParaQuien} onChange={(e) => setPrevisionParaQuien(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white">
+                      <option value="Ambos">Ambos (Compartido)</option>
+                      <option value="Yo">{usuarioActual?.nombre || 'Solo Yo'}</option>
+                      {otroUsuario && (
+                        <option value="Pareja">{otroUsuario.nombre} (Pareja)</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 active:scale-95 transition-all mt-4">
+                  {guardando ? <Loader2 className="animate-spin mx-auto" /> : "GUARDAR PREVISIÓN"}
                 </button>
               </form>
             </motion.div>

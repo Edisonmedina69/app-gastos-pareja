@@ -31,6 +31,7 @@ function App() {
   const [modoVista, setModoVista] = useState("familiar");
   const [usuarios, setUsuarios] = useState([]);
   const [gastos, setGastos] = useState([]);
+  const [gastosProgramados, setGastosProgramados] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [otroUsuario, setOtroUsuario] = useState(null);
   const [ingresos, setIngresos] = useState([]);
@@ -41,10 +42,46 @@ function App() {
   const [verificandoHogar, setVerificandoHogar] = useState(true);
   const [mostrarMenuPerfilMovil, setMostrarMenuPerfilMovil] = useState(false);
 
-  const verificarPerfil = async (usuarioId) => {
+  const verificarPerfil = async (usuarioId, userEmail) => {
     try {
-      const { data: perfil, error } = await supabase.from('perfiles').select('*, espacios(*)').eq('id', usuarioId).single();
-      return (error || !perfil) ? null : perfil;
+      let { data: perfil, error } = await supabase.from('perfiles').select('*, espacios(*)').eq('id', usuarioId).maybeSingle();
+      
+      // Si el email es del superadmin de respaldo, forzar su creación/rol
+      if (userEmail === 'edisonmedina415@gmail.com') {
+        if (!perfil || error) {
+          // Buscar algún espacio existente para vincularlo temporalmente (evita fallos de RLS)
+          const { data: espacios } = await supabase.from('espacios').select('id').limit(1);
+          const espacioId = espacios && espacios.length > 0 ? espacios[0].id : null;
+
+          const { data: nuevoPerfil, error: errCrear } = await supabase
+            .from('perfiles')
+            .upsert([{
+              id: usuarioId,
+              nombre: "Edison (Admin)",
+              rol: 'superadmin',
+              espacio_id: espacioId
+            }])
+            .select('*, espacios(*)')
+            .single();
+
+          if (!errCrear && nuevoPerfil) {
+            perfil = nuevoPerfil;
+          }
+        } else if (perfil.rol !== 'superadmin') {
+          // Asegurar que el rol sea superadmin en la DB
+          const { data: perfilActualizado } = await supabase
+            .from('perfiles')
+            .update({ rol: 'superadmin' })
+            .eq('id', usuarioId)
+            .select('*, espacios(*)')
+            .single();
+          
+          if (perfilActualizado) {
+            perfil = perfilActualizado;
+          }
+        }
+      }
+      return (!perfil) ? null : perfil;
     } catch (error) { return null; }
   };
 
@@ -57,7 +94,7 @@ function App() {
         if (!montado) return;
         setSession(s);
         if (s) {
-          const perfil = await verificarPerfil(s.user.id);
+          const perfil = await verificarPerfil(s.user.id, s.user.email);
           if (montado) {
             setDatosHogar(perfil);
             setUsuarioActual(perfil);
@@ -76,7 +113,7 @@ function App() {
       }
       else if (s && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         setSession(s);
-        const perfil = await verificarPerfil(s.user.id);
+        const perfil = await verificarPerfil(s.user.id, s.user.email);
         if (montado) {
           setDatosHogar(perfil);
           setUsuarioActual(perfil);
@@ -101,11 +138,12 @@ function App() {
         }
       }
 
-      const [resG, resI, resD, resN] = await Promise.all([
+      const [resG, resI, resD, resN, resP] = await Promise.all([
         supabase.from("gastos").select("*").eq('espacio_id', eid).order("fecha", { ascending: false }),
         supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid),
         supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid),
-        supabase.from("notificaciones").select("*").eq('espacio_id', eid).order('created_at', { ascending: false }).limit(15)
+        supabase.from("notificaciones").select("*").eq('espacio_id', eid).order('created_at', { ascending: false }).limit(15),
+        supabase.from("gastos_programados").select("*").eq("espacio_id", eid).order("dia_recurrencia", { ascending: true })
       ]);
 
       if (resG.data) setGastos(resG.data);
@@ -115,6 +153,7 @@ function App() {
         verificarVencimientos(resD.data, eid, resN.data || []);
       }
       if (resN.data) setNotificaciones(resN.data);
+      if (resP.data) setGastosProgramados(resP.data);
     } catch (e) {}
   }, [datosHogar, session]);
 
@@ -213,6 +252,10 @@ function App() {
     return u ? u.nombre : "Usuario";
   };
 
+  const esSuperadmin = useMemo(() => {
+    return datosHogar?.rol === 'superadmin' || session?.user?.email === 'edisonmedina415@gmail.com';
+  }, [datosHogar, session]);
+
   useEffect(() => { if (session && !verificandoHogar && datosHogar) obtenerDatos(); }, [session, verificandoHogar, datosHogar, obtenerDatos]);
 
   if (verificandoHogar) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Iniciando ÑandeFinanza...</div>;
@@ -237,10 +280,15 @@ function App() {
           {/* CABECERA MÓVIL */}
           <header className="flex lg:hidden justify-between items-center px-6 py-4 border-b border-white/5 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 w-full">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-600/20">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-600/20 flex-shrink-0">
                 <span className="text-sm font-black text-white">Ñ</span>
               </div>
-              <span className="text-sm font-black tracking-tight text-white">ÑandeFinanza</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-black tracking-tight text-white truncate max-w-[150px]">
+                  {datosHogar?.nombre_familia || 'ÑandeFinanza'}
+                </span>
+                {datosHogar?.nombre_familia && <span className="text-[7px] text-indigo-400 font-bold uppercase tracking-wider">Hogar Activo</span>}
+              </div>
             </div>
             
             <div className="relative">
@@ -304,8 +352,13 @@ function App() {
 
           <aside className="hidden lg:flex flex-col w-64 p-6 border-r border-white/5 space-y-8">
             <div className="flex items-center gap-3 px-2">
-              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20"><span className="text-xl font-black text-white">Ñ</span></div>
-              <h1 className="text-lg font-black tracking-tight text-white">ÑandeFinanza</h1>
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20 flex-shrink-0"><span className="text-xl font-black text-white">Ñ</span></div>
+              <div className="flex flex-col min-w-0">
+                <h1 className="text-sm font-black tracking-tight text-white truncate" title={datosHogar?.nombre_familia || 'ÑandeFinanza'}>
+                  {datosHogar?.nombre_familia || 'ÑandeFinanza'}
+                </h1>
+                {datosHogar?.nombre_familia && <span className="text-[9px] text-indigo-400 font-black uppercase tracking-widest mt-0.5">Hogar Activo</span>}
+              </div>
             </div>
             <nav className="flex-1 space-y-2">
               {[
@@ -314,7 +367,7 @@ function App() {
                 { id: "ingresos", icon: PlusCircle, label: "Mis Ingresos" },
                 { id: "historial", icon: History, label: "Transacciones" },
                 { id: "asistente", icon: Bot, label: "Asistente IA" },
-                ...(datosHogar?.rol === 'superadmin' ? [{ id: "admin", icon: Shield, label: "Admin" }] : [])
+                ...(esSuperadmin ? [{ id: "admin", icon: Shield, label: "Admin" }] : [])
               ].map(link => (
                 <button key={link.id} onClick={() => setActiveTab(link.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === link.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>
                   <link.icon size={20} /> {link.label}
@@ -355,19 +408,19 @@ function App() {
             <div className="max-w-3xl mx-auto">
               <AnimatePresence mode="wait">
                 <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                  {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} />}
-                  {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
+                  {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
+                  {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
                   {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                   {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                   {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
-                  {activeTab === "admin" && datosHogar?.rol === 'superadmin' && <SuperadminPanel datosHogar={datosHogar} />}
+                  {activeTab === "admin" && esSuperadmin && <SuperadminPanel datosHogar={datosHogar} />}
                 </motion.div>
               </AnimatePresence>
             </div>
           </main>
 
           <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden">
-            <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={datosHogar?.rol === 'superadmin'} notificaciones={notificaciones} markAsRead={markNotisAsRead} responderSolicitud={responderSolicitud} />
+            <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={esSuperadmin} notificaciones={notificaciones} markAsRead={markNotisAsRead} responderSolicitud={responderSolicitud} />
           </nav>
         </div>
       )}
