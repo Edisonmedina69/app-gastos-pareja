@@ -198,16 +198,19 @@ function App() {
         }
       }
 
-      const [resG, resI, resD, resN, resP] = await Promise.all([
+      const [resG, resI, resD, resN, resP, resIP] = await Promise.all([
         supabase.from("gastos").select("*").eq('espacio_id', eid).order("fecha", { ascending: false }),
         supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid),
         supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid),
         supabase.from("notificaciones").select("*").eq('espacio_id', eid).order('created_at', { ascending: false }).limit(15),
-        supabase.from("gastos_programados").select("*").eq("espacio_id", eid).order("dia_recurrencia", { ascending: true })
+        supabase.from("gastos_programados").select("*").eq("espacio_id", eid).order("dia_recurrencia", { ascending: true }),
+        supabase.from("ingresos_programados").select("*").eq('espacio_id', eid)
       ]);
 
       let deudasFinal = resD.data || [];
-      let huboCambios = false;
+      let ingresosFinal = resI.data || [];
+      let huboCambiosDeudas = false;
+      let huboCambiosIngresos = false;
 
       // Cierre automático de ciclos vencidos para tarjetas de crédito
       const hoy = new Date();
@@ -225,7 +228,7 @@ function App() {
               if (hoy >= cierre) {
                 try {
                   await autoCerrarCicloTarjeta(d, cuotaActual, eid, session.user.id);
-                  huboCambios = true;
+                  huboCambiosDeudas = true;
                   toast.success(`Cierre automático: ciclo de "${d.titulo}" cerrado y nuevo período iniciado. 📅💳`, { duration: 6000 });
                 } catch (errAuto) {
                   console.error("Error al auto cerrar ciclo:", errAuto);
@@ -236,7 +239,47 @@ function App() {
         }
       }
 
-      if (huboCambios) {
+      // Acreditación automática de sueldos programados
+      if (resIP.data) {
+        const diaActual = hoy.getDate();
+        const mesActual = hoy.getMonth() + 1;
+        const anioActual = hoy.getFullYear();
+
+        for (let i = 0; i < resIP.data.length; i++) {
+          const prog = resIP.data[i];
+          // Si el día de cobro programado ya pasó o es hoy
+          if (diaActual >= prog.dia_recurrencia) {
+            // Verificar si ya está acreditado en ingresos_mensuales
+            const yaCobrado = ingresosFinal.some(ing => 
+              ing.concepto === `[FIJO] ${prog.descripcion}` &&
+              Number(ing.mes) === mesActual &&
+              Number(ing.anio) === anioActual &&
+              ing.usuario_id === prog.usuario_id
+            );
+
+            if (!yaCobrado) {
+              try {
+                await supabase.from("ingresos_mensuales").insert([{
+                  usuario_id: prog.usuario_id,
+                  espacio_id: eid,
+                  concepto: `[FIJO] ${prog.descripcion}`,
+                  monto: prog.monto,
+                  moneda: prog.moneda,
+                  tasa_cambio: 1,
+                  mes: mesActual,
+                  anio: anioActual
+                }]);
+                huboCambiosIngresos = true;
+                toast.success(`Sueldo acreditado automáticamente: "${prog.descripcion}" 🏦💰`, { duration: 5000 });
+              } catch (errAutoI) {
+                console.error("Error al auto acreditar sueldo:", errAutoI);
+              }
+            }
+          }
+        }
+      }
+
+      if (huboCambiosDeudas) {
         // Volver a cargar las deudas actualizadas si hubo cierres automáticos
         const { data: updatedDeudas } = await supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid);
         if (updatedDeudas) {
@@ -244,8 +287,16 @@ function App() {
         }
       }
 
+      if (huboCambiosIngresos) {
+        // Volver a cargar los ingresos si hubo acreditación automática
+        const { data: updatedIngresos } = await supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid);
+        if (updatedIngresos) {
+          ingresosFinal = updatedIngresos;
+        }
+      }
+
       if (resG.data) setGastos(resG.data);
-      if (resI.data) setIngresos(resI.data);
+      setIngresos(ingresosFinal);
       setDeudas(deudasFinal);
       if (deudasFinal) {
         verificarVencimientos(deudasFinal, eid, resN.data || []);
