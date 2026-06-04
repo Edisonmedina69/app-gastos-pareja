@@ -183,9 +183,30 @@ export default function Ingresos({
 
   async function eliminarProgramado(id) {
     if (confirm("¿Eliminar este ingreso fijo?")) {
-      await supabase.from("ingresos_programados").delete().eq("id", id);
-      cargarProgramados();
-      toast.success("Programación eliminada");
+      const toastId = toast.loading("Eliminando...");
+      try {
+        const { error } = await supabase.from("ingresos_programados").delete().eq("id", id);
+        if (error) throw error;
+        cargarProgramados();
+        obtenerDatos();
+        toast.success("Programación eliminada", { id: toastId });
+      } catch (err) {
+        toast.error("Error al eliminar: " + err.message, { id: toastId });
+      }
+    }
+  }
+
+  async function eliminarIngresoMensual(id, concepto) {
+    if (window.confirm(`¿Seguro que querés eliminar el ingreso "${concepto}"?`)) {
+      const toastId = toast.loading("Eliminando ingreso...");
+      try {
+        const { error } = await supabase.from("ingresos_mensuales").delete().eq("id", id);
+        if (error) throw error;
+        toast.success("¡Ingreso eliminado! 🗑️", { id: toastId });
+        obtenerDatos();
+      } catch (err) {
+        toast.error("Error al eliminar: " + err.message, { id: toastId });
+      }
     }
   }
 
@@ -260,8 +281,19 @@ export default function Ingresos({
                       <div className="text-[10px] text-slate-500 font-bold">{getNombreUsuario(i.usuario_id)} • {new Date(i.fecha || i.created_at || new Date().toISOString()).toLocaleDateString("es-PY")}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-emerald-400 font-black tracking-tight">+ {formatearNumero(i.monto, i.moneda)}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-emerald-400 font-black tracking-tight">+ {formatearNumero(i.monto, i.moneda)}</div>
+                    </div>
+                    {(i.usuario_id === usuarioActual?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'admin_hogar') && (
+                      <button 
+                        onClick={() => eliminarIngresoMensual(i.id, i.concepto)} 
+                        className="p-2 text-slate-500 hover:text-red-400 active:scale-90 transition-colors duration-150"
+                        title="Eliminar ingreso"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))

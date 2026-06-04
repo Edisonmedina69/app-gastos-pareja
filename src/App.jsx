@@ -24,6 +24,7 @@ import Historial from "./components/Historial";
 import AsistenteGemini from "./components/AsistenteGemini";
 import SuperadminPanel from "./components/SuperadminPanel";
 import { obtenerFechaCierreExacta } from "./utils/formatters";
+import { obtenerCotizacion } from "./utils/exchangeApi";
 
 function ajustarDiaHabil(fecha) {
   const d = fecha.getDay();
@@ -247,25 +248,27 @@ function App() {
 
         for (let i = 0; i < resIP.data.length; i++) {
           const prog = resIP.data[i];
-          // Si el día de cobro programado ya pasó o es hoy
-          if (diaActual >= prog.dia_recurrencia) {
-            // Verificar si ya está acreditado en ingresos_mensuales
-            const yaCobrado = ingresosFinal.some(ing => 
-              ing.concepto === `[FIJO] ${prog.descripcion}` &&
-              Number(ing.mes) === mesActual &&
-              Number(ing.anio) === anioActual &&
-              ing.usuario_id === prog.usuario_id
-            );
+          // Solo auto-acreditar si pertenece al usuario activo (evita fallos de RLS en Supabase)
+          if (prog.usuario_id !== session.user.id) continue;
 
-            if (!yaCobrado) {
-              try {
-                await supabase.from("ingresos_mensuales").insert([{
+          // Verificar si ya está acreditado en ingresos_mensuales
+          const yaCobrado = ingresosFinal.some(ing => 
+            ing.concepto === `[FIJO] ${prog.descripcion}` &&
+            Number(ing.mes) === mesActual &&
+            Number(ing.anio) === anioActual &&
+            ing.usuario_id === prog.usuario_id
+          );
+
+          if (!yaCobrado) {
+            try {
+              const tasa = await obtenerCotizacion(prog.moneda, "PYG");
+              await supabase.from("ingresos_mensuales").insert([{
                   usuario_id: prog.usuario_id,
                   espacio_id: eid,
                   concepto: `[FIJO] ${prog.descripcion}`,
                   monto: prog.monto,
                   moneda: prog.moneda,
-                  tasa_cambio: 1,
+                  tasa_cambio: tasa,
                   mes: mesActual,
                   anio: anioActual
                 }]);
@@ -275,7 +278,6 @@ function App() {
                 console.error("Error al auto acreditar sueldo:", errAutoI);
               }
             }
-          }
         }
       }
 
@@ -315,9 +317,24 @@ function App() {
       individual: { carga: 0, ingresos: 0, indice: 0 },
       familiar: { carga: 0, ingresos: 0, indice: 0 }
     };
-    const totalIngresosYo = ingresos?.filter(i => i.usuario_id === usuarioActual.id)?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
-    const totalIngresosHogar = ingresos?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
-    const totalGastosHogar = gastos?.reduce((acc, g) => acc + (Number(g.monto) * (g.tasa_cambio || 1)), 0) || 0;
+    const ahora = new Date();
+    const mesActual = ahora.getMonth() + 1;
+    const anioActual = ahora.getFullYear();
+
+    const totalIngresosYo = ingresos
+      ?.filter(i => i.usuario_id === usuarioActual.id && Number(i.mes) === mesActual && Number(i.anio) === anioActual)
+      ?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
+
+    const totalIngresosHogar = ingresos
+      ?.filter(i => Number(i.mes) === mesActual && Number(i.anio) === anioActual)
+      ?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
+
+    const totalGastosHogar = gastos
+      ?.filter(g => {
+        const fG = new Date(g.fecha || g.created_at);
+        return fG.getMonth() + 1 === mesActual && fG.getFullYear() === anioActual;
+      })
+      ?.reduce((acc, g) => acc + (Number(g.monto) * (g.tasa_cambio || 1)), 0) || 0;
     let cargaIndividual = 0; let cargaTotalHogar = 0;
     deudas.forEach(d => {
       if (d.estado === 'cerrada') return;
