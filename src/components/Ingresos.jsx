@@ -163,7 +163,7 @@ export default function Ingresos({
     const toastId = toast.loading(`Acreditando ${prog.descripcion}...`);
     try {
       const { error } = await supabase.from("ingresos_mensuales").insert([{
-        usuario_id: prog.usuario_id,
+        usuario_id: prog.usuario_id || usuarioActual.id,
         espacio_id: prog.espacio_id,
         concepto: `[FIJO] ${prog.descripcion}`,
         monto: prog.monto,
@@ -175,7 +175,10 @@ export default function Ingresos({
       if (error) throw error;
       toast.success("¡Cobro confirmado! 🏦", { id: toastId });
       obtenerDatos();
-    } catch (e) { toast.error("Error al cobrar"); }
+    } catch (e) {
+      console.error("Error al cobrar:", e);
+      toast.error(`Error al cobrar: ${e.message || e}`, { id: toastId });
+    }
   }
 
   async function eliminarProgramado(id) {

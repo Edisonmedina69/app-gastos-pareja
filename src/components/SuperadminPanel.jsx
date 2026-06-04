@@ -17,7 +17,13 @@ const tempSupabase = createClient(
     auth: {
       persistSession: false,
       autoRefreshToken: false,
-      detectSessionInUrl: false
+      detectSessionInUrl: false,
+      storageKey: 'sb-temp-auth-token',
+      storage: {
+        getItem: (key) => null,
+        setItem: (key, value) => {},
+        removeItem: (key) => {}
+      }
     }
   }
 );

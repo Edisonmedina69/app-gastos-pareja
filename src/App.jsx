@@ -21,12 +21,65 @@ import Cuentas from "./components/Cuentas";
 import Ingresos from "./components/Ingresos";
 import Metas from "./components/Metas";
 import Historial from "./components/Historial";
-import ConfiguracionHogar from "./components/ConfiguracionHogar";
 import AsistenteGemini from "./components/AsistenteGemini";
 import SuperadminPanel from "./components/SuperadminPanel";
+import { obtenerFechaCierreExacta } from "./utils/formatters";
+
+function ajustarDiaHabil(fecha) {
+  const d = fecha.getDay();
+  const nf = new Date(fecha);
+  if (d === 0) nf.setDate(nf.getDate() + 1);
+  else if (d === 6) nf.setDate(nf.getDate() + 2);
+  return nf;
+}
+
+async function autoCerrarCicloTarjeta(deuda, cuota, espId, usrId) {
+  const saldoPendiente = Math.max(0, Number(cuota.monto_cuota) - Number(cuota.monto_abonado));
+  const interesGenerado = saldoPendiente > 0 && deuda.tasa_interes > 0 
+    ? Math.round(saldoPendiente * (deuda.tasa_interes / 100 / 12)) 
+    : 0;
+
+  // 1. Mark current cuota as pagado (archived)
+  const { error: errUpd } = await supabase.from("cuotas_detalle").update({
+    estado: 'pagado',
+    fecha_pago: new Date().toISOString(),
+    pagador_id: usrId
+  }).eq("id", cuota.id);
+  
+  if (errUpd) throw errUpd;
+
+  // 2. Generate next month's due date safely
+  const parts = cuota.fecha_vencimiento.split("-");
+  let nextYear = parseInt(parts[0], 10);
+  let nextMonth = parseInt(parts[1], 10); // 1-based month, index of next month's 0-based
+  if (nextMonth > 11) {
+    nextMonth = 0;
+    nextYear += 1;
+  }
+  
+  const rawDay = Math.min(parseInt(parts[2], 10), new Date(nextYear, nextMonth + 1, 0).getDate());
+  let nextVenc = new Date(nextYear, nextMonth, rawDay);
+  nextVenc = ajustarDiaHabil(nextVenc);
+
+  // 3. Insert new cuota
+  const nuevaCuota = {
+    deuda_maestra_id: deuda.id,
+    espacio_id: espId,
+    numero_cuota: cuota.numero_cuota + 1,
+    monto_cuota: saldoPendiente + interesGenerado,
+    monto_abonado: 0,
+    pago_minimo: (saldoPendiente + interesGenerado) * 0.1,
+    fecha_vencimiento: `${nextVenc.getFullYear()}-${String(nextVenc.getMonth() + 1).padStart(2, '0')}-${String(nextVenc.getDate()).padStart(2, '0')}`,
+    estado: 'pendiente'
+  };
+
+  const { error: errIns } = await supabase.from("cuotas_detalle").insert([nuevaCuota]);
+  if (errIns) throw errIns;
+}
 
 function App() {
   const [session, setSession] = useState(null);
+  const [cargandoPerfil, setCargandoPerfil] = useState(false);
   const [activeTab, setActiveTab] = useState("inicio");
   const [modoVista, setModoVista] = useState("familiar");
   const [usuarios, setUsuarios] = useState([]);
@@ -87,13 +140,14 @@ function App() {
 
   useEffect(() => {
     let montado = true;
-    const timerCierre = setTimeout(() => { if (montado && verificandoHogar) setVerificandoHogar(false); }, 6000);
+    const timerCierre = setTimeout(() => { if (montado && (verificandoHogar || cargandoPerfil)) { setVerificandoHogar(false); setCargandoPerfil(false); } }, 6000);
     const inicializar = async () => {
       try {
         const { data: { session: s } } = await supabase.auth.getSession();
         if (!montado) return;
         setSession(s);
         if (s) {
+          setCargandoPerfil(true);
           const perfil = await verificarPerfil(s.user.id, s.user.email);
           if (montado) {
             setDatosHogar(perfil);
@@ -101,7 +155,11 @@ function App() {
           }
         }
       } catch (err) {} finally {
-        if (montado) { setVerificandoHogar(false); clearTimeout(timerCierre); }
+        if (montado) { 
+          setCargandoPerfil(false);
+          setVerificandoHogar(false); 
+          clearTimeout(timerCierre); 
+        }
       }
     };
     inicializar();
@@ -113,10 +171,12 @@ function App() {
       }
       else if (s && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         setSession(s);
+        setCargandoPerfil(true);
         const perfil = await verificarPerfil(s.user.id, s.user.email);
         if (montado) {
           setDatosHogar(perfil);
           setUsuarioActual(perfil);
+          setCargandoPerfil(false);
         }
       }
     });
@@ -146,11 +206,49 @@ function App() {
         supabase.from("gastos_programados").select("*").eq("espacio_id", eid).order("dia_recurrencia", { ascending: true })
       ]);
 
+      let deudasFinal = resD.data || [];
+      let huboCambios = false;
+
+      // Cierre automático de ciclos vencidos para tarjetas de crédito
+      const hoy = new Date();
+      hoy.setHours(0,0,0,0);
+
+      for (let i = 0; i < deudasFinal.length; i++) {
+        const d = deudasFinal[i];
+        if (d.tipo === 'tarjeta_credito' && d.estado === 'activa' && d.fecha_cierre_tarjeta) {
+          const cuotaActual = d.cuotas_detalle?.find(c => c.estado === 'pendiente');
+          if (cuotaActual) {
+            const cierreActualStr = obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta);
+            if (cierreActualStr) {
+              const cierre = new Date(cierreActualStr);
+              cierre.setHours(0,0,0,0);
+              if (hoy >= cierre) {
+                try {
+                  await autoCerrarCicloTarjeta(d, cuotaActual, eid, session.user.id);
+                  huboCambios = true;
+                  toast.success(`Cierre automático: ciclo de "${d.titulo}" cerrado y nuevo período iniciado. 📅💳`, { duration: 6000 });
+                } catch (errAuto) {
+                  console.error("Error al auto cerrar ciclo:", errAuto);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (huboCambios) {
+        // Volver a cargar las deudas actualizadas si hubo cierres automáticos
+        const { data: updatedDeudas } = await supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid);
+        if (updatedDeudas) {
+          deudasFinal = updatedDeudas;
+        }
+      }
+
       if (resG.data) setGastos(resG.data);
       if (resI.data) setIngresos(resI.data);
-      if (resD.data) {
-        setDeudas(resD.data);
-        verificarVencimientos(resD.data, eid, resN.data || []);
+      setDeudas(deudasFinal);
+      if (deudasFinal) {
+        verificarVencimientos(deudasFinal, eid, resN.data || []);
       }
       if (resN.data) setNotificaciones(resN.data);
       if (resP.data) setGastosProgramados(resP.data);
@@ -258,7 +356,7 @@ function App() {
 
   useEffect(() => { if (session && !verificandoHogar && datosHogar) obtenerDatos(); }, [session, verificandoHogar, datosHogar, obtenerDatos]);
 
-  if (verificandoHogar) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Iniciando ÑandeFinanza...</div>;
+  if (verificandoHogar || cargandoPerfil) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Iniciando ÑandeFinanza...</div>;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
@@ -266,15 +364,30 @@ function App() {
       
       {!session ? (
         <Login />
-      ) : !datosHogar ? (
-        <ConfiguracionHogar 
-          usuario={session.user} 
-          onHogarCreado={async () => {
-            const perfil = await verificarPerfil(session.user.id);
-            setDatosHogar(perfil);
-            setUsuarioActual(perfil);
-          }} 
-        />
+      ) : (!datosHogar || !datosHogar.espacio_id) ? (
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px]" />
+          </div>
+          <div className="w-full max-w-md z-10 glass-card border-white/10 p-8 text-center space-y-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500/10 text-red-500 rounded-full shadow-lg mb-2">
+              <Shield size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-white uppercase tracking-tight">Acceso Restringido</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Tu usuario no está asociado a ningún Hogar activo en el sistema.
+            </p>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              Por favor, contactá al Administrador para que vincule tu cuenta a un Hogar o verifique tu registro.
+            </p>
+            <button 
+              onClick={() => supabase.auth.signOut()} 
+              className="w-full bg-slate-900 hover:bg-slate-800 text-red-400 font-bold py-3.5 rounded-xl border border-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-wider"
+            >
+              <LogOut size={16} /> Cerrar Sesión / Volver
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="max-w-5xl mx-auto flex flex-col lg:flex-row min-h-screen">
           {/* CABECERA MÓVIL */}

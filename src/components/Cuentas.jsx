@@ -731,6 +731,56 @@ export default function Cuentas({
     }
   }
 
+  async function deshacerCierreTarjeta(deuda, cuotaCerrada) {
+    if (!deuda || !cuotaCerrada) return;
+    
+    const nextCuota = deuda.cuotas_detalle?.find(c => c.numero_cuota === cuotaCerrada.numero_cuota + 1 && c.estado === 'pendiente');
+    if (!nextCuota) {
+      toast.error("No se encontró el ciclo siguiente para deshacer.");
+      return;
+    }
+
+    if (Number(nextCuota.monto_abonado) > 0) {
+      toast.error("No se puede deshacer el cierre: el ciclo actual ya tiene abonos.");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Confirmas deshacer el cierre del ciclo de la tarjeta "${deuda.titulo}"?\n\n` +
+      `Se eliminará el ciclo nuevo (Cuota ${nextCuota.numero_cuota}) y se reactivará este ciclo.`
+    );
+    if (!confirmar) return;
+
+    const toastId = toast.loading("Deshaciendo cierre de ciclo...");
+    try {
+      const saldoPendienteOriginal = Math.max(0, Number(cuotaCerrada.monto_cuota) - Number(cuotaCerrada.monto_abonado));
+      const interesGenerado = saldoPendienteOriginal > 0 && deuda.tasa_interes > 0 
+        ? Math.round(saldoPendienteOriginal * (deuda.tasa_interes / 100 / 12)) 
+        : 0;
+      const initialMontoNextCuota = saldoPendienteOriginal + interesGenerado;
+      
+      const comprasEnNuevoCiclo = Math.max(0, Number(nextCuota.monto_cuota) - initialMontoNextCuota);
+
+      const nuevoMontoCuota = Number(cuotaCerrada.monto_cuota) + comprasEnNuevoCiclo;
+      const { error: errRevert } = await supabase.from("cuotas_detalle").update({
+        estado: 'pendiente',
+        fecha_pago: null,
+        pagador_id: null,
+        monto_cuota: nuevoMontoCuota
+      }).eq("id", cuotaCerrada.id);
+      
+      if (errRevert) throw errRevert;
+
+      const { error: errDel } = await supabase.from("cuotas_detalle").delete().eq("id", nextCuota.id);
+      if (errDel) throw errDel;
+
+      toast.success("¡Cierre deshecho exitosamente! 💳✨", { id: toastId });
+      obtenerDatos();
+    } catch (e) {
+      toast.error("Error al deshacer cierre: " + e.message, { id: toastId });
+    }
+  }
+
   function ModalCompra() {
     if (!compraSeleccionada) return null;
     return (
@@ -1355,14 +1405,34 @@ export default function Cuentas({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {d.cuotas_detalle?.sort((a,b)=>a.numero_cuota-b.numero_cuota).map(c => (
-                        <div key={c.id} className="flex justify-between text-[10px] bg-white/5 p-2 rounded-xl">
-                          <span className={c.estado==='pagado'?'text-emerald-400':'text-slate-400'}>
-                            Cuota {c.numero_cuota} • {c.estado === 'pagado' ? 'Pagado' : `Vence: ${formatearFechaCorta(c.fecha_vencimiento)}`}
-                          </span>
-                          <span className="text-white font-bold">{formatearNumero(c.monto_cuota, d.moneda)}</span>
-                        </div>
-                      ))}
+                      {d.cuotas_detalle?.sort((a,b)=>a.numero_cuota-b.numero_cuota).map(c => {
+                        const closedCuotas = d.cuotas_detalle?.filter(x => x.estado === 'pagado') || [];
+                        const maxClosedNum = closedCuotas.length > 0 ? Math.max(...closedCuotas.map(x => x.numero_cuota)) : -1;
+                        const nextPendiente = d.cuotas_detalle?.find(x => x.numero_cuota === c.numero_cuota + 1 && x.estado === 'pendiente');
+                        
+                        return (
+                          <div key={c.id} className="flex justify-between items-center text-[10px] bg-white/5 p-2 rounded-xl">
+                            <div className="flex items-center">
+                              <span className={c.estado==='pagado'?'text-emerald-400':'text-slate-400'}>
+                                Cuota {c.numero_cuota} • {c.estado === 'pagado' ? 'Pagado' : `Vence: ${formatearFechaCorta(c.fecha_vencimiento)}`}
+                              </span>
+                              {d.tipo === 'tarjeta_credito' && c.estado === 'pagado' && c.numero_cuota === maxClosedNum && nextPendiente && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deshacerCierreTarjeta(d, c);
+                                  }}
+                                  className="ml-2 text-[8px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-black px-2 py-0.5 rounded border border-rose-500/20 transition-all uppercase tracking-wider"
+                                >
+                                  Deshacer Cierre
+                                </button>
+                              )}
+                            </div>
+                            <span className="text-white font-bold">{formatearNumero(c.monto_cuota, d.moneda)}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </motion.div>
@@ -1594,12 +1664,42 @@ export default function Cuentas({
                   {['familiar', 'individual'].map(a => <button key={a} type="button" onClick={() => setAlcanceDeuda(a)} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>{a}</button>)}
                 </div>
                 <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                  {['fija', 'flexible', 'tarjeta_credito'].map(t => <button key={t} type="button" onClick={() => setTipoDeuda(t)} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>{t.replace('_', ' ')}</button>)}
+                  {['fija', 'flexible', 'tarjeta_credito'].map(t => {
+                    let label = t;
+                    if (t === 'fija') label = 'Cuota Fija';
+                    else if (t === 'flexible') label = 'Flexible';
+                    else if (t === 'tarjeta_credito') label = 'Tarjeta de Crédito';
+                    return (
+                      <button 
+                        key={t} 
+                        type="button" 
+                        onClick={() => setTipoDeuda(t)} 
+                        className={`flex-1 py-3 text-[9px] font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
                 
                 <div className="space-y-1">
                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Descripción / Entidad</label>
                    <input type="text" placeholder="Ej: Préstamo Banco Itaú" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" required />
+                   {tipoDeuda === 'fija' && (
+                     <div className="flex flex-wrap gap-1.5 mt-1.5 ml-1">
+                       <span className="text-[8px] text-slate-500 font-bold uppercase mr-1 self-center">Ejemplos:</span>
+                       {["Préstamo Consumo Francés", "Préstamo Vehículo", "Préstamo Hipotecario"].map((sug) => (
+                         <button
+                           key={sug}
+                           type="button"
+                           onClick={() => setTitulo(sug)}
+                           className="text-[8px] bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-2.5 py-1.5 rounded-lg border border-white/5 transition-all"
+                         >
+                           {sug}
+                         </button>
+                       ))}
+                     </div>
+                   )}
                 </div>
 
                 {tipoDeuda === 'tarjeta_credito' && (
