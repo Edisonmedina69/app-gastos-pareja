@@ -251,6 +251,9 @@ function App() {
           // Solo auto-acreditar si pertenece al usuario activo (evita fallos de RLS en Supabase)
           if (prog.usuario_id !== session.user.id) continue;
 
+          // Solo se acredita a partir del día programado de cobro
+          if (diaActual < prog.dia_recurrencia) continue;
+
           // Verificar si ya está acreditado en ingresos_mensuales
           const yaCobrado = ingresosFinal.some(ing => 
             ing.concepto === `[FIJO] ${prog.descripcion}` &&

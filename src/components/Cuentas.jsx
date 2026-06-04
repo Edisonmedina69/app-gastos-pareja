@@ -53,6 +53,7 @@ export default function Cuentas({
   const [guardando, setGuardando] = useState(false);
   const [deudaExpandida, setDeudaExpandida] = useState(null);
   const [pestana, setPestana] = useState('activas'); // activas | archivadas
+  const [filtroPersona, setFiltroPersona] = useState('todos'); // todos | yo | pareja
 
   // IA State
   const [analizandoIA, setAnalizandoIA] = useState(false);
@@ -959,9 +960,44 @@ export default function Cuentas({
     ) || false;
   };
 
-  const deudasFiltradas = deudas?.filter(d => pestana === 'activas' ? d.estado === 'activa' : d.estado === 'cerrada') || [];
-  const deudasFijas = gastosProgramados?.filter(g => !g.concepto.startsWith("[PRESUPUESTO] ")) || [];
-  const previsiones = gastosProgramados?.filter(g => g.concepto.startsWith("[PRESUPUESTO] ")) || [];
+  const deudasFiltradas = deudas?.filter(d => {
+    const coincideEstado = pestana === 'activas' ? d.estado === 'activa' : d.estado === 'cerrada';
+    if (!coincideEstado) return false;
+
+    if (filtroPersona === 'yo') {
+      return d.creador_id === usuarioActual?.id;
+    }
+    if (filtroPersona === 'pareja') {
+      return otroUsuario && d.creador_id === otroUsuario.id;
+    }
+    return true;
+  }) || [];
+
+  const deudasFijas = gastosProgramados?.filter(g => {
+    const esFijo = !g.concepto.startsWith("[PRESUPUESTO] ");
+    if (!esFijo) return false;
+
+    if (filtroPersona === 'yo') {
+      return g.usuario_id === usuarioActual?.id;
+    }
+    if (filtroPersona === 'pareja') {
+      return otroUsuario && g.usuario_id === otroUsuario.id;
+    }
+    return true;
+  }) || [];
+
+  const previsiones = gastosProgramados?.filter(g => {
+    const esPrevision = g.concepto.startsWith("[PRESUPUESTO] ");
+    if (!esPrevision) return false;
+
+    if (filtroPersona === 'yo') {
+      return g.usuario_id === usuarioActual?.id;
+    }
+    if (filtroPersona === 'pareja') {
+      return otroUsuario && g.usuario_id === otroUsuario.id;
+    }
+    return true;
+  }) || [];
 
   return (
     <div className="space-y-6 pb-20">
@@ -995,6 +1031,27 @@ export default function Cuentas({
           <Plus size={24} />
         </button>
       </header>
+
+      {/* FILTROS POR PERSONA */}
+      <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 p-2 rounded-2xl">
+        <span className="text-[9px] text-slate-500 font-bold uppercase ml-2 flex items-center gap-1">👤 Filtrar:</span>
+        <div className="flex bg-white/5 p-0.5 rounded-lg border border-white/5">
+          {[
+            { id: 'todos', label: 'Todos' },
+            { id: 'yo', label: 'Míos' },
+            { id: 'pareja', label: otroUsuario ? (otroUsuario.nombre || otroUsuario.email?.split('@')[0]) : 'Pareja' }
+          ].map(f => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFiltroPersona(f.id)}
+              className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase transition-all ${filtroPersona === f.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-400'}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="space-y-4">
         {(pestana === 'activas' || pestana === 'archivadas') && (
@@ -1529,7 +1586,7 @@ export default function Cuentas({
                           onClick={() => abrirPagoFijo(f)} 
                           className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg hover:bg-indigo-500"
                         >
-                          <CheckCircle size={14}/> COBRAR / REGISTRAR
+                          <CheckCircle size={14}/> PAGAR / REGISTRAR
                         </button>
                       ) : (
                         <div className="text-[9px] font-black text-emerald-400 flex items-center gap-1">
