@@ -46,6 +46,12 @@ export default function Cuentas({
   const [cuotasPagadas, setCuotasPagadas] = useState(0); 
   const [diaVencimiento, setDiaVencimiento] = useState("5");
   const [fechaCierreTarjeta, setFechaCierreTarjeta] = useState("25");
+  const [deudaMedioPago, setDeudaMedioPago] = useState('transferencia');
+  const [deudaTipoCuenta, setDeudaTipoCuenta] = useState('alias');
+  const [deudaAliasCuenta, setDeudaAliasCuenta] = useState('');
+  const [deudaNroCuenta, setDeudaNroCuenta] = useState('');
+  const [deudaNombreTitular, setDeudaNombreTitular] = useState('');
+  const [deudaCiTitular, setDeudaCiTitular] = useState('');
   const [monedaDeuda, setMonedaDeuda] = useState(monedaGlobal);
   const [modoMonto, setModoMonto] = useState('cuota'); // cuota | total
   
@@ -70,6 +76,12 @@ export default function Cuentas({
   const [fijoDiaRecurrencia, setFijoDiaRecurrencia] = useState('5');
   const [fijoCategoria, setFijoCategoria] = useState('Casa');
   const [fijoParaQuien, setFijoParaQuien] = useState('Ambos');
+  const [fijoMedioPago, setFijoMedioPago] = useState('transferencia');
+  const [fijoTipoCuenta, setFijoTipoCuenta] = useState('alias');
+  const [fijoAliasCuenta, setFijoAliasCuenta] = useState('');
+  const [fijoNroCuenta, setFijoNroCuenta] = useState('');
+  const [fijoNombreTitular, setFijoNombreTitular] = useState('');
+  const [fijoCiTitular, setFijoCiTitular] = useState('');
 
   // Pago Gasto Fijo State
   const [mostrarModalPagarFijo, setMostrarModalPagarFijo] = useState(false);
@@ -78,6 +90,7 @@ export default function Cuentas({
   const [pagarMoneda, setPagarMoneda] = useState('PYG');
   const [pagarPagadorId, setPagarPagadorId] = useState('');
   const [pagarParaQuien, setPagarParaQuien] = useState('Ambos');
+  const [pagarMedioPago, setPagarMedioPago] = useState('transferencia');
 
   // Previsiones State
   const [mostrarModalPrevision, setMostrarModalPrevision] = useState(false);
@@ -86,6 +99,17 @@ export default function Cuentas({
   const [previsionMontoFormateado, setPrevisionMontoFormateado] = useState('');
   const [previsionMoneda, setPrevisionMoneda] = useState(monedaGlobal);
   const [previsionParaQuien, setPrevisionParaQuien] = useState('Ambos');
+
+  // Quick-edit Medio de Pago State
+  const [mostrarModalMedioPago, setMostrarModalMedioPago] = useState(false);
+  const [medioPagoEditItem, setMedioPagoEditItem] = useState(null); // { id, type: 'gasto_fijo'|'deuda', medio_pago, tipo_cuenta, alias_cuenta, nro_cuenta, nombre_titular, ci_titular }
+  const [mpEditMedioPago, setMpEditMedioPago] = useState('transferencia');
+  const [mpEditTipoCuenta, setMpEditTipoCuenta] = useState('alias');
+  const [mpEditAlias, setMpEditAlias] = useState('');
+  const [mpEditNroCuenta, setMpEditNroCuenta] = useState('');
+  const [mpEditNombreTitular, setMpEditNombreTitular] = useState('');
+  const [mpEditCiTitular, setMpEditCiTitular] = useState('');
+  const [mpGuardando, setMpGuardando] = useState(false);
 
   useEffect(() => {
     if (mostrarModalFijo && !idFijoEditando) {
@@ -105,6 +129,48 @@ export default function Cuentas({
     setPrevisionMontoFormateado('');
     setPrevisionMoneda(monedaGlobal);
     setPrevisionParaQuien('Ambos');
+  };
+
+  // ─── QUICK-EDIT MEDIO DE PAGO ───
+  const abrirEdicionMedioPago = (item, type) => {
+    setMedioPagoEditItem({ id: item.id, type });
+    setMpEditMedioPago(item.medio_pago || 'transferencia');
+    setMpEditTipoCuenta(item.tipo_cuenta || 'alias');
+    setMpEditAlias(item.alias_cuenta || '');
+    setMpEditNroCuenta(item.nro_cuenta || '');
+    setMpEditNombreTitular(item.nombre_titular || '');
+    setMpEditCiTitular(item.ci_titular || '');
+    setMostrarModalMedioPago(true);
+  };
+
+  const guardarMedioPago = async (e) => {
+    e.preventDefault();
+    if (!medioPagoEditItem || mpGuardando) return;
+    setMpGuardando(true);
+    const toastId = toast.loading("Actualizando medio de pago...");
+    try {
+      const tabla = medioPagoEditItem.type === 'gasto_fijo' ? 'gastos_programados' : 'deudas_maestras';
+      const { error } = await supabase
+        .from(tabla)
+        .update({
+          medio_pago: mpEditMedioPago,
+          tipo_cuenta: mpEditMedioPago === 'transferencia' ? mpEditTipoCuenta : null,
+          alias_cuenta: mpEditMedioPago === 'transferencia' && mpEditTipoCuenta === 'alias' ? mpEditAlias.trim() : null,
+          nro_cuenta: mpEditMedioPago === 'transferencia' && mpEditTipoCuenta === 'nro_cuenta' ? mpEditNroCuenta.trim() : null,
+          nombre_titular: mpEditMedioPago === 'transferencia' && mpEditTipoCuenta === 'nro_cuenta' ? mpEditNombreTitular.trim() : null,
+          ci_titular: mpEditMedioPago === 'transferencia' && mpEditTipoCuenta === 'nro_cuenta' ? mpEditCiTitular.trim() : null,
+        })
+        .eq('id', medioPagoEditItem.id);
+      if (error) throw error;
+      toast.success("¡Medio de pago actualizado! 💳", { id: toastId });
+      setMostrarModalMedioPago(false);
+      setMedioPagoEditItem(null);
+      obtenerDatos();
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setMpGuardando(false);
+    }
   };
 
   const abrirEdicionPrevision = (prev) => {
@@ -253,7 +319,13 @@ export default function Cuentas({
             monto: montoLimpio,
             dia_recurrencia: parseInt(fijoDiaRecurrencia),
             categoria: fijoCategoria,
-            para_quien: fijoParaQuien
+            para_quien: fijoParaQuien,
+            medio_pago: fijoMedioPago,
+            tipo_cuenta: fijoMedioPago === 'transferencia' ? fijoTipoCuenta : null,
+            alias_cuenta: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'alias' ? fijoAliasCuenta.trim() : null,
+            nro_cuenta: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'nro_cuenta' ? fijoNroCuenta.trim() : null,
+            nombre_titular: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'nro_cuenta' ? fijoNombreTitular.trim() : null,
+            ci_titular: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'nro_cuenta' ? fijoCiTitular.trim() : null,
           })
           .eq("id", idFijoEditando);
         clearTimeout(timeoutId);
@@ -270,7 +342,13 @@ export default function Cuentas({
             moneda: fijoMoneda,
             dia_recurrencia: parseInt(fijoDiaRecurrencia),
             categoria: fijoCategoria,
-            para_quien: fijoParaQuien
+            para_quien: fijoParaQuien,
+            medio_pago: fijoMedioPago,
+            tipo_cuenta: fijoMedioPago === 'transferencia' ? fijoTipoCuenta : null,
+            alias_cuenta: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'alias' ? fijoAliasCuenta.trim() : null,
+            nro_cuenta: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'nro_cuenta' ? fijoNroCuenta.trim() : null,
+            nombre_titular: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'nro_cuenta' ? fijoNombreTitular.trim() : null,
+            ci_titular: fijoMedioPago === 'transferencia' && fijoTipoCuenta === 'nro_cuenta' ? fijoCiTitular.trim() : null,
           }]);
         clearTimeout(timeoutId);
         if (error) throw error;
@@ -308,6 +386,12 @@ export default function Cuentas({
     setFijoDiaRecurrencia(f.dia_recurrencia.toString());
     setFijoCategoria(f.categoria);
     setFijoParaQuien(f.para_quien);
+    setFijoMedioPago(f.medio_pago || 'transferencia');
+    setFijoTipoCuenta(f.tipo_cuenta || 'alias');
+    setFijoAliasCuenta(f.alias_cuenta || '');
+    setFijoNroCuenta(f.nro_cuenta || '');
+    setFijoNombreTitular(f.nombre_titular || '');
+    setFijoCiTitular(f.ci_titular || '');
     setMostrarModalFijo(true);
   };
 
@@ -318,6 +402,12 @@ export default function Cuentas({
     setFijoDiaRecurrencia('5');
     setFijoCategoria('Casa');
     setFijoParaQuien('Ambos');
+    setFijoMedioPago('transferencia');
+    setFijoTipoCuenta('alias');
+    setFijoAliasCuenta('');
+    setFijoNroCuenta('');
+    setFijoNombreTitular('');
+    setFijoCiTitular('');
   };
 
   const abrirPagoFijo = (f) => {
@@ -326,6 +416,7 @@ export default function Cuentas({
     setPagarMoneda(f.moneda);
     setPagarPagadorId(usuarioActual?.id || '');
     setPagarParaQuien(f.para_quien);
+    setPagarMedioPago(f.medio_pago || 'transferencia');
     setMostrarModalPagarFijo(true);
   };
 
@@ -343,7 +434,13 @@ export default function Cuentas({
         monto: montoLimpio,
         moneda: pagarMoneda,
         categoria: gastoFijoAPagar.categoria,
-        para_quien: pagarParaQuien
+        para_quien: pagarParaQuien,
+        medio_pago: pagarMedioPago,
+        tipo_cuenta: gastoFijoAPagar?.tipo_cuenta || null,
+        alias_cuenta: gastoFijoAPagar?.alias_cuenta || null,
+        nro_cuenta: gastoFijoAPagar?.nro_cuenta || null,
+        nombre_titular: gastoFijoAPagar?.nombre_titular || null,
+        ci_titular: gastoFijoAPagar?.ci_titular || null,
       }]);
       if (error) throw error;
       toast.success("¡Pago registrado y guardado! 💸", { id: toastId });
@@ -426,6 +523,12 @@ export default function Cuentas({
     setTitulo(''); setNroTarjeta(''); setTasaInteres(''); setMontoTotalFormateado(''); setLineaCreditoFormateada(''); setPagoMinimoFormateado(''); setCargosMensualesFormateado(''); setCantidadCuotas(1); setCuotasPagadas(0);
     setTipoDeuda("fija"); setAlcanceDeuda("familiar"); setDiaVencimiento("5"); setFechaCierreTarjeta("25");
     setModoMonto('cuota');
+    setDeudaMedioPago('transferencia');
+    setDeudaTipoCuenta('alias');
+    setDeudaAliasCuenta('');
+    setDeudaNroCuenta('');
+    setDeudaNombreTitular('');
+    setDeudaCiTitular('');
     setDeudaEditandoId(null);
   };
 
@@ -469,6 +572,13 @@ export default function Cuentas({
     
     const yaPagadasCount = d.cuotas_detalle?.filter(c => c.estado === 'pagado').length || 0;
     setCuotasPagadas(yaPagadasCount);
+
+    setDeudaMedioPago(d.medio_pago || 'transferencia');
+    setDeudaTipoCuenta(d.tipo_cuenta || 'alias');
+    setDeudaAliasCuenta(d.alias_cuenta || '');
+    setDeudaNroCuenta(d.nro_cuenta || '');
+    setDeudaNombreTitular(d.nombre_titular || '');
+    setDeudaCiTitular(d.ci_titular || '');
 
     setMostrarModal(true);
   };
@@ -515,7 +625,13 @@ export default function Cuentas({
             fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
             nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
             estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa',
-            tasa_interes: (tipoDeuda === 'tarjeta_credito' || tipoDeuda === 'fija') ? parseFloat(tasaInteres) || 0 : 0
+            tasa_interes: (tipoDeuda === 'tarjeta_credito' || tipoDeuda === 'fija') ? parseFloat(tasaInteres) || 0 : 0,
+            medio_pago: deudaMedioPago,
+            tipo_cuenta: deudaMedioPago === 'transferencia' ? deudaTipoCuenta : null,
+            alias_cuenta: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'alias' ? deudaAliasCuenta.trim() : null,
+            nro_cuenta: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'nro_cuenta' ? deudaNroCuenta.trim() : null,
+            nombre_titular: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'nro_cuenta' ? deudaNombreTitular.trim() : null,
+            ci_titular: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'nro_cuenta' ? deudaCiTitular.trim() : null,
           })
           .eq("id", deudaEditandoId);
 
@@ -538,7 +654,13 @@ export default function Cuentas({
             fecha_cierre_tarjeta: tipoDeuda === 'tarjeta_credito' ? parseInt(fechaCierreTarjeta) : null,
             nro_tarjeta: tipoDeuda === 'tarjeta_credito' ? nroTarjeta.trim() : null,
             estado: yaPagadas >= numCuotas ? 'cerrada' : 'activa',
-            tasa_interes: (tipoDeuda === 'tarjeta_credito' || tipoDeuda === 'fija') ? parseFloat(tasaInteres) || 0 : 0
+            tasa_interes: (tipoDeuda === 'tarjeta_credito' || tipoDeuda === 'fija') ? parseFloat(tasaInteres) || 0 : 0,
+            medio_pago: deudaMedioPago,
+            tipo_cuenta: deudaMedioPago === 'transferencia' ? deudaTipoCuenta : null,
+            alias_cuenta: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'alias' ? deudaAliasCuenta.trim() : null,
+            nro_cuenta: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'nro_cuenta' ? deudaNroCuenta.trim() : null,
+            nombre_titular: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'nro_cuenta' ? deudaNombreTitular.trim() : null,
+            ci_titular: deudaMedioPago === 'transferencia' && deudaTipoCuenta === 'nro_cuenta' ? deudaCiTitular.trim() : null,
           }])
           .select().single();
 
@@ -600,7 +722,13 @@ export default function Cuentas({
       }
       await supabase.from("gastos").insert([{
         concepto: `Pago Deuda: ${maestra.titulo}`, monto: montoAbono, categoria: "Pago Tarjeta de Crédito",
-        usuario_id: usuarioActual.id, pagador_id: usuarioActual.id, para_quien: "Ambos", moneda: monedaAbono, espacio_id: datosHogar.espacio_id
+        usuario_id: usuarioActual.id, pagador_id: usuarioActual.id, para_quien: "Ambos", moneda: monedaAbono, espacio_id: datosHogar.espacio_id,
+        medio_pago: maestra.medio_pago || 'transferencia',
+        tipo_cuenta: maestra.tipo_cuenta || null,
+        alias_cuenta: maestra.alias_cuenta || null,
+        nro_cuenta: maestra.nro_cuenta || null,
+        nombre_titular: maestra.nombre_titular || null,
+        ci_titular: maestra.ci_titular || null,
       }]);
       const { data: check } = await supabase.from('cuotas_detalle').select('estado').eq('deuda_maestra_id', maestra.id);
       if (maestra.tipo !== 'tarjeta_credito' && check.every(c => c.estado === 'pagado')) {
@@ -940,6 +1068,41 @@ export default function Cuentas({
                 </button>
               ))}
             </div>
+
+            {/* ── DATOS DE CUENTA GUARDADOS ── */}
+            {maestra.medio_pago === 'transferencia' && maestra.tipo_cuenta === 'alias' && maestra.alias_cuenta && (
+              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3">
+                <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Alias / CBU para transferir</p>
+                <p className="text-sm font-black text-white">{maestra.alias_cuenta}</p>
+              </div>
+            )}
+            {maestra.medio_pago === 'transferencia' && maestra.tipo_cuenta === 'nro_cuenta' && maestra.nro_cuenta && (
+              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3 space-y-2">
+                <div>
+                  <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
+                  <p className="text-sm font-black text-white">{maestra.nro_cuenta}</p>
+                </div>
+                {maestra.nombre_titular && (
+                  <div>
+                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
+                    <p className="text-sm font-black text-white">{maestra.nombre_titular}</p>
+                  </div>
+                )}
+                {maestra.ci_titular && (
+                  <div>
+                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
+                    <p className="text-sm font-black text-white">{maestra.ci_titular}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            {maestra.medio_pago === 'efectivo' && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
+                <span className="text-lg">💵</span>
+                <p className="text-[10px] font-bold text-amber-400 uppercase">Pago en efectivo — no requiere datos de cuenta</p>
+              </div>
+            )}
+
             {reqT && <input type="number" step="0.0001" value={t} onChange={(e) => setT(e.target.value)} className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-white font-bold" placeholder="Cotización aplicada" />}
             <div className="flex gap-2 pt-4">
               <button onClick={() => setMostrarModalPago(false)} className="flex-1 py-4 bg-white/5 text-slate-400 font-bold rounded-2xl">CANCELAR</button>
@@ -1093,6 +1256,39 @@ export default function Cuentas({
                     {d.tasa_interes > 0 && ` • Interés: ${d.tasa_interes}%`}
                     {` • ${d.alcance}`}
                   </p>
+                  {d.medio_pago === 'transferencia' ? (
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicionMedioPago(d, 'deuda')}
+                      className="text-[9px] text-indigo-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-indigo-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                    >
+                      {d.tipo_cuenta === 'alias' && d.alias_cuenta && (
+                        <><Hash size={10} /> Alias: {d.alias_cuenta} <Edit2 size={9} className="ml-0.5 opacity-60" /></>
+                      )}
+                      {d.tipo_cuenta === 'nro_cuenta' && d.nro_cuenta && (
+                        <><Hash size={10} /> Cta: {d.nro_cuenta} {d.nombre_titular ? `• ${d.nombre_titular}` : ''} <Edit2 size={9} className="ml-0.5 opacity-60" /></>
+                      )}
+                      {!d.alias_cuenta && !d.nro_cuenta && (
+                        <>Transferencia <Edit2 size={9} className="ml-0.5 opacity-60" /></>
+                      )}
+                    </button>
+                  ) : d.medio_pago === 'efectivo' ? (
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicionMedioPago(d, 'deuda')}
+                      className="text-[9px] text-amber-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                    >
+                      💵 Pago en efectivo <Edit2 size={9} className="ml-0.5 opacity-60" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicionMedioPago(d, 'deuda')}
+                      className="text-[9px] text-slate-500 font-bold mt-0.5 flex items-center gap-1 hover:text-slate-300 transition-colors cursor-pointer bg-transparent border-0 p-0 border border-dashed border-slate-600 rounded-full px-2 py-0.5"
+                    >
+                      ⚠️ Sin medio de pago <Edit2 size={9} />
+                    </button>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   {cuotaActual && <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</div>}
@@ -1558,6 +1754,39 @@ export default function Cuentas({
                         <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-tighter">
                           Categoría: {f.categoria} • Vence el: {f.dia_recurrencia} de cada mes • {f.para_quien === 'Ambos' ? 'Familia' : `Para: ${f.para_quien}`}
                         </p>
+                        {f.medio_pago === 'transferencia' ? (
+                          <button
+                            type="button"
+                            onClick={() => abrirEdicionMedioPago(f, 'gasto_fijo')}
+                            className="text-[9px] text-indigo-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-indigo-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                          >
+                            {f.tipo_cuenta === 'alias' && f.alias_cuenta && (
+                              <><Hash size={10} /> Alias: {f.alias_cuenta} <Edit2 size={9} className="ml-0.5 opacity-60" /></>
+                            )}
+                            {f.tipo_cuenta === 'nro_cuenta' && f.nro_cuenta && (
+                              <><Hash size={10} /> Cta: {f.nro_cuenta} {f.nombre_titular ? `• ${f.nombre_titular}` : ''} <Edit2 size={9} className="ml-0.5 opacity-60" /></>
+                            )}
+                            {!f.alias_cuenta && !f.nro_cuenta && (
+                              <>Transferencia <Edit2 size={9} className="ml-0.5 opacity-60" /></>
+                            )}
+                          </button>
+                        ) : f.medio_pago === 'efectivo' ? (
+                          <button
+                            type="button"
+                            onClick={() => abrirEdicionMedioPago(f, 'gasto_fijo')}
+                            className="text-[9px] text-amber-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                          >
+                            💵 Pago en efectivo <Edit2 size={9} className="ml-0.5 opacity-60" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => abrirEdicionMedioPago(f, 'gasto_fijo')}
+                            className="text-[9px] text-slate-500 font-bold mt-0.5 flex items-center gap-1 hover:text-slate-300 transition-colors cursor-pointer bg-transparent border-0 p-0 border border-dashed border-slate-600 rounded-full px-2 py-0.5"
+                          >
+                            ⚠️ Sin medio de pago <Edit2 size={9} />
+                          </button>
+                        )}
                       </div>
                       <div className="flex gap-1">
                         <button 
@@ -1885,6 +2114,111 @@ export default function Cuentas({
                   )}
                 </div>
 
+                {/* ── MEDIO DE PAGO (Deuda Pro) ── */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+                  <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setDeudaMedioPago('transferencia')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Transferencia
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeudaMedioPago('efectivo')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        deudaMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Efectivo
+                    </button>
+                  </div>
+                </div>
+
+                {deudaMedioPago === 'transferencia' && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Tipo de Cuenta</label>
+                      <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => setDeudaTipoCuenta('alias')}
+                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                            deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                          }`}
+                        >
+                          Alias / CBU
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeudaTipoCuenta('nro_cuenta')}
+                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                            deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                          }`}
+                        >
+                          Nro. de Cuenta
+                        </button>
+                      </div>
+                    </div>
+
+                    {deudaTipoCuenta === 'alias' ? (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                          <Hash size={12} /> Alias / CBU
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: mi.alias.banco"
+                          value={deudaAliasCuenta}
+                          onChange={(e) => setDeudaAliasCuenta(e.target.value)}
+                          className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                            <Hash size={12} /> Número de Cuenta
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: 001-123456-00"
+                            value={deudaNroCuenta}
+                            onChange={(e) => setDeudaNroCuenta(e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label>
+                            <input
+                              type="text"
+                              placeholder="Titular de la cuenta"
+                              value={deudaNombreTitular}
+                              onChange={(e) => setDeudaNombreTitular(e.target.value)}
+                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
+                            <input
+                              type="text"
+                              placeholder="Ej: 1234567"
+                              value={deudaCiTitular}
+                              onChange={(e) => setDeudaCiTitular(e.target.value)}
+                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
                 {zonaPeligro && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4"><AlertTriangle className="text-red-500 shrink-0" /><p className="text-[11px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP.</p></div>}
                 <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : (deudaEditandoId ? "GUARDAR CAMBIOS" : "REGISTRAR DEUDA")}</button>
               </form>
@@ -1956,6 +2290,112 @@ export default function Cuentas({
                   </div>
                 </div>
 
+                {/* ── MEDIO DE PAGO ── */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+                  <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setFijoMedioPago('transferencia')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        fijoMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Transferencia
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFijoMedioPago('efectivo')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        fijoMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Efectivo
+                    </button>
+                  </div>
+                </div>
+
+                {/* ── DATOS DE CUENTA (solo si Transferencia) ── */}
+                {fijoMedioPago === 'transferencia' && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Tipo de Cuenta</label>
+                      <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => setFijoTipoCuenta('alias')}
+                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                            fijoTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                          }`}
+                        >
+                          Alias / CBU
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFijoTipoCuenta('nro_cuenta')}
+                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                            fijoTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                          }`}
+                        >
+                          Nro. de Cuenta
+                        </button>
+                      </div>
+                    </div>
+
+                    {fijoTipoCuenta === 'alias' ? (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                          <Hash size={12} /> Alias / CBU
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: mi.alias.banco"
+                          value={fijoAliasCuenta}
+                          onChange={(e) => setFijoAliasCuenta(e.target.value)}
+                          className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                            <Hash size={12} /> Número de Cuenta
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: 001-123456-00"
+                            value={fijoNroCuenta}
+                            onChange={(e) => setFijoNroCuenta(e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label>
+                            <input
+                              type="text"
+                              placeholder="Titular de la cuenta"
+                              value={fijoNombreTitular}
+                              onChange={(e) => setFijoNombreTitular(e.target.value)}
+                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
+                            <input
+                              type="text"
+                              placeholder="Ej: 1234567"
+                              value={fijoCiTitular}
+                              onChange={(e) => setFijoCiTitular(e.target.value)}
+                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
                 <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 active:scale-95 transition-all mt-4">
                   {guardando ? <Loader2 className="animate-spin mx-auto" /> : "PROGRAMAR GASTO"}
                 </button>
@@ -2016,6 +2456,68 @@ export default function Cuentas({
                     <option value="Pareja">Pareja</option>
                   </select>
                 </div>
+
+                {/* ── MEDIO DE PAGO ── */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+                  <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setPagarMedioPago('transferencia')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        pagarMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Transferencia
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPagarMedioPago('efectivo')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        pagarMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Efectivo
+                    </button>
+                  </div>
+                </div>
+
+                {/* ── DATOS DE CUENTA GUARDADOS (solo lectura, si Transferencia) ── */}
+                {pagarMedioPago === 'transferencia' && gastoFijoAPagar?.tipo_cuenta === 'alias' && gastoFijoAPagar?.alias_cuenta && (
+                  <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3">
+                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Alias / CBU para transferir</p>
+                    <p className="text-sm font-black text-white">{gastoFijoAPagar.alias_cuenta}</p>
+                  </div>
+                )}
+
+                {pagarMedioPago === 'transferencia' && gastoFijoAPagar?.tipo_cuenta === 'nro_cuenta' && gastoFijoAPagar?.nro_cuenta && (
+                  <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3 space-y-2">
+                    <div>
+                      <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
+                      <p className="text-sm font-black text-white">{gastoFijoAPagar.nro_cuenta}</p>
+                    </div>
+                    {gastoFijoAPagar.nombre_titular && (
+                      <div>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
+                        <p className="text-sm font-black text-white">{gastoFijoAPagar.nombre_titular}</p>
+                      </div>
+                    )}
+                    {gastoFijoAPagar.ci_titular && (
+                      <div>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
+                        <p className="text-sm font-black text-white">{gastoFijoAPagar.ci_titular}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── AVISO EFECTIVO ── */}
+                {pagarMedioPago === 'efectivo' && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
+                    <span className="text-lg">💵</span>
+                    <p className="text-[10px] font-bold text-amber-400 uppercase">Pago en efectivo — no requiere datos de cuenta</p>
+                  </div>
+                )}
 
                 <button type="submit" className="w-full py-4 font-black rounded-2xl bg-emerald-600 text-white shadow-xl shadow-emerald-950/30 active:scale-95 transition-all mt-4">
                   CONFIRMAR PAGO
@@ -2078,6 +2580,127 @@ export default function Cuentas({
 
                 <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 active:scale-95 transition-all mt-4">
                   {guardando ? <Loader2 className="animate-spin mx-auto" /> : "GUARDAR PREVISIÓN"}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MINI-MODAL EDITAR MEDIO DE PAGO */}
+      <AnimatePresence>
+        {mostrarModalMedioPago && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl relative border border-white/10">
+              <button onClick={() => { setMostrarModalMedioPago(false); setMedioPagoEditItem(null); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
+              <h2 className="text-lg font-black text-white mb-4 uppercase">Medio de Pago</h2>
+              <form onSubmit={guardarMedioPago} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+                  <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setMpEditMedioPago('transferencia')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        mpEditMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Transferencia
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMpEditMedioPago('efectivo')}
+                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                        mpEditMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
+                      }`}
+                    >
+                      Efectivo
+                    </button>
+                  </div>
+                </div>
+
+                {mpEditMedioPago === 'transferencia' && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Tipo de Cuenta</label>
+                      <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => setMpEditTipoCuenta('alias')}
+                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                            mpEditTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                          }`}
+                        >
+                          Alias / CBU
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMpEditTipoCuenta('nro_cuenta')}
+                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                            mpEditTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                          }`}
+                        >
+                          Nro. de Cuenta
+                        </button>
+                      </div>
+                    </div>
+
+                    {mpEditTipoCuenta === 'alias' ? (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                          <Hash size={12} /> Alias / CBU
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: mi.alias.banco"
+                          value={mpEditAlias}
+                          onChange={(e) => setMpEditAlias(e.target.value)}
+                          className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                            <Hash size={12} /> Número de Cuenta
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: 001-123456-00"
+                            value={mpEditNroCuenta}
+                            onChange={(e) => setMpEditNroCuenta(e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label>
+                            <input
+                              type="text"
+                              placeholder="Titular de la cuenta"
+                              value={mpEditNombreTitular}
+                              onChange={(e) => setMpEditNombreTitular(e.target.value)}
+                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
+                            <input
+                              type="text"
+                              placeholder="Ej: 1234567"
+                              value={mpEditCiTitular}
+                              onChange={(e) => setMpEditCiTitular(e.target.value)}
+                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                <button type="submit" disabled={mpGuardando} className="w-full py-3.5 font-black rounded-2xl bg-indigo-600 text-white shadow-xl active:scale-95 transition-all mt-4">
+                  {mpGuardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : "GUARDAR"}
                 </button>
               </form>
             </motion.div>
