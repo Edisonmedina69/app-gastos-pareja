@@ -36,6 +36,46 @@ export function formatearFecha(fechaStr) {
   );
 }
 
+export function obtenerRangoCicloFinanciero(diaCobro = 1, fechaReferencia = new Date()) {
+  const ref = new Date(fechaReferencia);
+  const diaNum = parseInt(diaCobro, 10) || 1;
+  const anio = ref.getFullYear();
+  const mes = ref.getMonth(); // 0-based
+  const diaHoy = ref.getDate();
+
+  let inicio, fin;
+
+  if (diaHoy >= diaNum) {
+    // El ciclo actual comenzó el día (diaNum) de este mes
+    const ultDiaMesActual = new Date(anio, mes + 1, 0).getDate();
+    inicio = new Date(anio, mes, Math.min(diaNum, ultDiaMesActual), 0, 0, 0);
+
+    // Termina el día anterior al próximo día de cobro del mes siguiente
+    const ultDiaMesSig = new Date(anio, mes + 2, 0).getDate();
+    const diaSig = Math.min(diaNum, ultDiaMesSig);
+    fin = new Date(anio, mes + 1, diaSig - 1, 23, 59, 59);
+  } else {
+    // El ciclo actual comenzó el día (diaNum) del mes anterior
+    const ultDiaMesAnt = new Date(anio, mes, 0).getDate();
+    inicio = new Date(anio, mes - 1, Math.min(diaNum, ultDiaMesAnt), 0, 0, 0);
+
+    const ultDiaMesActual = new Date(anio, mes + 1, 0).getDate();
+    const diaActual = Math.min(diaNum, ultDiaMesActual);
+    fin = new Date(anio, mes, diaActual - 1, 23, 59, 59);
+  }
+
+  return { inicio, fin };
+}
+
+export function estaEnCicloFinanciero(fechaObjOrStr, diaCobro = 1, fechaRef = new Date()) {
+  if (!fechaObjOrStr) return false;
+  const target = new Date(fechaObjOrStr);
+  if (isNaN(target.getTime())) return false;
+
+  const { inicio, fin } = obtenerRangoCicloFinanciero(diaCobro, fechaRef);
+  return target >= inicio && target <= fin;
+}
+
 export function formatearFechaCorta(fechaStr) {
   if (!fechaStr) return "";
   const parts = fechaStr.split("T")[0].split("-");
@@ -121,4 +161,37 @@ export function obtenerPlanAmortizacion(montoCuota, totalCuotas, tasaInteresAnua
   return plan;
 }
 
+export function calcularFechaCobroReal(diaRecurrencia, mes = new Date().getMonth() + 1, anio = new Date().getFullYear(), soloDiasHabiles = true, ajuste = 'anterior') {
+  const diaNum = parseInt(diaRecurrencia, 10) || 1;
+  const ultimoDiaMes = new Date(anio, mes, 0).getDate();
+  const diaValido = Math.min(diaNum, ultimoDiaMes);
+  
+  let fecha = new Date(anio, mes - 1, diaValido);
+  
+  if (soloDiasHabiles) {
+    const dayOfWeek = fecha.getDay(); // 0: Domingo, 6: Sábado
+    if (dayOfWeek === 6) { // Sábado
+      if (ajuste === 'anterior') {
+        fecha.setDate(fecha.getDate() - 1); // Viernes
+      } else {
+        fecha.setDate(fecha.getDate() + 2); // Lunes
+      }
+    } else if (dayOfWeek === 0) { // Domingo
+      if (ajuste === 'anterior') {
+        fecha.setDate(fecha.getDate() - 2); // Viernes
+      } else {
+        fecha.setDate(fecha.getDate() + 1); // Lunes
+      }
+    }
+  }
 
+  const yyyy = fecha.getFullYear();
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dd = String(fecha.getDate()).padStart(2, '0');
+  
+  return {
+    fechaStr: `${yyyy}-${mm}-${dd}`,
+    fechaObj: fecha,
+    esAjustado: soloDiasHabiles && (new Date(anio, mes - 1, diaValido).getDay() === 0 || new Date(anio, mes - 1, diaValido).getDay() === 6)
+  };
+}

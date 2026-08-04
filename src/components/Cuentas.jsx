@@ -54,6 +54,7 @@ export default function Cuentas({
   const [deudaCiTitular, setDeudaCiTitular] = useState('');
   const [monedaDeuda, setMonedaDeuda] = useState(monedaGlobal);
   const [modoMonto, setModoMonto] = useState('cuota'); // cuota | total
+  const [fechaInicioDeuda, setFechaInicioDeuda] = useState('');
   
   // UI State
   const [guardando, setGuardando] = useState(false);
@@ -529,6 +530,7 @@ export default function Cuentas({
     setDeudaNroCuenta('');
     setDeudaNombreTitular('');
     setDeudaCiTitular('');
+    setFechaInicioDeuda('');
     setDeudaEditandoId(null);
   };
 
@@ -541,14 +543,16 @@ export default function Cuentas({
     setTasaInteres(d.tasa_interes?.toString() || '');
     setMonedaDeuda(d.moneda);
     
-    // Dia vencimiento
+    // Dia vencimiento y Fecha Inicio
     const primerVencimiento = d.cuotas_detalle?.[0]?.fecha_vencimiento;
     if (primerVencimiento) {
+      setFechaInicioDeuda(primerVencimiento);
       const parts = primerVencimiento.split("-");
       if (parts.length === 3) {
         setDiaVencimiento(parseInt(parts[2], 10).toString());
       }
     } else {
+      setFechaInicioDeuda('');
       setDiaVencimiento("5");
     }
 
@@ -669,13 +673,24 @@ export default function Cuentas({
       }
 
       const cuotas = [];
-      const fechaBase = new Date();
+      let fechaBase = new Date();
+      if (fechaInicioDeuda) {
+        const parts = fechaInicioDeuda.split("-");
+        if (parts.length === 3) {
+          fechaBase = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        }
+      }
+
       const hoyDia = fechaBase.getDate();
       const mesProximo = parseInt(diaVencimiento) < hoyDia ? 1 : 0;
-      const mesInicio = fechaBase.getMonth() + mesProximo - yaPagadas;
+      const mesInicio = fechaInicioDeuda 
+        ? fechaBase.getMonth()
+        : fechaBase.getMonth() + mesProximo - yaPagadas;
+
+      const anioBase = fechaBase.getFullYear();
 
       for (let i = 1; i <= numCuotas; i++) {
-        let fv = new Date(fechaBase.getFullYear(), mesInicio + (i - 1), parseInt(diaVencimiento));
+        let fv = new Date(anioBase, mesInicio + (i - 1), parseInt(diaVencimiento));
         fv = ajustarDiaHabil(fv);
         
         const esPagada = i <= yaPagadas;
@@ -687,7 +702,7 @@ export default function Cuentas({
           pago_minimo: i === 1 ? (desformatearInput(pagoMinimoFormateado) || 0) : 0,
           fecha_vencimiento: `${fv.getFullYear()}-${String(fv.getMonth() + 1).padStart(2, '0')}-${String(fv.getDate()).padStart(2, '0')}`,
           estado: esPagada ? 'pagado' : 'pendiente',
-          fecha_pago: esPagada ? new Date().toISOString() : null,
+          fecha_pago: esPagada ? (fechaInicioDeuda ? fv.toISOString() : new Date().toISOString()) : null,
           pagador_id: esPagada ? usuarioActual.id : null
         });
       }
@@ -1291,9 +1306,31 @@ export default function Cuentas({
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  {cuotaActual && <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</div>}
+                  {(() => {
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    const cuotasVencidas = d.cuotas_detalle?.filter(c => {
+                      if (c.estado !== 'pendiente') return false;
+                      const fv = new Date(c.fecha_vencimiento);
+                      fv.setHours(0, 0, 0, 0);
+                      return fv < hoy;
+                    }) || [];
+
+                    if (cuotasVencidas.length > 0) {
+                      const totalAtrasado = cuotasVencidas.reduce((acc, c) => acc + (Number(c.monto_cuota) - Number(c.monto_abonado)), 0);
+                      return (
+                        <div className="bg-red-600/20 text-red-400 text-[9px] font-black px-2.5 py-1 rounded-md border border-red-500/40 animate-pulse flex items-center gap-1">
+                          <AlertTriangle size={11} /> {cuotasVencidas.length} {cuotasVencidas.length === 1 ? 'CUOTA ATRASADA' : 'CUOTAS ATRASADAS'} ({formatearNumero(totalAtrasado, d.moneda)})
+                        </div>
+                      );
+                    }
+                    if (cuotaActual) {
+                      return <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</div>;
+                    }
+                    return null;
+                  })()}
                   <div className="flex items-center gap-1">
-                    {!d.cuotas_detalle?.some(c => c.estado === 'pagado' || Number(c.monto_abonado) > 0) && (esMia || datosHogar.rol === 'superadmin' || datosHogar.rol === 'admin_hogar') && (
+                    {(esMia || datosHogar.rol === 'superadmin' || datosHogar.rol === 'admin_hogar') && (
                       <button 
                         onClick={() => iniciarEdicionDeuda(d)} 
                         className="p-1.5 text-slate-600 hover:text-indigo-400 rounded-lg transition-colors"
@@ -1371,36 +1408,43 @@ export default function Cuentas({
                             });
                           }
 
-                          if (cuotaActual) {
-                            // 3. Vencimiento
-                            if (cuotaActual.estado === 'pendiente') {
-                              const venc = new Date(cuotaActual.fecha_vencimiento);
-                              venc.setHours(0, 0, 0, 0);
-                              const diffVencDays = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+                          // 3. Evaluar TODAS las cuotas atrasadas acumuladas
+                          const cuotasVencidas = d.cuotas_detalle?.filter(c => {
+                            if (c.estado !== 'pendiente') return false;
+                            const fv = new Date(c.fecha_vencimiento);
+                            fv.setHours(0, 0, 0, 0);
+                            return fv < hoy;
+                          }) || [];
 
-                              if (diffVencDays === 0) {
-                                alertas.push({
-                                  id: 'vence_hoy',
-                                  icono: <AlertTriangle size={12} className="animate-pulse" />,
-                                  texto: 'PAGO VENCE HOY 🚨',
-                                  clase: 'bg-red-500/15 border-red-500/35 text-red-400 font-extrabold'
-                                });
-                              } else if (diffVencDays > 0 && diffVencDays <= 3) {
-                                alertas.push({
-                                  id: 'vence_pronto',
-                                  icono: <Clock size={12} />,
-                                  texto: `Vence en ${diffVencDays} ${diffVencDays === 1 ? 'día' : 'días'} ⏳`,
-                                  clase: 'bg-amber-500/10 border-amber-500/25 text-amber-400'
-                                });
-                              } else if (diffVencDays < 0) {
-                                alertas.push({
-                                  id: 'vencido',
-                                  icono: <AlertTriangle size={12} className="animate-bounce" />,
-                                  texto: `PAGO VENCIDO hace ${Math.abs(diffVencDays)} días 🚨`,
-                                  clase: 'bg-red-600/20 border-red-600/45 text-red-400 font-black'
-                                });
-                              }
+                          if (cuotasVencidas.length > 0) {
+                            const fechasStr = cuotasVencidas.map(c => formatearFechaCorta(c.fecha_vencimiento)).join(", ");
+                            alertas.push({
+                              id: 'cuotas_vencidas_multiples',
+                              icono: <AlertTriangle size={14} className="animate-bounce text-red-400 shrink-0" />,
+                              texto: `⚠️ ¡ATENCIÓN! Tenés ${cuotasVencidas.length} ${cuotasVencidas.length === 1 ? 'cuota atrasada' : 'cuotas atrasadas'} (Vencidas el: ${fechasStr})`,
+                              clase: 'bg-red-600/20 border-red-500/40 text-red-300 font-black'
+                            });
+                          } else if (cuotaActual && cuotaActual.estado === 'pendiente') {
+                            const venc = new Date(cuotaActual.fecha_vencimiento);
+                            venc.setHours(0, 0, 0, 0);
+                            const diffVencDays = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+
+                            if (diffVencDays === 0) {
+                              alertas.push({
+                                id: 'vence_hoy',
+                                icono: <AlertTriangle size={12} className="animate-pulse text-red-400 shrink-0" />,
+                                texto: 'PAGO VENCE HOY 🚨',
+                                clase: 'bg-red-500/15 border-red-500/35 text-red-400 font-extrabold'
+                              });
+                            } else if (diffVencDays > 0 && diffVencDays <= 3) {
+                              alertas.push({
+                                id: 'vence_pronto',
+                                icono: <Clock size={12} className="text-amber-400 shrink-0" />,
+                                texto: `Vence en ${diffVencDays} ${diffVencDays === 1 ? 'día' : 'días'} ⏳`,
+                                clase: 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                              });
                             }
+                          }
 
                             // 4. Cierre
                             if (d.fecha_cierre_tarjeta) {
@@ -1434,7 +1478,6 @@ export default function Cuentas({
                                 }
                               }
                             }
-                          }
 
                           if (alertas.length === 0) return null;
 
@@ -1547,13 +1590,28 @@ export default function Cuentas({
               {(() => {
                 let montoAPagar = 0;
                 let etiquetaMonto = 'Cuota Actual';
-                if (pestana === 'activas' && cuotaActual) {
-                  if (d.tipo === 'tarjeta_credito') {
-                    etiquetaMonto = 'Pago Mínimo';
-                    const minPago = cuotaActual.pago_minimo || cuotaActual.monto_cuota;
-                    montoAPagar = Math.max(0, minPago - Number(cuotaActual.monto_abonado));
-                  } else {
-                    montoAPagar = cuotaActual.monto_cuota - cuotaActual.monto_abonado;
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+
+                const cuotasAtrasadas = d.cuotas_detalle?.filter(c => {
+                  if (c.estado !== 'pendiente') return false;
+                  const fv = new Date(c.fecha_vencimiento);
+                  fv.setHours(0, 0, 0, 0);
+                  return fv < hoy;
+                }) || [];
+
+                if (pestana === 'activas') {
+                  if (cuotasAtrasadas.length > 0) {
+                    etiquetaMonto = `${cuotasAtrasadas.length} ${cuotasAtrasadas.length === 1 ? 'Cuota Atrasada' : 'Cuotas Atrasadas'}`;
+                    montoAPagar = cuotasAtrasadas.reduce((acc, c) => acc + (Number(c.monto_cuota) - Number(c.monto_abonado)), 0);
+                  } else if (cuotaActual) {
+                    if (d.tipo === 'tarjeta_credito') {
+                      etiquetaMonto = 'Pago Mínimo';
+                      const minPago = cuotaActual.pago_minimo || cuotaActual.monto_cuota;
+                      montoAPagar = Math.max(0, minPago - Number(cuotaActual.monto_abonado));
+                    } else {
+                      montoAPagar = cuotaActual.monto_cuota - cuotaActual.monto_abonado;
+                    }
                   }
                 } else {
                   etiquetaMonto = 'Total Pagado';
@@ -2103,15 +2161,13 @@ export default function Cuentas({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
-                    <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                    <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1">Fecha Inicio / 1º Venc.</label>
+                    <input type="date" value={fechaInicioDeuda} onChange={(e) => setFechaInicioDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-xs outline-none" />
                   </div>
-                  {tipoDeuda === 'tarjeta_credito' && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Cierre</label>
-                      <input type="number" min="1" max="31" value={fechaCierreTarjeta} onChange={(e) => setFechaCierreTarjeta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                    </div>
-                  )}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
+                    <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
+                  </div>
                 </div>
 
                 {/* ── MEDIO DE PAGO (Deuda Pro) ── */}

@@ -23,7 +23,7 @@ import Metas from "./components/Metas";
 import Historial from "./components/Historial";
 import AsistenteGemini from "./components/AsistenteGemini";
 import SuperadminPanel from "./components/SuperadminPanel";
-import { obtenerFechaCierreExacta } from "./utils/formatters";
+import { obtenerFechaCierreExacta, estaEnCicloFinanciero, obtenerRangoCicloFinanciero } from "./utils/formatters";
 import { obtenerCotizacion } from "./utils/exchangeApi";
 
 function ajustarDiaHabil(fecha) {
@@ -170,15 +170,24 @@ function App() {
         setDatosHogar(null); 
         setUsuarioActual(null); 
       }
+      else if (event === 'TOKEN_REFRESHED' && s) {
+        setSession(s);
+      }
       else if (s && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         setSession(s);
-        setCargandoPerfil(true);
-        const perfil = await verificarPerfil(s.user.id, s.user.email);
-        if (montado) {
-          setDatosHogar(perfil);
-          setUsuarioActual(perfil);
-          setCargandoPerfil(false);
-        }
+        setDatosHogar((prevHogar) => {
+          if (!prevHogar || prevHogar.id !== s.user.id) {
+            setCargandoPerfil(true);
+            verificarPerfil(s.user.id, s.user.email).then((perfil) => {
+              if (montado) {
+                setDatosHogar(perfil);
+                setUsuarioActual(perfil);
+                setCargandoPerfil(false);
+              }
+            });
+          }
+          return prevHogar;
+        });
       }
     });
     return () => { montado = false; subscription.unsubscribe(); clearTimeout(timerCierre); };
@@ -324,8 +333,12 @@ function App() {
     const mesActual = ahora.getMonth() + 1;
     const anioActual = ahora.getFullYear();
 
+    // Obtener día de cobro del usuario actual a partir de sus ingresos programados (default: 1)
+    const progYo = gastosProgramados?.find(p => p.usuario_id === usuarioActual.id) || null;
+    const diaCobroYo = progYo?.dia_recurrencia || 1;
+
     const totalIngresosYo = ingresos
-      ?.filter(i => i.usuario_id === usuarioActual.id && Number(i.mes) === mesActual && Number(i.anio) === anioActual)
+      ?.filter(i => i.usuario_id === usuarioActual.id && (estaEnCicloFinanciero(i.fecha_efectiva || i.fecha || i.created_at, diaCobroYo) || (Number(i.mes) === mesActual && Number(i.anio) === anioActual)))
       ?.reduce((acc, i) => acc + (Number(i.monto) * (i.tasa_cambio || 1)), 0) || 0;
 
     const totalIngresosHogar = ingresos
@@ -368,7 +381,7 @@ function App() {
       individual: { carga: cargaIndividual, ingresos: totalIngresosYo, indice },
       familiar: { carga: cargaTotalHogar, ingresos: totalIngresosHogar, indice: indiceFamiliar }
     };
-  }, [usuarioActual, deudas, ingresos, gastos]);
+  }, [usuarioActual, deudas, ingresos, gastos, gastosProgramados]);
 
   async function verificarVencimientos(deudasData, eid, notisActuales) {
     const hoy = new Date();
@@ -594,7 +607,7 @@ function App() {
                 <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
                   {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
                   {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
-                  {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
+                  {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                   {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                   {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
                   {activeTab === "admin" && esSuperadmin && <SuperadminPanel datosHogar={datosHogar} />}
