@@ -5,7 +5,7 @@ import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta,
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent, Clock
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent, Clock, Copy, Check
 } from 'lucide-react';
 
 export default function Cuentas({
@@ -1084,29 +1084,72 @@ export default function Cuentas({
               ))}
             </div>
 
-            {/* ── DATOS DE CUENTA GUARDADOS ── */}
-            {maestra.medio_pago === 'transferencia' && maestra.tipo_cuenta === 'alias' && maestra.alias_cuenta && (
-              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3">
-                <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Alias / CBU para transferir</p>
-                <p className="text-sm font-black text-white">{maestra.alias_cuenta}</p>
-              </div>
-            )}
-            {maestra.medio_pago === 'transferencia' && maestra.tipo_cuenta === 'nro_cuenta' && maestra.nro_cuenta && (
+            {/* ── DATOS DE CUENTA GUARDADOS (con opción de copiar) ── */}
+            {maestra.medio_pago === 'transferencia' && (
               <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3 space-y-2">
-                <div>
-                  <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
-                  <p className="text-sm font-black text-white">{maestra.nro_cuenta}</p>
-                </div>
-                {maestra.nombre_titular && (
-                  <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
-                    <p className="text-sm font-black text-white">{maestra.nombre_titular}</p>
+                {maestra.tipo_cuenta === 'alias' && maestra.alias_cuenta && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Alias / CBU para transferir</p>
+                      <p className="text-sm font-black text-white">{maestra.alias_cuenta}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(maestra.alias_cuenta);
+                        toast.success("¡Alias copiado al portapapeles! 📋", { icon: "✨" });
+                      }}
+                      className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                    >
+                      <Copy size={12} /> Copiar Alias
+                    </button>
                   </div>
                 )}
-                {maestra.ci_titular && (
-                  <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
-                    <p className="text-sm font-black text-white">{maestra.ci_titular}</p>
+                {maestra.tipo_cuenta === 'nro_cuenta' && maestra.nro_cuenta && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
+                        <p className="text-sm font-black text-white">{maestra.nro_cuenta}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(maestra.nro_cuenta);
+                          toast.success("¡Número de cuenta copiado! 📋", { icon: "✨" });
+                        }}
+                        className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                      >
+                        <Copy size={12} /> Copiar Cuenta
+                      </button>
+                    </div>
+                    {maestra.nombre_titular && (
+                      <div>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
+                        <p className="text-sm font-black text-white">{maestra.nombre_titular}</p>
+                      </div>
+                    )}
+                    {maestra.ci_titular && (
+                      <div>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
+                        <p className="text-sm font-black text-white">{maestra.ci_titular}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!maestra.alias_cuenta && !maestra.nro_cuenta && (
+                  <div className="flex items-center justify-between text-slate-400 text-xs py-1">
+                    <span>Sin datos de cuenta configurados</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMostrarModalPago(false);
+                        abrirEdicionMedioPago(maestra, 'deuda');
+                      }}
+                      className="text-[10px] text-indigo-400 font-bold underline cursor-pointer"
+                    >
+                      + Agregar datos
+                    </button>
                   </div>
                 )}
               </div>
@@ -2538,30 +2581,72 @@ export default function Cuentas({
                   </div>
                 </div>
 
-                {/* ── DATOS DE CUENTA GUARDADOS (solo lectura, si Transferencia) ── */}
-                {pagarMedioPago === 'transferencia' && gastoFijoAPagar?.tipo_cuenta === 'alias' && gastoFijoAPagar?.alias_cuenta && (
-                  <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3">
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Alias / CBU para transferir</p>
-                    <p className="text-sm font-black text-white">{gastoFijoAPagar.alias_cuenta}</p>
-                  </div>
-                )}
-
-                {pagarMedioPago === 'transferencia' && gastoFijoAPagar?.tipo_cuenta === 'nro_cuenta' && gastoFijoAPagar?.nro_cuenta && (
+                {/* ── DATOS DE CUENTA GUARDADOS (con opción de copiar) ── */}
+                {pagarMedioPago === 'transferencia' && (
                   <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3 space-y-2">
-                    <div>
-                      <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
-                      <p className="text-sm font-black text-white">{gastoFijoAPagar.nro_cuenta}</p>
-                    </div>
-                    {gastoFijoAPagar.nombre_titular && (
-                      <div>
-                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
-                        <p className="text-sm font-black text-white">{gastoFijoAPagar.nombre_titular}</p>
+                    {gastoFijoAPagar?.tipo_cuenta === 'alias' && gastoFijoAPagar?.alias_cuenta && (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Alias / CBU para transferir</p>
+                          <p className="text-sm font-black text-white">{gastoFijoAPagar.alias_cuenta}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(gastoFijoAPagar.alias_cuenta);
+                            toast.success("¡Alias copiado al portapapeles! 📋", { icon: "✨" });
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                        >
+                          <Copy size={12} /> Copiar Alias
+                        </button>
                       </div>
                     )}
-                    {gastoFijoAPagar.ci_titular && (
-                      <div>
-                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
-                        <p className="text-sm font-black text-white">{gastoFijoAPagar.ci_titular}</p>
+                    {gastoFijoAPagar?.tipo_cuenta === 'nro_cuenta' && gastoFijoAPagar?.nro_cuenta && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
+                            <p className="text-sm font-black text-white">{gastoFijoAPagar.nro_cuenta}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(gastoFijoAPagar.nro_cuenta);
+                              toast.success("¡Número de cuenta copiado! 📋", { icon: "✨" });
+                            }}
+                            className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                          >
+                            <Copy size={12} /> Copiar Cuenta
+                          </button>
+                        </div>
+                        {gastoFijoAPagar.nombre_titular && (
+                          <div>
+                            <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
+                            <p className="text-sm font-black text-white">{gastoFijoAPagar.nombre_titular}</p>
+                          </div>
+                        )}
+                        {gastoFijoAPagar.ci_titular && (
+                          <div>
+                            <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
+                            <p className="text-sm font-black text-white">{gastoFijoAPagar.ci_titular}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {!gastoFijoAPagar?.alias_cuenta && !gastoFijoAPagar?.nro_cuenta && (
+                      <div className="flex items-center justify-between text-slate-400 text-xs py-1">
+                        <span>Sin datos de cuenta configurados</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMostrarModalPagarFijo(false);
+                            abrirEdicionMedioPago(gastoFijoAPagar, 'gasto_fijo');
+                          }}
+                          className="text-[10px] text-indigo-400 font-bold underline cursor-pointer"
+                        >
+                          + Agregar datos
+                        </button>
                       </div>
                     )}
                   </div>
