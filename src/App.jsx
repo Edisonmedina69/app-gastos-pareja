@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import { supabase } from "./supabase";
 import { Toaster, toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,16 +13,19 @@ import {
   LogOut 
 } from "lucide-react";
 
-// COMPONENTES
+// COMPONENTES PRINCIPALES
 import Login from "./components/Login";
 import Navegacion from "./components/Navegacion";
 import Inicio from "./components/Inicio";
 import Cuentas from "./components/Cuentas";
 import Ingresos from "./components/Ingresos";
 import Metas from "./components/Metas";
-import Historial from "./components/Historial";
-import AsistenteGemini from "./components/AsistenteGemini";
-import SuperadminPanel from "./components/SuperadminPanel";
+
+// COMPONENTES SECUNDARIOS (Code-Splitting / Carga Diferida)
+const Historial = lazy(() => import("./components/Historial"));
+const AsistenteGemini = lazy(() => import("./components/AsistenteGemini"));
+const SuperadminPanel = lazy(() => import("./components/SuperadminPanel"));
+
 import { obtenerFechaCierreExacta, estaEnCicloFinanciero, obtenerRangoCicloFinanciero } from "./utils/formatters";
 import { obtenerCotizacion } from "./utils/exchangeApi";
 
@@ -141,7 +144,13 @@ function App() {
 
   useEffect(() => {
     let montado = true;
-    const timerCierre = setTimeout(() => { if (montado && (verificandoHogar || cargandoPerfil)) { setVerificandoHogar(false); setCargandoPerfil(false); } }, 6000);
+    const timerCierre = setTimeout(() => { 
+      if (montado && (verificandoHogar || cargandoPerfil)) { 
+        setVerificandoHogar(false); 
+        setCargandoPerfil(false); 
+      } 
+    }, 4000);
+
     const inicializar = async () => {
       try {
         const { data: { session: s } } = await supabase.auth.getSession();
@@ -164,6 +173,7 @@ function App() {
       }
     };
     inicializar();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       if (event === 'SIGNED_OUT') { 
         setSession(null); 
@@ -175,21 +185,19 @@ function App() {
       }
       else if (s && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         setSession(s);
-        setDatosHogar((prevHogar) => {
-          if (!prevHogar || prevHogar.id !== s.user.id) {
-            setCargandoPerfil(true);
-            verificarPerfil(s.user.id, s.user.email).then((perfil) => {
-              if (montado) {
-                setDatosHogar(perfil);
-                setUsuarioActual(perfil);
-                setCargandoPerfil(false);
-              }
-            });
-          }
-          return prevHogar;
-        });
+        if (montado) {
+          setCargandoPerfil(true);
+          verificarPerfil(s.user.id, s.user.email).then((perfil) => {
+            if (montado) {
+              setDatosHogar(perfil);
+              setUsuarioActual(perfil);
+              setCargandoPerfil(false);
+            }
+          });
+        }
       }
     });
+
     return () => { montado = false; subscription.unsubscribe(); clearTimeout(timerCierre); };
   }, []);
 
@@ -219,62 +227,66 @@ function App() {
 
       let deudasFinal = resD.data || [];
       let ingresosFinal = resI.data || [];
-      let huboCambiosDeudas = false;
-      let huboCambiosIngresos = false;
 
-      // Cierre automático de ciclos vencidos para tarjetas de crédito
-      const hoy = new Date();
-      hoy.setHours(0,0,0,0);
+      // Renderizar la UI inmediatamente antes de procesar tareas pesadas de fondo
+      if (resG.data) setGastos(resG.data);
+      setIngresos(ingresosFinal);
+      setDeudas(deudasFinal);
+      if (resN.data) setNotificaciones(resN.data);
+      if (resP.data) setGastosProgramados(resP.data);
 
-      for (let i = 0; i < deudasFinal.length; i++) {
-        const d = deudasFinal[i];
-        if (d.tipo === 'tarjeta_credito' && d.estado === 'activa' && d.fecha_cierre_tarjeta) {
-          const cuotaActual = d.cuotas_detalle?.find(c => c.estado === 'pendiente');
-          if (cuotaActual) {
-            const cierreActualStr = obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta);
-            if (cierreActualStr) {
-              const cierre = new Date(cierreActualStr);
-              cierre.setHours(0,0,0,0);
-              if (hoy >= cierre) {
-                try {
-                  await autoCerrarCicloTarjeta(d, cuotaActual, eid, session.user.id);
-                  huboCambiosDeudas = true;
-                  toast.success(`Cierre automático: ciclo de "${d.titulo}" cerrado y nuevo período iniciado. 📅💳`, { duration: 6000 });
-                } catch (errAuto) {
-                  console.error("Error al auto cerrar ciclo:", errAuto);
+      // Tareas secundarias / automáticas en segundo plano (asíncronas)
+      setTimeout(async () => {
+        let huboCambiosDeudas = false;
+        let huboCambiosIngresos = false;
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+
+        // Cierre automático de tarjetas
+        for (let i = 0; i < deudasFinal.length; i++) {
+          const d = deudasFinal[i];
+          if (d.tipo === 'tarjeta_credito' && d.estado === 'activa' && d.fecha_cierre_tarjeta) {
+            const cuotaActual = d.cuotas_detalle?.find(c => c.estado === 'pendiente');
+            if (cuotaActual) {
+              const cierreActualStr = obtenerFechaCierreExacta(cuotaActual.fecha_vencimiento, d.fecha_cierre_tarjeta);
+              if (cierreActualStr) {
+                const cierre = new Date(cierreActualStr);
+                cierre.setHours(0,0,0,0);
+                if (hoy >= cierre) {
+                  try {
+                    await autoCerrarCicloTarjeta(d, cuotaActual, eid, session.user.id);
+                    huboCambiosDeudas = true;
+                  } catch (errAuto) {
+                    console.error("Error al auto cerrar ciclo:", errAuto);
+                  }
                 }
               }
             }
           }
         }
-      }
 
-      // Acreditación automática de sueldos programados
-      if (resIP.data) {
-        const diaActual = hoy.getDate();
-        const mesActual = hoy.getMonth() + 1;
-        const anioActual = hoy.getFullYear();
+        // Acreditación de sueldos programados
+        if (resIP.data) {
+          const diaActual = hoy.getDate();
+          const mesActual = hoy.getMonth() + 1;
+          const anioActual = hoy.getFullYear();
 
-        for (let i = 0; i < resIP.data.length; i++) {
-          const prog = resIP.data[i];
-          // Solo auto-acreditar si pertenece al usuario activo (evita fallos de RLS en Supabase)
-          if (prog.usuario_id !== session.user.id) continue;
+          for (let i = 0; i < resIP.data.length; i++) {
+            const prog = resIP.data[i];
+            if (prog.usuario_id !== session.user.id) continue;
+            if (diaActual < prog.dia_recurrencia) continue;
 
-          // Solo se acredita a partir del día programado de cobro
-          if (diaActual < prog.dia_recurrencia) continue;
+            const yaCobrado = ingresosFinal.some(ing => 
+              ing.concepto === `[FIJO] ${prog.descripcion}` &&
+              Number(ing.mes) === mesActual &&
+              Number(ing.anio) === anioActual &&
+              ing.usuario_id === prog.usuario_id
+            );
 
-          // Verificar si ya está acreditado en ingresos_mensuales
-          const yaCobrado = ingresosFinal.some(ing => 
-            ing.concepto === `[FIJO] ${prog.descripcion}` &&
-            Number(ing.mes) === mesActual &&
-            Number(ing.anio) === anioActual &&
-            ing.usuario_id === prog.usuario_id
-          );
-
-          if (!yaCobrado) {
-            try {
-              const tasa = await obtenerCotizacion(prog.moneda, "PYG");
-              await supabase.from("ingresos_mensuales").insert([{
+            if (!yaCobrado) {
+              try {
+                const tasa = prog.moneda === 'PYG' ? 1 : await obtenerCotizacion(prog.moneda, "PYG");
+                await supabase.from("ingresos_mensuales").insert([{
                   usuario_id: prog.usuario_id,
                   espacio_id: eid,
                   concepto: `[FIJO] ${prog.descripcion}`,
@@ -285,40 +297,52 @@ function App() {
                   anio: anioActual
                 }]);
                 huboCambiosIngresos = true;
-                toast.success(`Sueldo acreditado automáticamente: "${prog.descripcion}" 🏦💰`, { duration: 5000 });
               } catch (errAutoI) {
                 console.error("Error al auto acreditar sueldo:", errAutoI);
               }
             }
+          }
         }
-      }
 
-      if (huboCambiosDeudas) {
-        // Volver a cargar las deudas actualizadas si hubo cierres automáticos
-        const { data: updatedDeudas } = await supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid);
-        if (updatedDeudas) {
-          deudasFinal = updatedDeudas;
+        if (huboCambiosDeudas) {
+          const { data: updatedDeudas } = await supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid);
+          if (updatedDeudas) setDeudas(updatedDeudas);
         }
-      }
 
-      if (huboCambiosIngresos) {
-        // Volver a cargar los ingresos si hubo acreditación automática
-        const { data: updatedIngresos } = await supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid);
-        if (updatedIngresos) {
-          ingresosFinal = updatedIngresos;
+        if (huboCambiosIngresos) {
+          const { data: updatedIngresos } = await supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid);
+          if (updatedIngresos) setIngresos(updatedIngresos);
         }
-      }
 
-      if (resG.data) setGastos(resG.data);
-      setIngresos(ingresosFinal);
-      setDeudas(deudasFinal);
-      if (deudasFinal) {
-        verificarVencimientos(deudasFinal, eid, resN.data || []);
-      }
-      if (resN.data) setNotificaciones(resN.data);
-      if (resP.data) setGastosProgramados(resP.data);
+        if (deudasFinal) {
+          verificarVencimientos(deudasFinal, eid, resN.data || []);
+        }
+      }, 50);
+
     } catch (e) {}
   }, [datosHogar, session]);
+
+  // Suscripción Realtime por espacio para que las parejas sincronicen cambios de inmediato
+  useEffect(() => {
+    if (!datosHogar?.espacio_id) return;
+    const eid = datosHogar.espacio_id;
+
+    const canal = supabase
+      .channel(`espacio-${eid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', filter: `espacio_id=eq.${eid}` },
+        () => {
+          // Refrescar silenciosamente cuando la pareja realiza algún cambio
+          obtenerDatos();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [datosHogar?.espacio_id, obtenerDatos]);
 
   const saludFinanciera = useMemo(() => {
     if (!usuarioActual) return {
@@ -333,7 +357,6 @@ function App() {
     const mesActual = ahora.getMonth() + 1;
     const anioActual = ahora.getFullYear();
 
-    // Obtener día de cobro del usuario actual a partir de sus ingresos programados (default: 1)
     const progYo = gastosProgramados?.find(p => p.usuario_id === usuarioActual.id) || null;
     const diaCobroYo = progYo?.dia_recurrencia || 1;
 
@@ -603,16 +626,18 @@ function App() {
 
           <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
             <div className="max-w-3xl mx-auto">
-              <AnimatePresence mode="wait">
-                <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                  {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
-                  {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
-                  {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
-                  {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
-                  {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
-                  {activeTab === "admin" && esSuperadmin && <SuperadminPanel datosHogar={datosHogar} />}
-                </motion.div>
-              </AnimatePresence>
+              <Suspense fallback={<div className="p-8 text-center text-slate-400 animate-pulse">Cargando vista... ⚡</div>}>
+                <AnimatePresence mode="wait">
+                  <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                    {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
+                    {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
+                    {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
+                    {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
+                    {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
+                    {activeTab === "admin" && esSuperadmin && <SuperadminPanel datosHogar={datosHogar} />}
+                  </motion.div>
+                </AnimatePresence>
+              </Suspense>
             </div>
           </main>
 
