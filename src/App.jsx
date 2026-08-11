@@ -624,8 +624,8 @@ function App() {
             </div>
           </aside>
 
-          <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-            <div className="max-w-3xl mx-auto">
+          <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto pb-24 lg:pb-8">
+            <div className="max-w-5xl xl:max-w-6xl mx-auto w-full">
               <Suspense fallback={<div className="p-8 text-center text-slate-400 animate-pulse">Cargando vista... ⚡</div>}>
                 <AnimatePresence mode="wait">
                   <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
