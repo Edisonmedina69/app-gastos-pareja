@@ -2265,28 +2265,6 @@ export default function Cuentas({
                         </div>
                       )}
 
-                      {tipoDeuda !== 'tarjeta_credito' && (
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Método de Registro de Monto</label>
-                          <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                            <button
-                              type="button"
-                              onClick={() => cambiarModoMonto('cuota')}
-                              className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
-                            >
-                              Ingresar por Cuota
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => cambiarModoMonto('total')}
-                              className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
-                            >
-                              Ingresar por Monto Total
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
                       {/* ── MEDIO DE PAGO (Deuda Pro) ── */}
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
