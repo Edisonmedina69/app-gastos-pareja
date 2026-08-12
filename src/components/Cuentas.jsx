@@ -5,7 +5,7 @@ import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta,
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent, Clock, Copy, Check
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent, Clock, Copy, Check, Settings2
 } from 'lucide-react';
 
 export default function Cuentas({
@@ -23,6 +23,7 @@ export default function Cuentas({
 }) {
   // Modal & Form State
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [modoAvanzadoDeuda, setModoAvanzadoDeuda] = useState(false);
   const [mostrarModalPago, setMostrarModalPago] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState(null);
   const [deudaEditandoId, setDeudaEditandoId] = useState(null);
@@ -532,6 +533,7 @@ export default function Cuentas({
     setDeudaCiTitular('');
     setFechaInicioDeuda('');
     setDeudaEditandoId(null);
+    setModoAvanzadoDeuda(false);
   };
 
   const iniciarEdicionDeuda = (d) => {
@@ -2213,110 +2215,185 @@ export default function Cuentas({
                   </div>
                 </div>
 
-                {/* ── MEDIO DE PAGO (Deuda Pro) ── */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
-                  <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                    <button
-                      type="button"
-                      onClick={() => setDeudaMedioPago('transferencia')}
-                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                        deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
-                      }`}
-                    >
-                      Transferencia
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeudaMedioPago('efectivo')}
-                      className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                        deudaMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
-                      }`}
-                    >
-                      Efectivo
-                    </button>
-                  </div>
+                {/* BOTÓN COLAPSABLE: REGISTRO AVANZADO */}
+                <div className="pt-1 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setModoAvanzadoDeuda(!modoAvanzadoDeuda)}
+                    className="w-full py-3 px-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-between transition-all"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Settings2 size={16} />
+                      {modoAvanzadoDeuda ? "Ocultar Datos Bancarios e Intereses" : "Agregar Intereses, Seguros o CBU/Alias (Avanzado)"}
+                    </span>
+                    {modoAvanzadoDeuda ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
                 </div>
 
-                {deudaMedioPago === 'transferencia' && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Tipo de Cuenta</label>
-                      <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                        <button
-                          type="button"
-                          onClick={() => setDeudaTipoCuenta('alias')}
-                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                            deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
-                          }`}
-                        >
-                          Alias / CBU
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeudaTipoCuenta('nro_cuenta')}
-                          className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                            deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
-                          }`}
-                        >
-                          Nro. de Cuenta
-                        </button>
-                      </div>
-                    </div>
-
-                    {deudaTipoCuenta === 'alias' ? (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
-                          <Hash size={12} /> Alias / CBU
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Ej: mi.alias.banco"
-                          value={deudaAliasCuenta}
-                          onChange={(e) => setDeudaAliasCuenta(e.target.value)}
-                          className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
-                            <Hash size={12} /> Número de Cuenta
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Ej: 001-123456-00"
-                            value={deudaNroCuenta}
-                            onChange={(e) => setDeudaNroCuenta(e.target.value)}
-                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                          />
-                        </div>
+                {/* BLOQUE AVANZADO (Intereses, Seguros y Datos Bancarios) */}
+                <AnimatePresence>
+                  {modoAvanzadoDeuda && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-4 overflow-hidden pt-2 border-t border-white/10"
+                    >
+                      {tipoDeuda === 'tarjeta_credito' && (
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label>
-                            <input
-                              type="text"
-                              placeholder="Titular de la cuenta"
-                              value={deudaNombreTitular}
-                              onChange={(e) => setDeudaNombreTitular(e.target.value)}
-                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                            />
+                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos</label>
+                            <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white font-black tracking-widest outline-none focus:border-indigo-500/50" />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
-                            <input
-                              type="text"
-                              placeholder="Ej: 1234567"
-                              value={deudaCiTitular}
-                              onChange={(e) => setDeudaCiTitular(e.target.value)}
-                              className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                            />
+                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                            <input type="number" step="0.01" min="0" placeholder="Ej: 15" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
                           </div>
                         </div>
-                      </>
-                    )}
-                  </>
-                )}
+                      )}
+
+                      {tipoDeuda === 'fija' && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                            <input type="number" step="0.01" min="0" placeholder="Ej: 24" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">🛡️ Cargos / Seguros por Cuota</label>
+                            <input type="text" placeholder="Ej: 4.500" value={cargosMensualesFormateado} onChange={(e) => setCargosMensualesFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
+                          </div>
+                        </div>
+                      )}
+
+                      {tipoDeuda !== 'tarjeta_credito' && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Método de Registro de Monto</label>
+                          <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                            <button
+                              type="button"
+                              onClick={() => cambiarModoMonto('cuota')}
+                              className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
+                            >
+                              Ingresar por Cuota
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => cambiarModoMonto('total')}
+                              className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
+                            >
+                              Ingresar por Monto Total
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── MEDIO DE PAGO (Deuda Pro) ── */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+                        <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                          <button
+                            type="button"
+                            onClick={() => setDeudaMedioPago('transferencia')}
+                            className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                              deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                            }`}
+                          >
+                            Transferencia
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeudaMedioPago('efectivo')}
+                            className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                              deudaMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
+                            }`}
+                          >
+                            Efectivo
+                          </button>
+                        </div>
+                      </div>
+
+                      {deudaMedioPago === 'transferencia' && (
+                        <>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Tipo de Cuenta</label>
+                            <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                              <button
+                                type="button"
+                                onClick={() => setDeudaTipoCuenta('alias')}
+                                className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                                  deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                                }`}
+                              >
+                                Alias / CBU
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeudaTipoCuenta('nro_cuenta')}
+                                className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
+                                  deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                                }`}
+                              >
+                                Nro. de Cuenta
+                              </button>
+                            </div>
+                          </div>
+
+                          {deudaTipoCuenta === 'alias' ? (
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                                <Hash size={12} /> Alias / CBU
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Ej: mi.alias.banco"
+                                value={deudaAliasCuenta}
+                                onChange={(e) => setDeudaAliasCuenta(e.target.value)}
+                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                                  <Hash size={12} /> Número de Cuenta
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 001-123456-00"
+                                  value={deudaNroCuenta}
+                                  onChange={(e) => setDeudaNroCuenta(e.target.value)}
+                                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label>
+                                  <input
+                                    type="text"
+                                    placeholder="Titular de la cuenta"
+                                    value={deudaNombreTitular}
+                                    onChange={(e) => setDeudaNombreTitular(e.target.value)}
+                                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 1234567"
+                                    value={deudaCiTitular}
+                                    onChange={(e) => setDeudaCiTitular(e.target.value)}
+                                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
+                                  />
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {zonaPeligro && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4"><AlertTriangle className="text-red-500 shrink-0" /><p className="text-[11px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP.</p></div>}
                 <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : (deudaEditandoId ? "GUARDAR CAMBIOS" : "REGISTRAR DEUDA")}</button>
