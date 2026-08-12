@@ -5,7 +5,7 @@ import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta,
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, Plus, CheckCircle, X, Loader2, Sparkles, 
-  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent, Clock, Copy, Check, Settings2
+  Lock, Users, Send, Archive, AlertTriangle, ChevronDown, ChevronUp, Calendar, Trash2, Hash, Edit2, Percent, Clock, Copy, Check, Settings2, ArrowRight, ArrowLeft
 } from 'lucide-react';
 
 export default function Cuentas({
@@ -23,6 +23,7 @@ export default function Cuentas({
 }) {
   // Modal & Form State
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [pasoDeuda, setPasoDeuda] = useState(1); // 1: Tipo/Concepto, 2: Montos/Cuotas, 3: Vencimiento & Avanzado
   const [modoAvanzadoDeuda, setModoAvanzadoDeuda] = useState(false);
   const [mostrarModalPago, setMostrarModalPago] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState(null);
@@ -534,6 +535,7 @@ export default function Cuentas({
     setFechaInicioDeuda('');
     setDeudaEditandoId(null);
     setModoAvanzadoDeuda(false);
+    setPasoDeuda(1);
   };
 
   const iniciarEdicionDeuda = (d) => {
@@ -2023,7 +2025,7 @@ export default function Cuentas({
                               style={{ width: `${Math.min(100, porc)}%` }}
                             />
                           </div>
-                          <div className="flex justify-between items-center mt-2 text-[9px] font-bold uppercase tracking-wider">
+<div className="flex justify-between items-center mt-2 text-[9px] font-bold uppercase tracking-wider">
                             <span className={porc > 100 ? "text-rose-400" : "text-slate-500"}>
                               {porc > 100 ? `Excedido por ${formatearNumero(consumido - limite, p.moneda)}` : `Disponible: ${formatearNumero(limite - consumido, p.moneda)}`}
                             </span>
@@ -2044,343 +2046,358 @@ export default function Cuentas({
 
       <AnimatePresence>
         {mostrarModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg glass-panel p-6 rounded-3xl relative max-h-[90vh] overflow-y-auto">
-              <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24} /></button>
-              <h2 className="text-xl font-black text-white mb-6 uppercase">{deudaEditandoId ? 'Editar Compromiso Pro' : 'Nuevo Compromiso Pro'}</h2>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg glass-panel p-6 rounded-3xl relative max-h-[92vh] overflow-y-auto border border-white/10 shadow-2xl">
+              <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/5"><X size={20} /></button>
+              
+              {/* Header con Indicador de Pasos / Wizard */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
+                    <CreditCard className="text-indigo-400" size={20} />
+                    {deudaEditandoId ? 'Editar Compromiso Pro' : 'Nuevo Compromiso Pro'}
+                  </h2>
+                  <span className="text-[10px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
+                    Paso {pasoDeuda} de 3
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden flex gap-1 p-0.5">
+                  <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoDeuda >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+                  <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoDeuda >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+                  <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoDeuda >= 3 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+                </div>
+              </div>
+
               <form onSubmit={guardarDeudaPro} className="space-y-5">
-                <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                  {['familiar', 'individual'].map(a => <button key={a} type="button" onClick={() => setAlcanceDeuda(a)} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>{a}</button>)}
-                </div>
-                <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                  {['fija', 'flexible', 'tarjeta_credito'].map(t => {
-                    let label = t;
-                    if (t === 'fija') label = 'Cuota Fija';
-                    else if (t === 'flexible') label = 'Flexible';
-                    else if (t === 'tarjeta_credito') label = 'Tarjeta de Crédito';
-                    return (
-                      <button 
-                        key={t} 
-                        type="button" 
-                        onClick={() => setTipoDeuda(t)} 
-                        className={`flex-1 py-3 text-[9px] font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
                 
-                <div className="space-y-1">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Descripción / Entidad</label>
-                   <input type="text" placeholder="Ej: Préstamo Banco Itaú" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" required />
-                   {tipoDeuda === 'fija' && (
-                     <div className="flex flex-wrap gap-1.5 mt-1.5 ml-1">
-                       <span className="text-[8px] text-slate-500 font-bold uppercase mr-1 self-center">Ejemplos:</span>
-                       {["Préstamo Consumo Francés", "Préstamo Vehículo", "Préstamo Hipotecario"].map((sug) => (
-                         <button
-                           key={sug}
-                           type="button"
-                           onClick={() => setTitulo(sug)}
-                           className="text-[8px] bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-2.5 py-1.5 rounded-lg border border-white/5 transition-all"
-                         >
-                           {sug}
-                         </button>
-                       ))}
-                     </div>
-                   )}
-                </div>
-
-                {tipoDeuda === 'tarjeta_credito' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos</label>
-                      <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white font-black tracking-widest outline-none focus:border-indigo-500/50" />
+                {/* ── PASO 1: Alcance, Tipo y Descripción ── */}
+                {pasoDeuda === 1 && (
+                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">1. Alcance de la Deuda</label>
+                      <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                        {['familiar', 'individual'].map(a => (
+                          <button 
+                            key={a} 
+                            type="button" 
+                            onClick={() => setAlcanceDeuda(a)} 
+                            className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            {a === 'familiar' ? '🏠 Compartida (Familiar)' : '👤 Individual'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
-                      <input type="number" step="0.01" min="0" placeholder="Ej: 15" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">2. Tipo de Compromiso</label>
+                      <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                        {['fija', 'flexible', 'tarjeta_credito'].map(t => {
+                          let label = t;
+                          if (t === 'fija') label = 'Cuota Fija';
+                          else if (t === 'flexible') label = 'Flexible';
+                          else if (t === 'tarjeta_credito') label = 'Tarjeta Crédito';
+                          return (
+                            <button 
+                              key={t} 
+                              type="button" 
+                              onClick={() => setTipoDeuda(t)} 
+                              className={`flex-1 py-3 text-[9px] font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {tipoDeuda === 'fija' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
-                      <input type="number" step="0.01" min="0" placeholder="Ej: 24" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">🛡️ Cargos / Seguros por Cuota</label>
-                      <input type="text" placeholder="Ej: 4.500" value={cargosMensualesFormateado} onChange={(e) => setCargosMensualesFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
-                    </div>
-                  </div>
-                )}
-
-                {tipoDeuda !== 'tarjeta_credito' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Método de Registro de Monto</label>
-                    <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => cambiarModoMonto('cuota')}
-                        className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
-                      >
-                        Ingresar por Cuota
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => cambiarModoMonto('total')}
-                        className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
-                      >
-                        Ingresar por Monto Total
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
-                      {tipoDeuda === 'tarjeta_credito' 
-                        ? 'Deuda Actual' 
-                        : (modoMonto === 'cuota' ? 'Monto de cada Cuota' : 'Monto Total de la Deuda')
-                      }
-                    </label>
-                    <input type="text" value={montoTotalFormateado} onChange={(e) => setMontoTotalFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" placeholder="0" required />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
-                    <select value={monedaDeuda} onChange={(e) => setMonedaDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"><option value="PYG">PYG</option><option value="BRL">BRL</option></select>
-                  </div>
-                </div>
-
-                {(() => {
-                  const inputVal = desformatearInput(montoTotalFormateado) || 0;
-                  const numCuotas = parseInt(cantidadCuotas) || 1;
-                  if (!inputVal) return null;
-                  
-                  if (tipoDeuda !== 'tarjeta_credito') {
-                    if (modoMonto === 'cuota') {
-                      const totalCalculado = inputVal * numCuotas;
-                      return (
-                        <div className="text-[10px] text-slate-400 font-bold ml-1 -mt-3">
-                          📊 Monto Total estimado: <span className="text-indigo-400">{formatearNumero(totalCalculado, monedaDeuda)}</span>
-                        </div>
-                      );
-                    } else {
-                      const cuotaCalculada = Math.round(inputVal / numCuotas);
-                      return (
-                        <div className="text-[10px] text-slate-400 font-bold ml-1 -mt-3">
-                          📊 Cuota estimada (lineal): <span className="text-indigo-400">{formatearNumero(cuotaCalculada, monedaDeuda)}</span>
-                        </div>
-                      );
-                    }
-                  }
-                  return null;
-                })()}
-
-                {tipoDeuda === 'tarjeta_credito' ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Pago Mínimo</label>
-                      <input type="text" value={pagoMinimoFormateado} onChange={(e) => setPagoMinimoFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none" placeholder="0" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Línea Crédito</label>
-                      <input type="text" value={lineaCreditoFormateada} onChange={(e) => setLineaCreditoFormateada(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none" placeholder="0" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Cuotas Totales</label>
-                      <input type="number" min="1" value={cantidadCuotas} onChange={(e) => setCantidadCuotas(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Cuotas ya Pagadas</label>
-                      <input type="number" min="0" max={cantidadCuotas} value={cuotasPagadas} onChange={(e) => setCuotasPagadas(e.target.value)} className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-5 py-4 text-white outline-none" />
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1">Fecha Inicio / 1º Venc.</label>
-                    <input type="date" value={fechaInicioDeuda} onChange={(e) => setFechaInicioDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-xs outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Día Vencimiento</label>
-                    <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
-                  </div>
-                </div>
-
-                {/* BOTÓN COLAPSABLE: REGISTRO AVANZADO */}
-                <div className="pt-1 pb-1">
-                  <button
-                    type="button"
-                    onClick={() => setModoAvanzadoDeuda(!modoAvanzadoDeuda)}
-                    className="w-full py-3 px-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-between transition-all"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Settings2 size={16} />
-                      {modoAvanzadoDeuda ? "Ocultar Datos Bancarios e Intereses" : "Agregar Intereses, Seguros o CBU/Alias (Avanzado)"}
-                    </span>
-                    {modoAvanzadoDeuda ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-                </div>
-
-                {/* BLOQUE AVANZADO (Intereses, Seguros y Datos Bancarios) */}
-                <AnimatePresence>
-                  {modoAvanzadoDeuda && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="space-y-4 overflow-hidden pt-2 border-t border-white/10"
-                    >
-                      {tipoDeuda === 'tarjeta_credito' && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos</label>
-                            <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white font-black tracking-widest outline-none focus:border-indigo-500/50" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
-                            <input type="number" step="0.01" min="0" placeholder="Ej: 15" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
-                          </div>
-                        </div>
-                      )}
-
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">3. Nombre / Descripción del Préstamo o Tarjeta</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ej: Préstamo Vehículo Itaú, Tarjeta Continental..." 
+                        value={titulo} 
+                        onChange={(e) => setTitulo(e.target.value)} 
+                        className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm font-bold outline-none focus:border-indigo-500 transition-all shadow-inner" 
+                        required 
+                      />
                       {tipoDeuda === 'fija' && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
-                            <input type="number" step="0.01" min="0" placeholder="Ej: 24" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">🛡️ Cargos / Seguros por Cuota</label>
-                            <input type="text" placeholder="Ej: 4.500" value={cargosMensualesFormateado} onChange={(e) => setCargosMensualesFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50" />
-                          </div>
+                        <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
+                          <span className="text-[8px] text-slate-500 font-bold uppercase mr-1 self-center">Sugeridos:</span>
+                          {["Préstamo Consumo", "Préstamo Vehículo", "Hipotecario"].map((sug) => (
+                            <button
+                              key={sug}
+                              type="button"
+                              onClick={() => setTitulo(sug)}
+                              className="text-[8px] bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-2.5 py-1.5 rounded-lg border border-white/5 transition-all"
+                            >
+                              {sug}
+                            </button>
+                          ))}
                         </div>
                       )}
+                    </div>
 
-                      {/* ── MEDIO DE PAGO (Deuda Pro) ── */}
+                    <div className="pt-4 flex justify-end">
+                      <button 
+                        type="button" 
+                        disabled={!titulo.trim()} 
+                        onClick={() => setPasoDeuda(2)} 
+                        className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-500 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                      >
+                        Siguiente: Montos y Cuotas <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── PASO 2: Montos, Moneda y Cuotas ── */}
+                {pasoDeuda === 2 && (
+                  <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                    {tipoDeuda !== 'tarjeta_credito' && (
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Forma de Ingreso del Monto</label>
                         <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                           <button
                             type="button"
-                            onClick={() => setDeudaMedioPago('transferencia')}
-                            className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                              deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
-                            }`}
+                            onClick={() => cambiarModoMonto('cuota')}
+                            className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
                           >
-                            Transferencia
+                            Ingresar por Cuota
                           </button>
                           <button
                             type="button"
-                            onClick={() => setDeudaMedioPago('efectivo')}
-                            className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                              deudaMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
-                            }`}
+                            onClick={() => cambiarModoMonto('total')}
+                            className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
                           >
-                            Efectivo
+                            Ingresar por Monto Total
                           </button>
                         </div>
                       </div>
+                    )}
 
-                      {deudaMedioPago === 'transferencia' && (
-                        <>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                          {tipoDeuda === 'tarjeta_credito' 
+                            ? 'Monto Deuda Actual' 
+                            : (modoMonto === 'cuota' ? 'Monto Cuota Mensual' : 'Monto Total Deuda')
+                          }
+                        </label>
+                        <input 
+                          type="text" 
+                          value={montoTotalFormateado} 
+                          onChange={(e) => setMontoTotalFormateado(formatarInput(e.target.value))} 
+                          className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-xl font-black text-indigo-400 outline-none focus:border-indigo-500" 
+                          placeholder="0" 
+                          required 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Moneda</label>
+                        <select 
+                          value={monedaDeuda} 
+                          onChange={(e) => setMonedaDeuda(e.target.value)} 
+                          className="w-full bg-slate-900 border border-white/10 rounded-2xl px-3 py-4 text-white font-bold outline-none"
+                        >
+                          <option value="PYG">PYG (Gs.)</option>
+                          <option value="BRL">BRL (R$)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const inputVal = desformatearInput(montoTotalFormateado) || 0;
+                      const numCuotas = parseInt(cantidadCuotas) || 1;
+                      if (!inputVal) return null;
+                      
+                      if (tipoDeuda !== 'tarjeta_credito') {
+                        if (modoMonto === 'cuota') {
+                          const totalCalculado = inputVal * numCuotas;
+                          return (
+                            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-[11px] text-indigo-200 font-bold flex justify-between items-center">
+                              <span>📊 Monto Total estimado:</span>
+                              <span className="text-indigo-400 text-xs font-black">{formatearNumero(totalCalculado, monedaDeuda)}</span>
+                            </div>
+                          );
+                        } else {
+                          const cuotaCalculada = Math.round(inputVal / numCuotas);
+                          return (
+                            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-[11px] text-indigo-200 font-bold flex justify-between items-center">
+                              <span>📊 Cuota estimada (lineal):</span>
+                              <span className="text-indigo-400 text-xs font-black">{formatearNumero(cuotaCalculada, monedaDeuda)}</span>
+                            </div>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
+
+                    {tipoDeuda === 'tarjeta_credito' ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Pago Mínimo</label>
+                          <input type="text" value={pagoMinimoFormateado} onChange={(e) => setPagoMinimoFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none" placeholder="0" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Línea de Crédito</label>
+                          <input type="text" value={lineaCreditoFormateada} onChange={(e) => setLineaCreditoFormateada(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none" placeholder="0" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Cuotas Totales</label>
+                          <input type="number" min="1" value={cantidadCuotas} onChange={(e) => setCantidadCuotas(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Cuotas Ya Pagadas</label>
+                          <input type="number" min="0" max={cantidadCuotas} value={cuotasPagadas} onChange={(e) => setCuotasPagadas(e.target.value)} className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3.5 text-emerald-400 font-bold outline-none" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-4 flex gap-3">
+                      <button 
+                        type="button" 
+                        onClick={() => setPasoDeuda(1)} 
+                        className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-all"
+                      >
+                        <ArrowLeft size={16} /> Atrás
+                      </button>
+                      <button 
+                        type="button" 
+                        disabled={!montoTotalFormateado} 
+                        onClick={() => setPasoDeuda(3)} 
+                        className="flex-1 py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-500 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                      >
+                        Siguiente: Vencimiento <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── PASO 3: Vencimientos y Opciones Avanzadas ── */}
+                {pasoDeuda === 3 && (
+                  <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-indigo-400 uppercase tracking-wider ml-1">Fecha 1º Vencimiento</label>
+                        <input type="date" value={fechaInicioDeuda} onChange={(e) => setFechaInicioDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white text-xs font-bold outline-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Día de Cobro Mensual</label>
+                        <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none" />
+                      </div>
+                    </div>
+
+                    {/* BOTÓN COLAPSABLE AVANZADO */}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setModoAvanzadoDeuda(!modoAvanzadoDeuda)}
+                        className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-indigo-300 text-xs font-bold rounded-2xl flex items-center justify-between transition-all"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Settings2 size={16} />
+                          {modoAvanzadoDeuda ? "Ocultar Intereses y CBU / Alias" : "Agregar Intereses o CBU / Alias (Opcional)"}
+                        </span>
+                        {modoAvanzadoDeuda ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
+                    </div>
+
+                    <AnimatePresence>
+                      {modoAvanzadoDeuda && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-3 overflow-hidden pt-2 border-t border-white/10"
+                        >
+                          {tipoDeuda === 'tarjeta_credito' && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos</label>
+                                <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white font-black tracking-widest outline-none" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                                <input type="number" step="0.01" min="0" placeholder="Ej: 15" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
+                              </div>
+                            </div>
+                          )}
+
+                          {tipoDeuda === 'fija' && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                                <input type="number" step="0.01" min="0" placeholder="Ej: 24" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">🛡️ Seguros / Cuota</label>
+                                <input type="text" placeholder="Ej: 4.500" value={cargosMensualesFormateado} onChange={(e) => setCargosMensualesFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Medio de pago & Cuenta */}
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Tipo de Cuenta</label>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago habitual</label>
                             <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                              <button
-                                type="button"
-                                onClick={() => setDeudaTipoCuenta('alias')}
-                                className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                                  deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
-                                }`}
-                              >
-                                Alias / CBU
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeudaTipoCuenta('nro_cuenta')}
-                                className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                                  deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
-                                }`}
-                              >
-                                Nro. de Cuenta
-                              </button>
+                              <button type="button" onClick={() => setDeudaMedioPago('transferencia')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Transferencia</button>
+                              <button type="button" onClick={() => setDeudaMedioPago('efectivo')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'}`}>Efectivo</button>
                             </div>
                           </div>
 
-                          {deudaTipoCuenta === 'alias' ? (
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
-                                <Hash size={12} /> Alias / CBU
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="Ej: mi.alias.banco"
-                                value={deudaAliasCuenta}
-                                onChange={(e) => setDeudaAliasCuenta(e.target.value)}
-                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                              />
+                          {deudaMedioPago === 'transferencia' && (
+                            <div className="space-y-2">
+                              <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+                                <button type="button" onClick={() => setDeudaTipoCuenta('alias')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Alias / CBU</button>
+                                <button type="button" onClick={() => setDeudaTipoCuenta('nro_cuenta')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Nro. Cuenta</button>
+                              </div>
+                              {deudaTipoCuenta === 'alias' ? (
+                                <input type="text" placeholder="Ej: mi.alias.banco" value={deudaAliasCuenta} onChange={(e) => setDeudaAliasCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-xs outline-none" />
+                              ) : (
+                                <input type="text" placeholder="Ej: 001-123456-00" value={deudaNroCuenta} onChange={(e) => setDeudaNroCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-xs outline-none" />
+                              )}
                             </div>
-                          ) : (
-                            <>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
-                                  <Hash size={12} /> Número de Cuenta
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 001-123456-00"
-                                  value={deudaNroCuenta}
-                                  onChange={(e) => setDeudaNroCuenta(e.target.value)}
-                                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Titular de la cuenta"
-                                    value={deudaNombreTitular}
-                                    onChange={(e) => setDeudaNombreTitular(e.target.value)}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Ej: 1234567"
-                                    value={deudaCiTitular}
-                                    onChange={(e) => setDeudaCiTitular(e.target.value)}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-indigo-500/50"
-                                  />
-                                </div>
-                              </div>
-                            </>
                           )}
-                        </>
+                        </motion.div>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </AnimatePresence>
 
-                {zonaPeligro && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4"><AlertTriangle className="text-red-500 shrink-0" /><p className="text-[11px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP.</p></div>}
-                <button type="submit" disabled={guardando} className={`w-full py-5 font-black uppercase rounded-2xl shadow-xl transition-all ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600'} text-white`}>{guardando ? <Loader2 className="animate-spin mx-auto" /> : (deudaEditandoId ? "GUARDAR CAMBIOS" : "REGISTRAR DEUDA")}</button>
+                    {zonaPeligro && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-center">
+                        <AlertTriangle className="text-red-500 shrink-0" size={20} />
+                        <p className="text-[10px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP (40%).</p>
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex gap-3">
+                      <button 
+                        type="button" 
+                        onClick={() => setPasoDeuda(2)} 
+                        className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-all"
+                      >
+                        <ArrowLeft size={16} /> Atrás
+                      </button>
+                      <button 
+                        type="submit" 
+                        disabled={guardando} 
+                        className={`flex-1 py-4 font-black uppercase text-xs rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600 hover:bg-indigo-500'} text-white active:scale-95`}
+                      >
+                        {guardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : (deudaEditandoId ? "GUARDAR CAMBIOS" : "FINALIZAR Y REGISTRAR")}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-      <AnimatePresence>{mostrarModalPago && <ModalAbono />}</AnimatePresence>
       <AnimatePresence>{mostrarModalCompra && <ModalCompra />}</AnimatePresence>
       <AnimatePresence>{sugerenciaIA && <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"><motion.div className="w-full max-w-sm glass-panel p-8 rounded-3xl text-center"><Sparkles className="text-indigo-400 mx-auto mb-4" size={48}/><p className="text-slate-300 italic mb-8">"{sugerenciaIA}"</p><button onClick={() => setSugerenciaIA(null)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase">ENTENDIDO</button></motion.div></div>}</AnimatePresence>
 
