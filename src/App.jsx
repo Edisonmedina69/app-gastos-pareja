@@ -135,15 +135,18 @@ function App() {
 
         // SIEMPRE verificar si el espacio demo necesita cargar los datos de prueba
         if (espacioId) {
-          const { count } = await supabase.from('gastos').select('*', { count: 'exact', head: true }).eq('espacio_id', espacioId);
-          if (!count || count === 0) {
-            // 1. Ingresos Mensuales
+          // 1. Ingresos Mensuales
+          const { data: exIngresos } = await supabase.from('ingresos_mensuales').select('id').eq('espacio_id', espacioId).limit(1);
+          if (!exIngresos || exIngresos.length === 0) {
             await supabase.from('ingresos_mensuales').insert([
               { espacio_id: espacioId, usuario_id: usuarioId, monto: 8500000, moneda: 'PYG', concepto: 'Salario Titular', mes: new Date().getMonth() + 1, anio: new Date().getFullYear() },
               { espacio_id: espacioId, usuario_id: usuarioId, monto: 5200000, moneda: 'PYG', concepto: 'Ingreso Pareja', mes: new Date().getMonth() + 1, anio: new Date().getFullYear() }
             ]);
+          }
 
-            // 2. Gastos Reales
+          // 2. Gastos Reales
+          const { data: exGastos } = await supabase.from('gastos').select('id').eq('espacio_id', espacioId).limit(1);
+          if (!exGastos || exGastos.length === 0) {
             await supabase.from('gastos').insert([
               { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Supermercado Stock - Compras del Mes', monto: 2200000, moneda: 'PYG', categoria: 'Alimentación', para_quien: 'Ambos' },
               { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Alquiler Departamento', monto: 3500000, moneda: 'PYG', categoria: 'Vivienda', para_quien: 'Ambos' },
@@ -151,64 +154,56 @@ function App() {
               { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Cena de Fin de Semana', monto: 450000, moneda: 'PYG', categoria: 'Entretenimiento', para_quien: 'Ambos' },
               { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Factura ANDE Luz', monto: 380000, moneda: 'PYG', categoria: 'Servicios', para_quien: 'Ambos' }
             ]);
+          }
 
-            // 3. Deudas Pro: Cuotas Fijas, Préstamo Personal, Tarjeta de Crédito y Deuda Flexible
-            const hoy = new Date();
-
-            // 3.1. Cuotas Fijas (TV Smart)
+          // 3. Deudas Maestras
+          const { data: exDeudas } = await supabase.from('deudas_maestras').select('id').eq('espacio_id', espacioId).limit(1);
+          if (!exDeudas || exDeudas.length === 0) {
+            // 3.1. Cuotas Fijas
             const { data: d1 } = await supabase.from('deudas_maestras').insert([{
               espacio_id: espacioId, creador_id: usuarioId, titulo: 'Tarjeta Crédito Itaú - TV Smart 55"',
               tipo: 'cuotas_fijas', entidad: 'Itaú', alcance: 'familiar', total_cuotas: 12, monto_total: 4800000, moneda: 'PYG'
             }]).select('id').single();
             if (d1) {
+              const hoy = new Date();
               await supabase.from('cuotas_detalle').insert([
                 { deuda_maestra_id: d1.id, espacio_id: espacioId, numero_cuota: 1, monto_cuota: 400000, monto_abonado: 400000, estado: 'pagado', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth()).padStart(2, '0')}-25` },
                 { deuda_maestra_id: d1.id, espacio_id: espacioId, numero_cuota: 2, monto_cuota: 400000, monto_abonado: 0, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-25` }
               ]);
             }
 
-            // 3.2. Préstamo Personal (Banco Continental)
+            // 3.2. Préstamo Personal
             const { data: d2 } = await supabase.from('deudas_maestras').insert([{
               espacio_id: espacioId, creador_id: usuarioId, titulo: 'Préstamo Auto Banco Continental',
               tipo: 'prestamo', entidad: 'Continental', alcance: 'familiar', total_cuotas: 36, monto_total: 45000000, tasa_interes: 14.5, moneda: 'PYG'
             }]).select('id').single();
             if (d2) {
+              const hoy = new Date();
               await supabase.from('cuotas_detalle').insert([
                 { deuda_maestra_id: d2.id, espacio_id: espacioId, numero_cuota: 1, monto_cuota: 1550000, monto_abonado: 0, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-10` }
               ]);
             }
 
-            // 3.3. Tarjeta de Crédito (Sudameris Visa Signature)
+            // 3.3. Tarjeta de Crédito
             const { data: d3 } = await supabase.from('deudas_maestras').insert([{
               espacio_id: espacioId, creador_id: usuarioId, titulo: 'Tarjeta Sudameris Visa Signature',
               tipo: 'tarjeta_credito', entidad: 'Sudameris', nro_tarjeta_mascara: '•••• 8842', linea_credito: 15000000, pago_minimo: 850000, fecha_cierre: 20, alcance: 'individual', moneda: 'PYG'
             }]).select('id').single();
             if (d3) {
+              const hoy = new Date();
               await supabase.from('cuotas_detalle').insert([
                 { deuda_maestra_id: d3.id, espacio_id: espacioId, numero_cuota: 1, monto_cuota: 2400000, pago_minimo: 850000, monto_abonado: 0, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-05` }
               ]);
             }
+          }
 
-            // 3.4. Deuda Flexible / Préstamo Familiar
-            const { data: d4 } = await supabase.from('deudas_maestras').insert([{
-              espacio_id: espacioId, creador_id: usuarioId, titulo: 'Préstamo Familiar de Apoyo',
-              tipo: 'flexible', entidad: 'Particular', alcance: 'individual', total_cuotas: 5, monto_total: 2500000, moneda: 'PYG'
-            }]).select('id').single();
-            if (d4) {
-              await supabase.from('cuotas_detalle').insert([
-                { deuda_maestra_id: d4.id, espacio_id: espacioId, numero_cuota: 1, monto_cuota: 500000, monto_abonado: 250000, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-15` }
-              ]);
-            }
-
-            // 4. Gastos Fijos Programados
+          // 4. Gastos Programados
+          const { data: exProg } = await supabase.from('gastos_programados').select('id').eq('espacio_id', espacioId).limit(1);
+          if (!exProg || exProg.length === 0) {
             await supabase.from('gastos_programados').insert([
               { espacio_id: espacioId, concepto: 'Internet Fibra Óptica Personal', monto: 180000, moneda: 'PYG', dia_recurrencia: 10, categoria: 'Servicios', para_quien: 'Ambos' },
               { espacio_id: espacioId, concepto: 'Expensas Edificio / Barrio', monto: 450000, moneda: 'PYG', dia_recurrencia: 5, categoria: 'Vivienda', para_quien: 'Ambos' },
-              { espacio_id: espacioId, concepto: 'Seguro Médico Sanatorio Migone', monto: 550000, moneda: 'PYG', dia_recurrencia: 15, categoria: 'Salud', para_quien: 'Ambos' }
-            ]);
-
-            // 5. Previsiones / Ahorros Programados
-            await supabase.from('gastos_programados').insert([
+              { espacio_id: espacioId, concepto: 'Seguro Médico Sanatorio Migone', monto: 550000, moneda: 'PYG', dia_recurrencia: 15, categoria: 'Salud', para_quien: 'Ambos' },
               { espacio_id: espacioId, concepto: 'Fondo de Emergencia Familiar', monto: 1000000, moneda: 'PYG', dia_recurrencia: 1, categoria: 'Ahorro', para_quien: 'Ambos' }
             ]);
           }
