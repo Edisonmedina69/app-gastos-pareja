@@ -103,8 +103,34 @@ function App() {
     try {
       let { data: perfil, error } = await supabase.from('perfiles').select('*, espacios(*)').eq('id', usuarioId).maybeSingle();
       
-      // Si el email es del superadmin de respaldo, forzar su creación/rol
-      if (userEmail === 'edisonmedina415@gmail.com') {
+      // Manejo automático de cuenta DEMO
+      if (userEmail === 'demo@nandefinanza.com') {
+        if (!perfil || !perfil.espacio_id) {
+          // Obtener o crear un espacio demo
+          let { data: espacios } = await supabase.from('espacios').select('id').eq('nombre_familia', 'Hogar Demo 🧪').limit(1);
+          let espacioId = espacios && espacios.length > 0 ? espacios[0].id : null;
+
+          if (!espacioId) {
+            const { data: nuevoEspacio } = await supabase.from('espacios').insert([{ nombre_familia: 'Hogar Demo 🧪' }]).select('id').single();
+            if (nuevoEspacio) espacioId = nuevoEspacio.id;
+          }
+
+          if (espacioId) {
+            const { data: nuevoPerfilDemo } = await supabase
+              .from('perfiles')
+              .upsert([{
+                id: usuarioId,
+                nombre: "Invitado Demo 🧪",
+                rol: 'miembro',
+                espacio_id: espacioId
+              }])
+              .select('*, espacios(*)')
+              .single();
+
+            if (nuevoPerfilDemo) perfil = nuevoPerfilDemo;
+          }
+        }
+      } else if (userEmail === 'edisonmedina415@gmail.com') {
         if (!perfil || error) {
           // Buscar algún espacio existente para vincularlo temporalmente (evita fallos de RLS)
           const { data: espacios } = await supabase.from('espacios').select('id').limit(1);
