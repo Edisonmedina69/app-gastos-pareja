@@ -266,11 +266,29 @@ function App() {
           if (montado) {
             setDatosHogar(perfil);
             setUsuarioActual(perfil);
+            setCargandoPerfil(false);
+            // Cargar inmediatamente los datos de la base de datos (Gastos, Deudas, Ingresos)
+            if (perfil?.espacio_id) {
+              const eid = perfil.espacio_id;
+              const [resG, resI, resD, resN, resP] = await Promise.all([
+                supabase.from("gastos").select("*").eq('espacio_id', eid).order("fecha", { ascending: false }),
+                supabase.from("ingresos_mensuales").select("*").eq('espacio_id', eid),
+                supabase.from("deudas_maestras").select("*, cuotas_detalle(*)").eq('espacio_id', eid),
+                supabase.from("notificaciones").select("*").eq('espacio_id', eid).order('created_at', { ascending: false }).limit(15),
+                supabase.from("gastos_programados").select("*").eq("espacio_id", eid).order("dia_recurrencia", { ascending: true })
+              ]);
+              if (resG.data) setGastos(resG.data);
+              if (resI.data) setIngresos(resI.data);
+              if (resD.data) setDeudas(resD.data);
+              if (resN.data) setNotificaciones(resN.data);
+              if (resP.data) setGastosProgramados(resP.data);
+            }
           }
         }
-      } catch (err) {} finally {
+      } catch (err) {
+        if (montado) setDatosHogar(null);
+      } finally {
         if (montado) { 
-          setCargandoPerfil(false);
           setVerificandoHogar(false); 
           clearTimeout(timerCierre); 
         }
