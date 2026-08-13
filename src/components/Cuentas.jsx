@@ -1242,23 +1242,61 @@ export default function Cuentas({
             </button>
           ))}
         </div>
-        <button 
-          onClick={() => {
-            if (pestana === 'fijos') {
-              resetFormFijo();
-              setMostrarModalFijo(true);
-            } else if (pestana === 'presupuestos') {
-              resetFormPrevision();
-              setMostrarModalPrevision(true);
-            } else {
-              resetForm();
-              setMostrarModal(true);
-            }
-          }} 
-          className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex gap-2">
+          {pestana === 'activas' && (
+            <button
+              onClick={async () => {
+                const toastId = toast.loading("Generando deudas demo...");
+                try {
+                  const hoy = new Date();
+                  const { data: d1 } = await supabase.from('deudas_maestras').insert([{
+                    espacio_id: datosHogar.espacio_id, creador_id: usuarioActual.id, titulo: 'Tarjeta Crédito Itaú - TV Smart 55"',
+                    tipo: 'cuotas_fijas', entidad: 'Itaú', alcance: 'familiar', total_cuotas: 12, monto_total: 4800000, moneda: 'PYG', estado: 'activa'
+                  }]).select('id').single();
+                  if (d1) {
+                    await supabase.from('cuotas_detalle').insert([
+                      { deuda_maestra_id: d1.id, espacio_id: datosHogar.espacio_id, numero_cuota: 1, monto_cuota: 400000, monto_abonado: 400000, estado: 'pagado', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth()).padStart(2, '0')}-25` },
+                      { deuda_maestra_id: d1.id, espacio_id: datosHogar.espacio_id, numero_cuota: 2, monto_cuota: 400000, monto_abonado: 0, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-25` }
+                    ]);
+                  }
+                  const { data: d2 } = await supabase.from('deudas_maestras').insert([{
+                    espacio_id: datosHogar.espacio_id, creador_id: usuarioActual.id, titulo: 'Préstamo Auto Banco Continental',
+                    tipo: 'prestamo', entidad: 'Continental', alcance: 'familiar', total_cuotas: 36, monto_total: 45000000, tasa_interes: 14.5, moneda: 'PYG', estado: 'activa'
+                  }]).select('id').single();
+                  if (d2) {
+                    await supabase.from('cuotas_detalle').insert([
+                      { deuda_maestra_id: d2.id, espacio_id: datosHogar.espacio_id, numero_cuota: 1, monto_cuota: 1550000, monto_abonado: 0, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-10` }
+                    ]);
+                  }
+                  toast.success("¡Deudas demo listas! 💳✨", { id: toastId });
+                  obtenerDatos();
+                } catch (err) {
+                  toast.error("Error: " + err.message, { id: toastId });
+                }
+              }}
+              className="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 transition-all"
+            >
+              ⚡ Cargar Deudas Demo
+            </button>
+          )}
+          <button 
+            onClick={() => {
+              if (pestana === 'fijos') {
+                resetFormFijo();
+                setMostrarModalFijo(true);
+              } else if (pestana === 'presupuestos') {
+                resetFormPrevision();
+                setMostrarModalPrevision(true);
+              } else {
+                resetForm();
+                setMostrarModal(true);
+              }
+            }} 
+            className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </header>
 
       {/* FILTROS POR PERSONA */}
