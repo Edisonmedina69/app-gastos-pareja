@@ -1,88 +1,171 @@
-# 📖 Guía del Usuario - ÑandeFinanza 2.0 🇵🇾
+# 🇵🇾 Manual de Usuario Completo y Exhaustivo - ÑandeFinanza 2.0
 
-¡Bienvenido a **ÑandeFinanza 2.0**! La plataforma colaborativa de finanzas personales y en pareja diseñada especialmente para el contexto financiero paraguayo.
-
----
-
-## 🚀 1. Primeros Pasos e Inicio Rápido
-
-### Acceso a la Plataforma
-1. **Modo Demo (Para Probar sin Registrarte)**:
-   - En la pantalla de inicio, hacé clic en **"🧪 PROBAR DEMO INSTANTÁNEA (1-CLIC)"**.
-   - Accederás a un entorno de prueba con datos pre-cargados (ingresos, deudas y gastos) para interactuar inmediatamente con el sistema.
-2. **Acceso Registrado**:
-   - Ingresá tu nombre de usuario o correo electrónico y contraseña proporcionados por tu administrador de hogar.
+**ÑandeFinanza 2.0** es la plataforma colaborativa de gestión financiera de hogar y parejas para Paraguay. Combina control presupuestario, cálculo automático de ratios de endeudamiento oficial del Banco Central del Paraguay (BCP), gestión avanzada de crédito/cuotas (*Deudas Pro*) y un asistente con inteligencia artificial que habla Jopara.
 
 ---
 
-## 📊 2. Dashboard y Salud Financiera
+## 📌 Tabla de Contenidos
 
-El **Dashboard Principal** te ofrece un resumen visual instantáneo de la salud financiera de tu hogar:
-
-- **Índice de Endeudamiento (Alerta BCP)**:
-  - Muestra el porcentaje de tus ingresos destinado al pago de deudas.
-  - 🟢 **Menor a 30%**: Salud financiera óptima.
-  - 🟡 **Entre 30% y 40%**: Nivel de precaución.
-  - 🔴 **Mayor a 40%**: Alerta crítica de sobreendeudamiento (según normativas del Banco Central del Paraguay).
-
----
-
-## 💳 3. Gestión de Deudas Pro ("Deudas Pro")
-
-El módulo de **Deudas Pro** permite gestionar tanto créditos personales como compras con Tarjeta de Crédito en cuotas (*cuotas fijas*).
-
-### Caso de Uso 1: Registrar una Compra en Cuotas (Ej: Electródoméstico / TV)
-1. Ir a la pestaña **Deudas Pro**.
-2. Hacer clic en **"+ Nueva Deuda"**.
-3. Seleccionar la entidad (ej: Itaú, Continental, Sudameris).
-4. Indicar el **Tipo**: `Cuotas Fijas`.
-5. Cargar el **Monto Total**, la **Cantidad de Cuotas** (ej: 12 cuotas) y el **Día de Vencimiento**.
-6. **Alcance**:
-   - `Familiar`: La deuda se divide al 50% entre la pareja.
-   - `Individual`: La deuda impacta solo la salud financiera del creador.
-7. Al guardar, el sistema generará automáticamente la tabla con el plan de pagos cuota por cuota.
-
-### Caso de Uso 2: Registrar Pago de Cuota
-1. Dentro del listado de deudas, desplegar la deuda correspondiente.
-2. Hacer clic en **"Registrar Pago"** en la cuota pendiente.
-3. Podés realizar un **Pago Total de la Cuota** o un **Pago Parcial**.
-4. El sistema calculará el saldo restante y actualizará los gráficos en tiempo real.
+1. [Acceso e Inicio Rápido](#1-acceso-e-inicio-rápido)
+2. [Estructura del Sistema y Dashboard](#2-estructura-del-sistema-y-dashboard)
+3. [Algoritmo de Salud Financiera y Alerta BCP (40%)](#3-algoritmo-de-salud-financiera-y-alerta-bcp-40)
+4. [Módulo Deudas Pro (Tarjetas, Cuotas y Préstamos)](#4-módulo-deudas-pro-tarjetas-cuotas-y-préstamos)
+5. [Módulo de Ingresos Mensuales e Ingresos Programados](#5-módulo-de-ingresos-mensuales-e-ingresos-programados)
+6. [Gestión de Gastos Diarios y Fijos Recurrentes](#6-gestión-de-gastos-diarios-y-fijos-recurrentes)
+7. [Asistente de Inteligencia Artificial (ÑandeAsistente en Jopara)](#7-asistente-de-inteligencia-artificial-ñandeasistente-en-jopara)
+8. [Exportación a Excel y Reportes Históricos](#8-exportación-a-excel-y-reportes-históricos)
+9. [Instalación PWA en Dispositivos Móviles](#9-instalación-pwa-en-dispositivos-móviles)
+10. [Preguntas Frecuentes y Resolución de Problemas](#10-preguntas-frecuentes-y-resolución-de-problemas)
 
 ---
 
-## 💰 4. Registro de Ingresos y Gastos
+## 🚀 1. Acceso e Inicio Rápido
 
-### Registrar un Ingreso Mensual
-1. Ir a la sección **Mis Ingresos**.
-2. Hacer clic en **"+ Registrar Ingreso"**.
-3. Indicar el concepto (Ej: *Salario*, *Aguinaldo*, *Honorarios Extra*), monto en Gs. o USD y el mes correspondiente.
+La aplicación soporta dos formas de acceso:
 
-### Registrar un Gasto Diario o Fijo
-1. Desde la pantalla principal o menú rápido, seleccionar **"+ Registrar Gasto"**.
-2. Completar:
-   - **Concepto**: Ej. *Supermercado*, *Combustible*, *Alquiler*.
-   - **Categoría**: Alimentación, Vivienda, Transporte, Entretenimiento, Salud, etc.
-   - **¿Para quién es?**: `Ambos` (Gasto compartido) / `Yo` / `Pareja`.
+### A. Modo Demo Instantáneo (1-Clic)
+Ideal para conocer las capacidades de la plataforma sin ingresar información personal:
+1. En la pantalla de inicio de sesión, hacé clic en **"🧪 PROBAR DEMO INSTANTÁNEA (1-CLIC)"**.
+2. El sistema creará y vinculará automáticamente un perfil temporal al **"Hogar Demo 🧪"**.
+3. Se cargarán automáticamente datos reales de prueba (ingresos de 13.700.000 Gs., deudas en cuotas de tarjeta de crédito Itaú y gastos fijos de supermercado y alquiler).
 
----
-
-## 🤖 5. Asistente IA Financiero ("ÑandeAsistente")
-
-El asistente analiza en tiempo real todos tus números y te responde en un tono amigable (*Jopara/Español paraguayo*).
-
-### Consultas de Ejemplo para la IA:
-- *"¿Cómo están nuestros gastos este mes, kape?"*
-- *"¿Superamos el límite del 40% de endeudamiento?"*
-- *"¿Qué consejo me das para reducir los gastos de supermercado?"*
+### B. Inicio de Sesión Registrado
+1. Ingresá tu nombre de usuario (ej. `edison`) o tu correo electrónico (ej. `tu@email.com`).
+2. Ingresá tu contraseña de acceso asignada por el Administrador.
+3. El sistema verificará tu **Hogar Activo** y cargará tus datos sincronizados.
 
 ---
 
-## 📱 6. Instalación como PWA (App Móvil)
+## 📊 2. Estructura del Sistema y Dashboard
 
-Puedes instalar **ÑandeFinanza** en tu teléfono móvil sin necesidad de ingresar a la App Store / Play Store:
-- **Android (Chrome)**: Abrir la web, presionar los 3 puntos superiores y seleccionar **"Agregar a la pantalla principal"**.
-- **iOS / iPhone (Safari)**: Abrir la web, presionar el botón **Compartir** y seleccionar **"Agregar al inicio"**.
+La interfaz está dividida en 5 secciones accesibles desde el menú lateral o barra inferior:
+
+1. **Dashboard (Inicio)**: Resumen del balance, gráficos interactivos de distribución de gastos por categoría y estado del ratio de endeudamiento.
+2. **Deudas Pro (Cuentas)**: Control detallado de tarjetas de crédito, compras en cuotas fijas, préstamos y previsión de gastos fijos del mes.
+3. **Mis Ingresos**: Registro de salarios fijos, aguinaldos, comisiones e ingresos recurrentes del hogar.
+4. **Transacciones (Historial)**: Listado cronológico de movimientos con filtros por persona (`Yo`, `Pareja`, `Ambos`), categorías y exportador a Excel.
+5. **Asistente IA**: Chatbot inteligente capacitado en reglas financieras de Paraguay.
 
 ---
 
-*¡Organizar las finanzas del hogar nunca fue tan fácil y colaborativo!* 🇵🇾
+## ⚖️ 3. Algoritmo de Salud Financiera y Alerta BCP (40%)
+
+El sistema evalúa continuamente la capacidad de pago del hogar basándose en las directrices de salud financiera del **Banco Central del Paraguay (BCP)**:
+
+$$\text{Índice de Endeudamiento (\%)} = \left( \frac{\text{Carga Total de Cuotas y Deudas del Mes}}{\text{Total de Ingresos Mensuales del Hogar}} \right) \times 100$$
+
+### Escalas de Evaluación:
+- 🟢 **0% a 30% (Nivel Saludable)**: Finanzas equilibradas. Capacidad de ahorro óptima.
+- 🟡 **30.1% a 40% (Nivel de Precaución)**: Presión moderada sobre los ingresos. Se recomienda congelar la toma de nuevos créditos.
+- 🔴 **Mayor a 40.1% (Alerta Crítica BCP)**: Riesgo de sobreendeudamiento. El sistema emitirá alertas rojas y el Asistente IA recomendará un plan de austeridad inmediato.
+
+---
+
+## 💳 4. Módulo Deudas Pro (Tarjetas, Cuotas y Préstamos)
+
+Este es el módulo central para controlar compromisos financieros a plazo.
+
+### Tipos de Deudas Soportadas:
+1. **Cuotas Fijas (Electrodomésticos, Muebles, Vehículos)**:
+   - Permite ingresar monto total, cantidad de cuotas (ej. 6, 12, 18, 24) y fecha de vencimiento.
+   - Genera automáticamente el desglose de cuotas pendientes y pagadas.
+2. **Tarjeta de Crédito (Línea Revolvente)**:
+   - Permite registrar límite de crédito, fecha de cierre de extracto y día de vencimiento del pago mínimo.
+   - Permite cargar compras individuales dentro de la tarjeta.
+3. **Préstamos Amortizables (Bancarios / Cooperativos)**:
+   - Calcula el plan de amortización con tasa de interés anual (TEA) aplicada sobre saldos.
+
+### Caso Práctico 1: Registrar una compra en 12 cuotas
+1. Ir a **Deudas Pro** -> Botón **"+ Nueva Deuda"**.
+2. **Paso 1**: Ingresar Título (*Ej: TV Smart 55" Itaú*), Entidad (*Itaú*) y Tipo (*Cuotas Fijas*).
+3. **Paso 2**: Seleccionar Moneda (*PYG / USD*), ingresar Monto Total (*4.800.000 Gs.*) y Cantidad de Cuotas (*12*). El sistema calculará la cuota mensual (*400.000 Gs.*).
+4. **Paso 3**: Seleccionar Alcance:
+   - `Familiar`: La cuota impacta 50% a cada uno en el cálculo de salud financiera.
+   - `Individual`: Impacta 100% al creador.
+5. Indicar el día de vencimiento (ej. día 25 de cada mes).
+6. Guardar. El plan de 12 cuotas quedará generado en estado *Pendiente*.
+
+### Caso Práctico 2: Registrar Pago de Cuota
+1. Desplegar la deuda desde la lista de **Deudas Activas**.
+2. Hacer clic en **"Registrar Pago"** en la cuota del mes.
+3. Seleccionar si es un **Pago Total** o **Parcial**, el medio de pago utilizado (Transferencia, Efectivo, Débito) y confirmar.
+
+---
+
+## 💰 5. Módulo de Ingresos Mensuales e Ingresos Programados
+
+Permite proyectar el flujo de caja del hogar.
+
+### Registros Fijos vs Variables:
+- **Salario Fijo**: Se puede configurar en **Ingresos Programados** para que se cargue automáticamente cada inicio de mes.
+- **Ingresos Variables (Comisiones / Trabajos Extra)**: Se cargan manualmente indicando el mes y año correspondiente.
+
+---
+
+## 🛒 6. Gestión de Gastos Diarios y Fijos Recurrentes
+
+### A. Gastos Diarios
+1. Presionar el botón flotante o menú **"+ Registrar Gasto"**.
+2. Completar: Concepto (*Ej: Supermercado Stock*), Monto (*250.000 Gs.*), Categoría (*Alimentación*) y Asignación (*Ambos / Yo / Pareja*).
+
+### B. Gastos Fijos Recurrentes (Alquiler, Expensas, Servicios)
+1. En **Deudas Pro**, navegar a la sección **Gastos Fijos Programados**.
+2. Cargar gastos que vencen todos los meses (Ej. *ANDE, Essap, Internet, Alquiler*).
+3. Al llegar la fecha de vencimiento, el sistema enviará una notificación preventiva para evitar mora.
+
+---
+
+## 🤖 7. Asistente de Inteligencia Artificial (ÑandeAsistente)
+
+El asistente inteligente analiza los registros de la base de datos de tu hogar y te brinda asesoramiento adaptado a la economía de Paraguay.
+
+### Características del Asistente:
+- **Idioma**: Jopara natural (Español combinado con frases cotidianas en Guaraní).
+- **Regla BCP**: Te alertará estrictamente si tus compromisos superan el 40% de tus ingresos.
+
+### Ejemplos de Preguntas que podés hacerle:
+- *"¿Cómo está nuestra capacidad de pago para este mes?"*
+- *"Queremos comprar un auto a cuotas de 1.500.000 Gs., ¿nos alcanza el presupuesto?"*
+- *"¿En qué categoría estamos gastando más dinero este mes?"*
+
+---
+
+## 📄 8. Exportación a Excel y Reportes Históricos
+
+1. Ir a la pestaña **Transacciones (Historial)**.
+2. Aplicar los filtros deseados (Rango de fechas, categoría o miembro de la pareja).
+3. Hacer clic en **"Exportar a Excel (.xlsx)"**.
+4. Se descargará una planilla de cálculo profesional lista para auditoría o archivo personal.
+
+---
+
+## 📱 9. Instalación PWA en Dispositivos Móviles
+
+**ÑandeFinanza 2.0** es una Progressive Web App (PWA) instalable como aplicación nativa:
+
+### En Android (Google Chrome):
+1. Abrir la dirección web de la app.
+2. Presionar el menú de 3 puntos (arriba a la derecha).
+3. Seleccionar **"Agregar a la pantalla principal"** o **"Instalar aplicación"**.
+
+### En iOS / iPhone (Safari):
+1. Abrir la dirección web en Safari.
+2. Tocar el ícono de **Compartir** (cuadrado con flecha hacia arriba).
+3. Desplazarse hacia abajo y seleccionar **"Agregar al inicio"**.
+
+---
+
+## ❓ 10. Preguntas Frecuentes y Resolución de Problemas
+
+**Q: ¿Los datos cargados en el Modo Demo son públicos?**
+*R: No, el Modo Demo utiliza un espacio de pruebas aislado de los datos reales de los hogares registrados.*
+
+**Q: ¿Qué pasa si mi pareja gana más dinero que yo?**
+*R: El sistema permite configurar vistas proporcionales o individuales para que los gastos compartidos se evalúen de manera justa de acuerdo al ingreso de cada uno.*
+
+**Q: ¿Puedo usar la app en Dólares (USD)?**
+*R: Sí, la plataforma es multimoneda y convierte automáticamente los balances a Guaraníes (PYG) utilizando el tipo de cambio oficial guardado.*
+
+---
+
+*Desarrollado con ❤️ para fortalecer la educación y estabilidad financiera de los hogares.* 🇵🇾
