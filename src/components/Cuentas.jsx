@@ -1251,7 +1251,7 @@ export default function Cuentas({
                   const hoy = new Date();
                   const { data: d1 } = await supabase.from('deudas_maestras').insert([{
                     espacio_id: datosHogar.espacio_id, creador_id: usuarioActual.id, titulo: 'Tarjeta Crédito Itaú - TV Smart 55"',
-                    tipo: 'cuotas_fijas', entidad: 'Itaú', alcance: 'familiar', total_cuotas: 12, monto_total: 4800000, moneda: 'PYG', estado: 'activa'
+                    tipo: 'fija', alcance: 'familiar', moneda: 'PYG', estado: 'activa'
                   }]).select('id').single();
                   if (d1) {
                     await supabase.from('cuotas_detalle').insert([
@@ -1261,7 +1261,7 @@ export default function Cuentas({
                   }
                   const { data: d2 } = await supabase.from('deudas_maestras').insert([{
                     espacio_id: datosHogar.espacio_id, creador_id: usuarioActual.id, titulo: 'Préstamo Auto Banco Continental',
-                    tipo: 'prestamo', entidad: 'Continental', alcance: 'familiar', total_cuotas: 36, monto_total: 45000000, tasa_interes: 14.5, moneda: 'PYG', estado: 'activa'
+                    tipo: 'fija', alcance: 'familiar', tasa_interes: 14.5, moneda: 'PYG', estado: 'activa'
                   }]).select('id').single();
                   if (d2) {
                     await supabase.from('cuotas_detalle').insert([
