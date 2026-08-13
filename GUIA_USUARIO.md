@@ -1,4 +1,4 @@
-# 🇵🇾 Manual de Usuario Completo y Exhaustivo - ÑandeFinanza 2.0
+# 🇵🇾 Guía del Usuario - ÑandeFinanza 2.0
 
 **ÑandeFinanza 2.0** es la plataforma colaborativa de gestión financiera de hogar y parejas para Paraguay. Combina control presupuestario, cálculo automático de ratios de endeudamiento oficial del Banco Central del Paraguay (BCP), gestión avanzada de crédito/cuotas (*Deudas Pro*) y un asistente con inteligencia artificial que habla Jopara.
 
