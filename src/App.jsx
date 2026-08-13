@@ -132,25 +132,26 @@ function App() {
             // Verificar si el espacio demo ya tiene datos cargados, de lo contrario sembrarlos
             const { count } = await supabase.from('gastos').select('*', { count: 'exact', head: true }).eq('espacio_id', espacioId);
             if (count === 0) {
-              // 1. Ingresos de Prueba
+              // 1. Ingresos de Prueba (Súper reales)
               await supabase.from('ingresos_mensuales').insert([
-                { espacio_id: espacioId, usuario_id: usuarioId, monto: 8500000, moneda: 'PYG', concepto: 'Salario Titular (Demo)', mes: new Date().getMonth() + 1, anio: new Date().getFullYear() },
-                { espacio_id: espacioId, usuario_id: usuarioId, monto: 5200000, moneda: 'PYG', concepto: 'Ingreso Pareja (Demo)', mes: new Date().getMonth() + 1, anio: new Date().getFullYear() }
+                { espacio_id: espacioId, usuario_id: usuarioId, monto: 8500000, moneda: 'PYG', concepto: 'Salario Titular', mes: new Date().getMonth() + 1, anio: new Date().getFullYear() },
+                { espacio_id: espacioId, usuario_id: usuarioId, monto: 5200000, moneda: 'PYG', concepto: 'Ingreso Pareja', mes: new Date().getMonth() + 1, anio: new Date().getFullYear() }
               ]);
 
               // 2. Gastos de Prueba
               await supabase.from('gastos').insert([
-                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Supermercado Mensual', monto: 2200000, moneda: 'PYG', categoria: 'Alimentación', para_quien: 'Ambos' },
-                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Alquiler de Vivienda', monto: 3500000, moneda: 'PYG', categoria: 'Vivienda', para_quien: 'Ambos' },
-                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Combustible / Transporte', monto: 650000, moneda: 'PYG', categoria: 'Transporte', para_quien: 'Yo' },
-                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Salida de Fin de Semana', monto: 450000, moneda: 'PYG', categoria: 'Entretenimiento', para_quien: 'Ambos' }
+                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Supermercado Stock - Compras del Mes', monto: 2200000, moneda: 'PYG', categoria: 'Alimentación', para_quien: 'Ambos' },
+                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Alquiler Departamento', monto: 3500000, moneda: 'PYG', categoria: 'Vivienda', para_quien: 'Ambos' },
+                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Carga de Combustible Petrobras', monto: 650000, moneda: 'PYG', categoria: 'Transporte', para_quien: 'Yo' },
+                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Cena de Fin de Semana', monto: 450000, moneda: 'PYG', categoria: 'Entretenimiento', para_quien: 'Ambos' },
+                { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Factura ANDE Luz', monto: 380000, moneda: 'PYG', categoria: 'Servicios', para_quien: 'Ambos' }
               ]);
 
-              // 3. Deuda Maestra y Cuotas
+              // 3. Deudas Fijas y Cuotas de Tarjeta
               const { data: nuevaDeuda } = await supabase.from('deudas_maestras').insert([{
                 espacio_id: espacioId,
                 creador_id: usuarioId,
-                titulo: 'Tarjeta Crédito Itaú - TV Smart',
+                titulo: 'Tarjeta Crédito Itaú - TV Smart 55"',
                 tipo: 'cuotas_fijas',
                 entidad: 'Itaú',
                 alcance: 'familiar',
