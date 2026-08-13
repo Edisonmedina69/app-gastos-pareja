@@ -102,13 +102,37 @@ export default function Login() {
                 setCargando(true);
                 const toastId = toast.loading("Ingresando al entorno Demo...");
                 try {
-                  const { error } = await supabase.auth.signInWithPassword({
-                    email: "demo@nandefinanza.com",
-                    password: "demo123456",
+                  const demoEmail = "demo@nandefinanza.com";
+                  const demoPass = "demo123456";
+
+                  // Intentar iniciar sesión
+                  let { error } = await supabase.auth.signInWithPassword({
+                    email: demoEmail,
+                    password: demoPass,
                   });
+
+                  // Si el usuario no existe en Supabase Auth todavía, crearlo al instante
                   if (error) {
-                    // Si el usuario demo no existiera aún en auth, avisar o crearlo alternativamente
-                    throw new Error("No se pudo conectar al usuario demo. Registrate o usá tus credenciales.");
+                    const { error: signUpError } = await supabase.auth.signUp({
+                      email: demoEmail,
+                      password: demoPass,
+                      options: {
+                        data: { nombre: "Usuario Demo" }
+                      }
+                    });
+
+                    if (signUpError) {
+                      throw new Error("No se pudo iniciar el modo demo: " + signUpError.message);
+                    }
+
+                    // Intentar iniciar sesión nuevamente
+                    const { error: retryError } = await supabase.auth.signInWithPassword({
+                      email: demoEmail,
+                      password: demoPass,
+                    });
+                    if (retryError) {
+                      throw new Error("El usuario demo se creó pero requiere confirmación de email en Supabase.");
+                    }
                   }
                   toast.success("¡Bienvenido al Modo Demo Instantáneo! 🧪", { id: toastId });
                 } catch (err) {
