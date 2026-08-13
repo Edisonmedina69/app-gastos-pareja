@@ -92,6 +92,36 @@ export default function Login() {
               {cargando ? <Loader2 className="w-5 h-5 animate-spin" /> : <>ENTRAR <ArrowRight size={18} /></>}
             </button>
           </form>
+
+          <div className="mt-6 pt-6 border-t border-white/10 text-center">
+            <p className="text-xs text-slate-400 mb-3">¿Querés probar la app sin registrarte?</p>
+            <button
+              type="button"
+              disabled={cargando}
+              onClick={async () => {
+                setCargando(true);
+                const toastId = toast.loading("Ingresando al entorno Demo...");
+                try {
+                  const { error } = await supabase.auth.signInWithPassword({
+                    email: "demo@nandefinanza.com",
+                    password: "demo123456",
+                  });
+                  if (error) {
+                    // Si el usuario demo no existiera aún en auth, avisar o crearlo alternativamente
+                    throw new Error("No se pudo conectar al usuario demo. Registrate o usá tus credenciales.");
+                  }
+                  toast.success("¡Bienvenido al Modo Demo Instantáneo! 🧪", { id: toastId });
+                } catch (err) {
+                  toast.error(err.message, { id: toastId });
+                } finally {
+                  setCargando(false);
+                }
+              }}
+              className="w-full bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
+            >
+              <span>🧪</span> PROBAR DEMO INSTANTÁNEA (1-CLIC)
+            </button>
+          </div>
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-2">
