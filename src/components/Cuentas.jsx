@@ -1042,8 +1042,7 @@ export default function Cuentas({
                 type="text" 
                 value={mFormateado} 
                 onChange={(e) => setMFormateado(formatarInput(e.target.value))} 
-                disabled={esFija}
-                className={`w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black outline-none transition-all ${esFija ? 'text-slate-400 bg-slate-950/60 cursor-not-allowed opacity-75' : 'text-white'}`} 
+                className={`w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black outline-none transition-all ${esFija ? 'text-slate-400 bg-slate-950/60' : 'text-white'}`} 
                 placeholder="0" 
               />
               {esFija && (
