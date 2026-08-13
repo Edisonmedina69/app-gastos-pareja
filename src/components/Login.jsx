@@ -106,14 +106,14 @@ export default function Login() {
                   const demoPass = "demo123456";
 
                   // Intentar iniciar sesión
-                  let { error } = await supabase.auth.signInWithPassword({
+                  let { data: authData, error } = await supabase.auth.signInWithPassword({
                     email: demoEmail,
                     password: demoPass,
                   });
 
                   // Si el usuario no existe en Supabase Auth todavía, crearlo al instante
                   if (error) {
-                    const { error: signUpError } = await supabase.auth.signUp({
+                    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                       email: demoEmail,
                       password: demoPass,
                       options: {
@@ -126,14 +126,85 @@ export default function Login() {
                     }
 
                     // Intentar iniciar sesión nuevamente
-                    const { error: retryError } = await supabase.auth.signInWithPassword({
+                    const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
                       email: demoEmail,
                       password: demoPass,
                     });
                     if (retryError) {
                       throw new Error("El usuario demo se creó pero requiere confirmación de email en Supabase.");
                     }
+                    authData = retryData;
                   }
+
+                  // ASEGURAR SIEMBRA DIRECTA DE DATOS DEMO EN SUPABASE
+                  if (authData?.user) {
+                    const usuarioId = authData.user.id;
+                    let { data: espacios } = await supabase.from('espacios').select('id').eq('nombre_familia', 'Hogar Demo 🧪').limit(1);
+                    let espacioId = espacios && espacios.length > 0 ? espacios[0].id : null;
+
+                    if (!espacioId) {
+                      const { data: nuevoEspacio } = await supabase.from('espacios').insert([{ nombre_familia: 'Hogar Demo 🧪' }]).select('id').single();
+                      if (nuevoEspacio) espacioId = nuevoEspacio.id;
+                    }
+
+                    if (espacioId) {
+                      await supabase.from('perfiles').upsert([{
+                        id: usuarioId,
+                        nombre: "Invitado Demo 🧪",
+                        rol: 'miembro',
+                        espacio_id: espacioId
+                      }]);
+
+                      const hoy = new Date();
+
+                      // 1. Ingresos
+                      const { data: exIng } = await supabase.from('ingresos_mensuales').select('id').eq('espacio_id', espacioId).limit(1);
+                      if (!exIng || exIng.length === 0) {
+                        await supabase.from('ingresos_mensuales').insert([
+                          { espacio_id: espacioId, usuario_id: usuarioId, monto: 8500000, moneda: 'PYG', concepto: 'Salario Titular', mes: hoy.getMonth() + 1, anio: hoy.getFullYear() },
+                          { espacio_id: espacioId, usuario_id: usuarioId, monto: 5200000, moneda: 'PYG', concepto: 'Ingreso Pareja', mes: hoy.getMonth() + 1, anio: hoy.getFullYear() }
+                        ]);
+                      }
+
+                      // 2. Gastos
+                      const { data: exGas } = await supabase.from('gastos').select('id').eq('espacio_id', espacioId).limit(1);
+                      if (!exGas || exGas.length === 0) {
+                        await supabase.from('gastos').insert([
+                          { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Supermercado Stock - Compras del Mes', monto: 2200000, moneda: 'PYG', categoria: 'Alimentación', para_quien: 'Ambos' },
+                          { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Alquiler Departamento', monto: 3500000, moneda: 'PYG', categoria: 'Vivienda', para_quien: 'Ambos' },
+                          { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Carga de Combustible Petrobras', monto: 650000, moneda: 'PYG', categoria: 'Transporte', para_quien: 'Yo' },
+                          { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Cena de Fin de Semana', monto: 450000, moneda: 'PYG', categoria: 'Entretenimiento', para_quien: 'Ambos' },
+                          { espacio_id: espacioId, usuario_id: usuarioId, pagador_id: usuarioId, concepto: 'Factura ANDE Luz', monto: 380000, moneda: 'PYG', categoria: 'Servicios', para_quien: 'Ambos' }
+                        ]);
+                      }
+
+                      // 3. Deudas Maestra
+                      const { data: exDeu } = await supabase.from('deudas_maestras').select('id').eq('espacio_id', espacioId).limit(1);
+                      if (!exDeu || exDeu.length === 0) {
+                        const { data: d1 } = await supabase.from('deudas_maestras').insert([{
+                          espacio_id: espacioId, creador_id: usuarioId, titulo: 'Tarjeta Crédito Itaú - TV Smart 55"',
+                          tipo: 'cuotas_fijas', entidad: 'Itaú', alcance: 'familiar', total_cuotas: 12, monto_total: 4800000, moneda: 'PYG'
+                        }]).select('id').single();
+                        if (d1) {
+                          await supabase.from('cuotas_detalle').insert([
+                            { deuda_maestra_id: d1.id, espacio_id: espacioId, numero_cuota: 1, monto_cuota: 400000, monto_abonado: 400000, estado: 'pagado', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth()).padStart(2, '0')}-25` },
+                            { deuda_maestra_id: d1.id, espacio_id: espacioId, numero_cuota: 2, monto_cuota: 400000, monto_abonado: 0, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-25` }
+                          ]);
+                        }
+
+                        const { data: d2 } = await supabase.from('deudas_maestras').insert([{
+                          espacio_id: espacioId, creador_id: usuarioId, titulo: 'Préstamo Auto Banco Continental',
+                          tipo: 'prestamo', entidad: 'Continental', alcance: 'familiar', total_cuotas: 36, monto_total: 45000000, tasa_interes: 14.5, moneda: 'PYG'
+                        }]).select('id').single();
+                        if (d2) {
+                          await supabase.from('cuotas_detalle').insert([
+                            { deuda_maestra_id: d2.id, espacio_id: espacioId, numero_cuota: 1, monto_cuota: 1550000, monto_abonado: 0, estado: 'pendiente', fecha_vencimiento: `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-10` }
+                          ]);
+                        }
+                      }
+                    }
+                  }
+
                   toast.success("¡Bienvenido al Modo Demo Instantáneo! 🧪", { id: toastId });
                 } catch (err) {
                   toast.error(err.message, { id: toastId });
