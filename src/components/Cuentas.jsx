@@ -1188,7 +1188,9 @@ export default function Cuentas({
   };
 
   const deudasFiltradas = deudas?.filter(d => {
-    const coincideEstado = pestana === 'activas' ? d.estado === 'activa' : d.estado === 'cerrada';
+    const coincideEstado = pestana === 'activas' 
+      ? (!d.estado || d.estado === 'activa') 
+      : d.estado === 'cerrada';
     if (!coincideEstado) return false;
 
     if (filtroPersona === 'yo') {
