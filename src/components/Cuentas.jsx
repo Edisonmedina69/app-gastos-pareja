@@ -1828,7 +1828,22 @@ export default function Cuentas({
                                 </button>
                               )}
                             </div>
-                            <span className="text-white font-bold">{formatearNumero(c.monto_cuota, d.moneda)}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-bold">{formatearNumero(c.monto_cuota, d.moneda)}</span>
+                              {c.estado === 'pendiente' && (d.alcance === 'familiar' || esMia) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPagoSeleccionado({ cuota: c, maestra: d });
+                                    setMostrarModalPago(true);
+                                  }}
+                                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black px-2.5 py-1 rounded-lg uppercase shadow-sm transition-all active:scale-95"
+                                >
+                                  ABONAR
+                                </button>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
