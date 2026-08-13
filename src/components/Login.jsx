@@ -147,12 +147,6 @@ export default function Login() {
             </button>
           </div>
         </div>
-
-        <div className="mt-8 flex flex-col items-center gap-2">
-           <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-             <ShieldCheck size={14} className="text-indigo-400" /> Sistema Seguro con Encriptación Bancaria 🛡️
-           </p>
-        </div>
       </motion.div>
     </div>
   );
