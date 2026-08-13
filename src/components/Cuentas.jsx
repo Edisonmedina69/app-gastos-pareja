@@ -1189,7 +1189,7 @@ export default function Cuentas({
 
   const deudasFiltradas = deudas?.filter(d => {
     const coincideEstado = pestana === 'activas' 
-      ? (!d.estado || d.estado === 'activa') 
+      ? d.estado !== 'cerrada' 
       : d.estado === 'cerrada';
     if (!coincideEstado) return false;
 
