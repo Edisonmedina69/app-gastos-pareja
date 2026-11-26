@@ -24,8 +24,8 @@ export default defineConfig([
       },
     },
     rules: {
-      // Sin eslint-plugin-react, `<motion.div>` no cuenta como uso de `motion`.
-      'no-unused-vars': ['error', { varsIgnorePattern: '^(?:[A-Z_]|motion$)' }],
+      // Sin eslint-plugin-react, `<motion.div>` o `<Tag>` no cuentan como uso.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^(?:[A-Z_]|motion$)', argsIgnorePattern: '^[A-Z]' }],
       // Arquitectura: sólo `src/services/` habla con Supabase (ver docs/ARQUITECTURA.md).
       'no-restricted-imports': ['error', {
         patterns: [

@@ -73,7 +73,7 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, moned
       </div>
 
       <div className="relative">
-        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensaje()} placeholder="Preguntame lo que quieras, kape..." className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-5 pr-14 text-white outline-none focus:border-indigo-500 transition-all placeholder:text-slate-600" />
+        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensaje()} placeholder="Preguntame lo que quieras, kape..." className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-5 pr-14 text-white outline-none focus:border-indigo-500 transition-all placeholder:text-slate-600 text-base" />
         <button onClick={enviarMensaje} className="absolute right-2 top-2 w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-500 transition-all"><Send size={18} /></button>
       </div>
     </div>

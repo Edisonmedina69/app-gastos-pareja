@@ -42,7 +42,16 @@ function App() {
     getNombreUsuario,
   } = useHogar();
 
-  if (cargando) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Iniciando ÑandeFinanza...</div>;
+  if (cargando) {
+    return (
+      <div role="status" aria-live="polite" className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-foreground">
+        <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 animate-pulse">
+          <span className="text-xl font-black text-primary-foreground">Ñ</span>
+        </div>
+        <p className="text-sm text-muted-foreground">Iniciando ÑandeFinanza...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
@@ -58,7 +67,7 @@ function App() {
 
           <Sidebar datosHogar={datosHogar} usuarioActual={usuarioActual} activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={esSuperadmin} />
 
-          <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto pb-24 lg:pb-8">
+          <main className="flex-1 min-w-0 px-3 pt-3 sm:px-6 sm:pt-6 lg:p-8 overflow-y-auto pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-8">
             <div className="max-w-5xl xl:max-w-6xl mx-auto w-full">
               <Suspense fallback={<div className="p-8 text-center text-slate-400 animate-pulse">Cargando vista... ⚡</div>}>
                 <AnimatePresence mode="wait">
@@ -75,7 +84,7 @@ function App() {
             </div>
           </main>
 
-          <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden">
+          <nav aria-label="Navegación principal" className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 lg:hidden">
             <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={esSuperadmin} notificaciones={notificaciones} markAsRead={markNotisAsRead} responderSolicitud={responderSolicitud} />
           </nav>
         </div>

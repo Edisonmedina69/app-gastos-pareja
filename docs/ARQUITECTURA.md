@@ -47,3 +47,22 @@ npm run lint    # ESLint
 npm test        # tests unitarios (node --test)
 npm run build   # build de producción
 ```
+
+## UI compartida y tokens
+
+- **Tokens** en `src/index.css`: variables OKLCH (`--background`, `--primary`, `--muted-foreground`, …) expuestas a Tailwind como `bg-primary`, `text-muted-foreground`, `border-border`, etc., con soporte de opacidad (`bg-primary/20`). La app arranca en modo oscuro (`<html class="dark">`); la paleta clara ya está definida para cuando todas las pantallas usen tokens.
+- **Tipografía:** escala Major Third (1.250) sobre 16 px (`text-micro`, `text-title-sm|md|lg`).
+- **`src/shared/ui`:** `Button`, `IconButton`, `Input`, `Select`, `Label`, `Field`, `Card`, `Badge`, `Skeleton`, `Modal` y `SegmentedControl`. Todos tienen estados hover, focus-visible, active, disabled y carga.
+- **`Modal`:** en celular es una hoja inferior y desde `sm` un diálogo centrado. Cierra con Escape o tocando el fondo, bloquea el scroll del fondo y gestiona el foco.
+
+### Reglas mobile-first
+
+- Objetivos táctiles de **44 px** o más. Lo garantiza una regla global para `pointer: coarse` en `index.css`, y además los componentes usan `min-h-touch`.
+- Inputs con letra de **16 px** o más (`text-base`), para evitar el zoom de iOS.
+- **Sin scroll horizontal:** los grupos de pestañas tienen scroll propio (`SegmentedControl`).
+- **Navegación inferior** en celular (`app/layout/Navegacion.jsx`) y barra lateral desde `lg`. Ambas respetan `env(safe-area-inset-*)`.
+- Respeta `prefers-reduced-motion`.
+
+### Deudas Pro
+
+`Cuentas.jsx` solo orquesta pestañas, filtros y qué modal está abierto. Cada modal de `features/deudas/components/modales/` maneja su propio formulario: sus valores iniciales salen de `lib/formularios.js`, que tiene tests. Las tarjetas y las listas son componentes aparte.

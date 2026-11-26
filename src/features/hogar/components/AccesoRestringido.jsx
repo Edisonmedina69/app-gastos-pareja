@@ -1,5 +1,6 @@
 import { Shield, LogOut } from "lucide-react";
 import { cerrarSesion } from "../../../services/auth.service";
+import { Button } from "../../../shared/ui";
 
 /** Pantalla para usuarios autenticados que todavía no pertenecen a un hogar. */
 export default function AccesoRestringido() {
@@ -19,12 +20,9 @@ export default function AccesoRestringido() {
         <p className="text-slate-500 text-xs leading-relaxed">
           Por favor, contactá al Administrador para que vincule tu cuenta a un Hogar o verifique tu registro.
         </p>
-        <button
-          onClick={() => cerrarSesion()}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-red-400 font-bold py-3.5 rounded-xl border border-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-wider"
-        >
-          <LogOut size={16} /> Cerrar Sesión / Volver
-        </button>
+        <Button variante="secondary" tamano="lg" onClick={() => cerrarSesion()} className="w-full text-destructive border-destructive/20 hover:text-destructive">
+          <LogOut size={16} aria-hidden="true" /> Cerrar Sesión / Volver
+        </Button>
       </div>
     </div>
   );
