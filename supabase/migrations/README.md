@@ -1,14 +1,16 @@
 # Migraciones
 
-Estos archivos son el **historial** de cambios que se aplicaron a mano en el SQL Editor de Supabase. Antes vivían sueltos en `supabase/*.sql` y en `docs/SQL_FASE_*.md`.
+Las migraciones hasta `20260804000024` son el **historial** de cambios que se aplicaron a mano en el SQL Editor de Supabase. Antes vivían sueltos en `supabase/*.sql` y en `docs/SQL_FASE_*.md`.
+
+La última, `20261126120000_p0_aislamiento_espacios.sql` (P0 de seguridad), es la primera migración nueva. Tiene su rollback en `../rollback/` y sus pruebas en `../tests/`.
 
 - **Nombre:** `AAAAMMDDHHMMSS_descripcion.sql`. El timestamp (UTC) es la fecha del commit que agregó el script; así quedan en el orden en que se aplicaron. Cuando varios scripts entraron en el mismo commit, se separan por un segundo, en orden de dependencia.
 - **Nada se ejecutó** al moverlos. El contenido es el original, con una cabecera que indica el archivo de origen y el commit.
-- **Esquema vigente:** está en [`../schema.sql`](../schema.sql), leído de la base en solo lectura. Las migraciones no se pueden reproducir desde cero: la primera menciona tablas anteriores al proyecto (`usuarios_espacios`, `metas_ahorro`).
+- **Esquema vigente:** está en [`../schema.sql`](../schema.sql). Las tablas se leyeron de la base en solo lectura, y las funciones y políticas muestran el estado después de la P0. Las migraciones no se pueden reproducir desde cero: la primera menciona tablas anteriores al proyecto (`usuarios_espacios`, `metas_ahorro`).
 
 ## ⚠️ Producción
 
-La base de producción **no tiene historial de migraciones** (`supabase_migrations.schema_migrations` está vacía). Si se corre `supabase db push` tal cual, el CLI intentaría aplicar todo de nuevo, incluida la fase 7, que hace `DROP TABLE ... CASCADE`.
+La base de producción **no tiene historial de migraciones**: la tabla `supabase_migrations.schema_migrations` ni siquiera existe. Si se corre `supabase db push` tal cual, el CLI intentaría aplicar todo de nuevo, incluida la fase 7, que hace `DROP TABLE ... CASCADE`.
 
 Para evitarlo:
 
@@ -22,5 +24,7 @@ Para evitarlo:
      20260527013151 20260527220246 20260527220247 20260527220248 20260528031741 \
      20260528041823 20260709003546 20260804000024
    ```
+
+La P0 (`20261126120000`) **no** va en esa lista mientras no esté aplicada: es la que `db push` tiene que ejecutar. Si se aplica a mano, hay que agregarla con el mismo `repair`.
 
 A partir de ahí, cada cambio de esquema nuevo va en su propia migración con `supabase migration new <nombre>`.

@@ -1,9 +1,13 @@
 -- =============================================================================
 -- ÑandeFinanza · Esquema de referencia (schema `public`)
 --
--- Generado el 2026-11-26 leyendo el catálogo de la base de producción con
--- consultas de SOLO LECTURA (pg_class, pg_attribute, pg_constraint, pg_proc,
--- pg_trigger, pg_policies, pg_publication_tables).
+-- Tablas, columnas y restricciones: leídas el 2026-11-26 del catálogo de la base
+-- de producción con consultas de SOLO LECTURA (pg_class, pg_attribute,
+-- pg_constraint, pg_proc, pg_trigger, pg_policies, pg_publication_tables).
+-- Funciones, triggers, permisos y políticas: estado resultante de aplicar la
+-- última migración, supabase/migrations/20261126120000_p0_aislamiento_espacios.sql
+-- (P0 de seguridad). Al 2026-11-26 esa migración todavía no estaba aplicada en
+-- producción; cuando se aplique, este archivo coincide con la base.
 --
 -- Es documentación: NO es una migración y no hace falta ejecutarlo. Sirve para
 -- saber qué columnas, restricciones y políticas existen hoy sin leer las 18
@@ -15,7 +19,6 @@
 --     suscripción `postgres_changes` de la app no recibe eventos.
 --   * `cuentas_maestras`, `cuentas_pendientes` y `prestamos_personales` son
 --     tablas heredadas que la app ya no usa.
---   * `mis_espacios()` lee `public.usuarios_espacios`, tabla que ya no existe.
 -- =============================================================================
 
 
@@ -305,103 +308,267 @@ ALTER TABLE public.prestamos_personales ENABLE ROW LEVEL SECURITY;
 
 
 -- -----------------------------------------------------------------------------
--- Funciones
+-- Funciones (versión de la migración P0 20261126120000)
 -- -----------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION public.es_superadmin()
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
-AS $function$
-  SELECT COALESCE(
-    (SELECT rol = 'superadmin' FROM public.perfiles WHERE id = auth.uid()),
-    FALSE
+create or replace function public.mi_espacio_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.espacio_id from public.perfiles p where p.id = auth.uid() limit 1;
+$$;
+
+create or replace function public.es_superadmin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(
+    (select p.rol = 'superadmin' from public.perfiles p where p.id = auth.uid()),
+    false
   );
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION public.mi_espacio_id()
- RETURNS uuid
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-   SELECT espacio_id FROM public.perfiles WHERE id = auth.uid() LIMIT 1;
-$function$;
+create or replace function public.mis_espacios()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.espacio_id from public.perfiles p
+  where p.id = auth.uid() and p.espacio_id is not null;
+$$;
 
--- Heredada: `usuarios_espacios` ya no existe.
-CREATE OR REPLACE FUNCTION public.mis_espacios()
- RETURNS SETOF uuid
- LANGUAGE sql
- STABLE SECURITY DEFINER
-AS $function$
-      SELECT espacio_id FROM public.usuarios_espacios WHERE usuario_id = auth.uid();
-    $function$;
+create or replace function public.verificar_espacio_disponible(p_espacio_id uuid)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_limite integer;
+  v_actual integer;
+begin
+  -- Solo responde por el espacio propio (o para el superadmin).
+  if p_espacio_id is distinct from public.mi_espacio_id() and not public.es_superadmin() then
+    return null;
+  end if;
+  select e.limite_usuarios into v_limite from public.espacios e where e.id = p_espacio_id;
+  select count(*) into v_actual from public.perfiles p where p.espacio_id = p_espacio_id;
+  return v_limite is null or v_actual < v_limite;
+end;
+$$;
 
-CREATE OR REPLACE FUNCTION public.validar_limite_usuarios()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-    limite INTEGER;
-    actual INTEGER;
-BEGIN
-    -- Si es un UPDATE y el espacio_id no cambió, no validar
-    IF TG_OP = 'UPDATE' THEN
-        IF OLD.espacio_id IS NOT DISTINCT FROM NEW.espacio_id THEN
-            RETURN NEW;
-        END IF;
-    END IF;
+create or replace function public.validar_limite_usuarios()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_limite integer;
+  v_actual integer;
+begin
+  if tg_op = 'UPDATE' and old.espacio_id is not distinct from new.espacio_id then
+    return new;
+  end if;
+  if new.espacio_id is null then
+    return new;
+  end if;
 
-    -- Si se está desvinculando del espacio (espacio_id es NULL), no validar
-    IF NEW.espacio_id IS NULL THEN
-        RETURN NEW;
-    END IF;
+  -- Bloquea la fila del espacio para que dos altas concurrentes no superen el límite.
+  select e.limite_usuarios into v_limite
+  from public.espacios e where e.id = new.espacio_id
+  for update;
 
-    -- Obtener el límite del espacio
-    SELECT limite_usuarios INTO limite FROM public.espacios WHERE id = NEW.espacio_id;
+  if v_limite is null then
+    return new;
+  end if;
 
-    -- Si el espacio no tiene límite o no existe, omitir
-    IF limite IS NULL THEN
-        RETURN NEW;
-    END IF;
+  select count(*)::integer into v_actual
+  from public.perfiles p
+  where p.espacio_id = new.espacio_id and p.id <> new.id;
 
-    -- Contar miembros activos en el espacio destino (excluyendo el propio registro por si acaso)
-    SELECT count(*)::INTEGER INTO actual
-    FROM public.perfiles
-    WHERE espacio_id = NEW.espacio_id AND id <> NEW.id;
+  if v_actual >= v_limite then
+    raise exception 'Límite de usuarios alcanzado para este espacio (%)', v_limite
+      using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
 
-    IF actual >= limite THEN
-        RAISE EXCEPTION 'Límite de usuarios alcanzado para este plan (%)', limite;
-    END IF;
+create or replace function public.proteger_perfil()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if current_user not in ('anon', 'authenticated') or public.es_superadmin() then
+    return new;
+  end if;
 
-    RETURN NEW;
-END;
-$function$;
+  if tg_op = 'INSERT' then
+    if new.espacio_id is not null then
+      raise exception 'Para unirte a un espacio usá un código de invitación'
+        using errcode = '42501';
+    end if;
+    if coalesce(new.rol, 'miembro') <> 'miembro' then
+      raise exception 'No podés asignarte ese rol' using errcode = '42501';
+    end if;
+  else
+    if new.id is distinct from old.id then
+      raise exception 'No se puede cambiar el id del perfil' using errcode = '42501';
+    end if;
+    -- Salir del espacio (NULL) sí se permite; cambiar a otro, no.
+    if new.espacio_id is distinct from old.espacio_id and new.espacio_id is not null then
+      raise exception 'Para unirte a un espacio usá un código de invitación'
+        using errcode = '42501';
+    end if;
+    if new.rol is distinct from old.rol then
+      raise exception 'No podés cambiar tu rol' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end;
+$$;
 
-CREATE OR REPLACE FUNCTION public.verificar_espacio_disponible(p_espacio_id uuid)
- RETURNS boolean
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-  v_limite INTEGER;
-  v_actual INTEGER;
-BEGIN
-  -- Obtener el límite del espacio
-  SELECT limite_usuarios INTO v_limite FROM espacios WHERE id = p_espacio_id;
+create or replace function public.unirse_a_espacio(p_codigo text, p_nombre text default null)
+returns uuid
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid    uuid := auth.uid();
+  v_esp    public.espacios%rowtype;
+  v_perfil public.perfiles%rowtype;
+  v_actual integer;
+  v_nombre text;
+begin
+  if v_uid is null then
+    raise exception 'Necesitás iniciar sesión' using errcode = '28000';
+  end if;
+  if p_codigo is null or length(trim(p_codigo)) < 6 then
+    raise exception 'Código de invitación inválido' using errcode = '22023';
+  end if;
 
-  -- Contar usuarios actuales
-  SELECT COUNT(*) INTO v_actual FROM perfiles WHERE espacio_id = p_espacio_id;
+  select * into v_esp from public.espacios e
+  where upper(e.codigo_invitacion) = upper(trim(p_codigo))
+  for update;
+  if not found then
+    raise exception 'Código de invitación inválido' using errcode = '22023';
+  end if;
 
-  -- Retornar true si hay lugar
-  RETURN v_actual < v_limite;
-END;
-$function$;
+  select * into v_perfil from public.perfiles p where p.id = v_uid for update;
+  if found and v_perfil.espacio_id = v_esp.id then
+    return v_esp.id;                       -- ya es miembro: idempotente
+  end if;
+  if found and v_perfil.espacio_id is not null then
+    raise exception 'Ya pertenecés a otro espacio' using errcode = '42501';
+  end if;
+
+  select count(*) into v_actual from public.perfiles p where p.espacio_id = v_esp.id;
+  if v_esp.limite_usuarios is not null and v_actual >= v_esp.limite_usuarios then
+    raise exception 'Límite de usuarios alcanzado para este espacio (%)', v_esp.limite_usuarios
+      using errcode = 'P0001';
+  end if;
+
+  v_nombre := coalesce(
+    nullif(trim(p_nombre), ''),
+    v_perfil.nombre,
+    nullif(split_part((select u.email from auth.users u where u.id = v_uid), '@', 1), ''),
+    'Miembro'
+  );
+
+  insert into public.perfiles (id, espacio_id, nombre, rol)
+  values (v_uid, v_esp.id, v_nombre, 'miembro')
+  on conflict (id) do update
+    set espacio_id = excluded.espacio_id,
+        nombre     = excluded.nombre,
+        rol        = case when public.perfiles.rol = 'superadmin' then 'superadmin' else 'miembro' end;
+
+  return v_esp.id;
+end;
+$$;
+
+create or replace function public.crear_espacio(p_nombre_espacio text, p_nombre text default null)
+returns uuid
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid       uuid := auth.uid();
+  v_perfil    public.perfiles%rowtype;
+  v_espacio   uuid;
+  v_codigo    text;
+  v_alfabeto  constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  v_bytes     bytea;
+  v_intentos  integer := 0;
+  i           integer;
+begin
+  if v_uid is null then
+    raise exception 'Necesitás iniciar sesión' using errcode = '28000';
+  end if;
+  if p_nombre_espacio is null or length(trim(p_nombre_espacio)) = 0 then
+    raise exception 'El nombre del espacio es obligatorio' using errcode = '22023';
+  end if;
+
+  select * into v_perfil from public.perfiles p where p.id = v_uid for update;
+  if found and v_perfil.espacio_id is not null then
+    raise exception 'Ya pertenecés a otro espacio' using errcode = '42501';
+  end if;
+
+  -- Código de 8 caracteres (32^8 ≈ 1,1·10^12 combinaciones) generado en el servidor.
+  loop
+    v_bytes := extensions.gen_random_bytes(8);
+    v_codigo := '';
+    for i in 0..7 loop
+      v_codigo := v_codigo || substr(v_alfabeto, (get_byte(v_bytes, i) % 32) + 1, 1);
+    end loop;
+    exit when not exists (select 1 from public.espacios e where e.codigo_invitacion = v_codigo);
+    v_intentos := v_intentos + 1;
+    if v_intentos > 10 then
+      raise exception 'No se pudo generar un código único';
+    end if;
+  end loop;
+
+  insert into public.espacios (nombre_familia, codigo_invitacion)
+  values (trim(p_nombre_espacio), v_codigo)
+  returning id into v_espacio;
+
+  insert into public.perfiles (id, espacio_id, nombre, rol)
+  values (
+    v_uid, v_espacio,
+    coalesce(nullif(trim(p_nombre), ''), v_perfil.nombre,
+             nullif(split_part((select u.email from auth.users u where u.id = v_uid), '@', 1), ''),
+             'Admin'),
+    'admin_hogar'
+  )
+  on conflict (id) do update
+    set espacio_id = excluded.espacio_id,
+        nombre     = excluded.nombre,
+        rol        = case when public.perfiles.rol = 'superadmin' then 'superadmin' else 'admin_hogar' end;
+
+  return v_espacio;
+end;
+$$;
 
 -- Heredada: genera cuotas en `cuentas_pendientes`.
 CREATE OR REPLACE FUNCTION public.generar_cuotas(p_descripcion text, p_monto_mensual numeric, p_moneda text, p_cantidad_cuotas integer, p_fecha_inicio date, p_porcentaje_mora numeric, p_pagador_id bigint, p_espacio_id uuid)
  RETURNS void
  LANGUAGE plpgsql
+ SET search_path TO 'public'
 AS $function$
 DECLARE
   v_deuda_padre_id uuid;
@@ -443,49 +610,87 @@ $function$;
 -- -----------------------------------------------------------------------------
 
 CREATE TRIGGER tr_validar_limite_usuarios BEFORE INSERT OR UPDATE OF espacio_id ON public.perfiles FOR EACH ROW EXECUTE FUNCTION validar_limite_usuarios();
+CREATE TRIGGER tr_proteger_perfil BEFORE INSERT OR UPDATE ON public.perfiles FOR EACH ROW EXECUTE FUNCTION proteger_perfil();
+
+
+-- -----------------------------------------------------------------------------
+-- Permisos de ejecución (anon no ejecuta ninguna función)
+-- -----------------------------------------------------------------------------
+
+revoke execute on function public.mi_espacio_id()                      from public, anon;
+revoke execute on function public.es_superadmin()                      from public, anon;
+revoke execute on function public.mis_espacios()                       from public, anon;
+revoke execute on function public.verificar_espacio_disponible(uuid)   from public, anon;
+revoke execute on function public.unirse_a_espacio(text, text)         from public, anon;
+revoke execute on function public.crear_espacio(text, text)            from public, anon;
+revoke execute on function public.generar_cuotas(text, numeric, text, integer, date, numeric, bigint, uuid) from public, anon;
+revoke execute on function public.validar_limite_usuarios()            from public, anon, authenticated;
+revoke execute on function public.proteger_perfil()                    from public, anon, authenticated;
+grant execute on function public.mi_espacio_id()                       to authenticated, service_role;
+grant execute on function public.es_superadmin()                       to authenticated, service_role;
+grant execute on function public.mis_espacios()                        to authenticated, service_role;
+grant execute on function public.verificar_espacio_disponible(uuid)    to authenticated, service_role;
+grant execute on function public.unirse_a_espacio(text, text)          to authenticated, service_role;
+grant execute on function public.crear_espacio(text, text)             to authenticated, service_role;
+grant execute on function public.generar_cuotas(text, numeric, text, integer, date, numeric, bigint, uuid) to authenticated, service_role;
 
 
 -- -----------------------------------------------------------------------------
 -- Políticas
 -- -----------------------------------------------------------------------------
 
--- espacios
-CREATE POLICY "Permitir crear espacios a usuarios autenticados" ON public.espacios AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.role() = 'authenticated'::text));
-CREATE POLICY "RLS_Espacios_Insert" ON public.espacios AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (true);
-CREATE POLICY "RLS_Espacios_Select_Public" ON public.espacios AS PERMISSIVE FOR SELECT TO public
-  USING (true);
-CREATE POLICY "Superadmin gestiona todo espacios" ON public.espacios AS PERMISSIVE FOR ALL TO public
-  USING (es_superadmin());
-CREATE POLICY "Ver mi propio espacio" ON public.espacios AS PERMISSIVE FOR SELECT TO public
-  USING ((id = mi_espacio_id()));
+-- espacios: sólo el propio (o superadmin). El alta es por RPC crear_espacio.
+CREATE POLICY "Ver mi propio espacio" ON public.espacios AS PERMISSIVE FOR SELECT TO authenticated
+  USING ((id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Superadmin gestiona todo espacios" ON public.espacios AS PERMISSIVE FOR ALL TO authenticated
+  USING (( SELECT es_superadmin()))
+  WITH CHECK (( SELECT es_superadmin()));
 
--- perfiles
-CREATE POLICY "Actualizar perfil propio" ON public.perfiles AS PERMISSIVE FOR UPDATE TO public
-  USING ((id = auth.uid()));
-CREATE POLICY "Insertar perfil propio" ON public.perfiles AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((id = auth.uid()));
-CREATE POLICY "RLS_Perfiles_Hogar" ON public.perfiles AS PERMISSIVE FOR SELECT TO public
-  USING ((espacio_id = mi_espacio_id()));
-CREATE POLICY "RLS_Perfiles_Propio" ON public.perfiles AS PERMISSIVE FOR ALL TO public
-  USING ((auth.uid() = id));
-CREATE POLICY "Superadmin gestiona todo perfiles" ON public.perfiles AS PERMISSIVE FOR ALL TO public
-  USING (es_superadmin());
-CREATE POLICY "Ver o proprio perfil" ON public.perfiles AS PERMISSIVE FOR SELECT TO public
-  USING ((id = auth.uid()));
-CREATE POLICY "Ver perfiles de mi espacio" ON public.perfiles AS PERMISSIVE FOR SELECT TO public
-  USING (((id = auth.uid()) OR (espacio_id = mi_espacio_id())));
+-- perfiles: espacio_id y rol los protege el trigger tr_proteger_perfil.
+CREATE POLICY "Ver perfiles de mi espacio" ON public.perfiles AS PERMISSIVE FOR SELECT TO authenticated
+  USING (((id = ( SELECT auth.uid())) OR (espacio_id = ( SELECT mi_espacio_id()))));
+CREATE POLICY "Insertar perfil propio" ON public.perfiles AS PERMISSIVE FOR INSERT TO authenticated
+  WITH CHECK ((id = ( SELECT auth.uid())));
+CREATE POLICY "Actualizar perfil propio" ON public.perfiles AS PERMISSIVE FOR UPDATE TO authenticated
+  USING ((id = ( SELECT auth.uid())))
+  WITH CHECK ((id = ( SELECT auth.uid())));
+CREATE POLICY "Borrar perfil propio" ON public.perfiles AS PERMISSIVE FOR DELETE TO authenticated
+  USING ((id = ( SELECT auth.uid())));
+CREATE POLICY "Superadmin gestiona todo perfiles" ON public.perfiles AS PERMISSIVE FOR ALL TO authenticated
+  USING (( SELECT es_superadmin()))
+  WITH CHECK (( SELECT es_superadmin()));
 
--- gastos e ingresos
-CREATE POLICY "Gestionar gastos" ON public.gastos AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id = mi_espacio_id()));
-CREATE POLICY "Gestionar ingresos" ON public.ingresos_mensuales AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id = mi_espacio_id()));
-CREATE POLICY "Gestionar mis ingresos programados" ON public.ingresos_programados AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id = mi_espacio_id()));
-CREATE POLICY "Ver mi historial de salarios" ON public.historial_salarios AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id = mi_espacio_id()));
+-- tablas de datos (incluidas las heredadas)
+CREATE POLICY "Gestionar gastos" ON public.gastos AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Gestionar ingresos" ON public.ingresos_mensuales AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Gestionar mis notificaciones" ON public.notificaciones AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Gestionar deudas" ON public.deudas_maestras AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Gestionar cuotas" ON public.cuotas_detalle AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Gestionar mis ingresos programados" ON public.ingresos_programados AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Ver mi historial de salarios" ON public.historial_salarios AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Cuentas Maestras: Acceso a mi espacio" ON public.cuentas_maestras AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Cuentas: Acceso a mi espacio" ON public.cuentas_pendientes AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
+CREATE POLICY "Prestamos: Acceso a mi espacio" ON public.prestamos_personales AS PERMISSIVE FOR ALL TO authenticated
+  USING ((espacio_id = ( SELECT mi_espacio_id())))
+  WITH CHECK ((espacio_id = ( SELECT mi_espacio_id())));
 
 -- gastos_programados (los nombres están truncados a 63 caracteres por Postgres)
 CREATE POLICY "Permitir actualización de gastos programados a miembros del ho" ON public.gastos_programados AS PERMISSIVE FOR UPDATE TO authenticated
@@ -497,23 +702,3 @@ CREATE POLICY "Permitir inserción de gastos programados a miembros del hogar" O
   WITH CHECK ((espacio_id = mi_espacio_id()));
 CREATE POLICY "Permitir lectura de gastos programados a miembros del hogar" ON public.gastos_programados AS PERMISSIVE FOR SELECT TO authenticated
   USING ((espacio_id = mi_espacio_id()));
-
--- deudas y notificaciones
-CREATE POLICY "Gestionar deudas" ON public.deudas_maestras AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id = mi_espacio_id()));
-CREATE POLICY "Gestionar cuotas" ON public.cuotas_detalle AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id = mi_espacio_id()));
-CREATE POLICY "Gestionar mis notificaciones" ON public.notificaciones AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id = mi_espacio_id()));
-
--- tablas heredadas
-CREATE POLICY "Cuentas Maestras: Acceso a mi espacio" ON public.cuentas_maestras AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id IN ( SELECT mis_espacios() AS mis_espacios)));
-CREATE POLICY "Permitir todo a usuarios autenticados en cuentas_maestras" ON public.cuentas_maestras AS PERMISSIVE FOR ALL TO authenticated
-  USING (true);
-CREATE POLICY "Aislamiento por espacio" ON public.cuentas_pendientes AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id IN ( SELECT mis_espacios() AS mis_espacios)));
-CREATE POLICY "Cuentas: Acceso a mi espacio" ON public.cuentas_pendientes AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id IN ( SELECT mis_espacios() AS mis_espacios)));
-CREATE POLICY "Prestamos: Acceso a mi espacio" ON public.prestamos_personales AS PERMISSIVE FOR ALL TO public
-  USING ((espacio_id IN ( SELECT mis_espacios() AS mis_espacios)));
