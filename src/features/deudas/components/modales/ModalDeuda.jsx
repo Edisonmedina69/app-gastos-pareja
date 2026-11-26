@@ -30,13 +30,13 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
   const [cantidadCuotas, setCantidadCuotas] = useState(ini.cantidadCuotas);
   const [cuotasPagadas, setCuotasPagadas] = useState(ini.cuotasPagadas);
   const [diaVencimiento, setDiaVencimiento] = useState(ini.diaVencimiento);
-  const [fechaCierreTarjeta] = useState(ini.fechaCierreTarjeta); // el asistente no tiene campo para editarlo; se conserva el valor
+  const [fechaCierreTarjeta, setFechaCierreTarjeta] = useState(ini.fechaCierreTarjeta);
   const [deudaMedioPago, setDeudaMedioPago] = useState(ini.deudaMedioPago);
   const [deudaTipoCuenta, setDeudaTipoCuenta] = useState(ini.deudaTipoCuenta);
   const [deudaAliasCuenta, setDeudaAliasCuenta] = useState(ini.deudaAliasCuenta);
   const [deudaNroCuenta, setDeudaNroCuenta] = useState(ini.deudaNroCuenta);
-  const [deudaNombreTitular] = useState(ini.deudaNombreTitular); // el asistente no tiene campo para editarlo; se conserva el valor
-  const [deudaCiTitular] = useState(ini.deudaCiTitular); // el asistente no tiene campo para editarlo; se conserva el valor
+  const [deudaNombreTitular, setDeudaNombreTitular] = useState(ini.deudaNombreTitular);
+  const [deudaCiTitular, setDeudaCiTitular] = useState(ini.deudaCiTitular);
   const [monedaDeuda, setMonedaDeuda] = useState(ini.monedaDeuda);
   const [modoMonto, setModoMonto] = useState(ini.modoMonto);
   const [fechaInicioDeuda, setFechaInicioDeuda] = useState(ini.fechaInicioDeuda);
@@ -452,6 +452,14 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               </div>
             </div>
 
+            {tipoDeuda === 'tarjeta_credito' && (
+              <div className="space-y-1">
+                <label htmlFor="deuda-dia-cierre" className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Día de Cierre de la Tarjeta</label>
+                <input id="deuda-dia-cierre" type="number" inputMode="numeric" min="1" max="31" value={fechaCierreTarjeta} onChange={(e) => setFechaCierreTarjeta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none text-base focus:border-indigo-500/50" />
+                <p className="text-[10px] text-slate-500 ml-1">Ese día se cierra el ciclo y se genera el saldo del mes siguiente.</p>
+              </div>
+            )}
+
             {/* BOTÓN COLAPSABLE AVANZADO */}
             <div className="pt-1">
               <button
@@ -517,9 +525,21 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                         <button type="button" onClick={() => setDeudaTipoCuenta('nro_cuenta')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Nro. Cuenta</button>
                       </div>
                       {deudaTipoCuenta === 'alias' ? (
-                        <input type="text" placeholder="Ej: mi.alias.banco" value={deudaAliasCuenta} onChange={(e) => setDeudaAliasCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none" />
+                        <input type="text" aria-label="Alias o CBU" placeholder="Ej: mi.alias.banco" value={deudaAliasCuenta} onChange={(e) => setDeudaAliasCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none" />
                       ) : (
-                        <input type="text" placeholder="Ej: 001-123456-00" value={deudaNroCuenta} onChange={(e) => setDeudaNroCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none" />
+                        <>
+                          <input type="text" aria-label="Número de cuenta" placeholder="Ej: 001-123456-00" value={deudaNroCuenta} onChange={(e) => setDeudaNroCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none" />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label htmlFor="deuda-titular" className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre del Titular</label>
+                              <input id="deuda-titular" type="text" autoComplete="name" placeholder="Titular de la cuenta" value={deudaNombreTitular} onChange={(e) => setDeudaNombreTitular(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none focus:border-indigo-500/50" />
+                            </div>
+                            <div className="space-y-1">
+                              <label htmlFor="deuda-ci" className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
+                              <input id="deuda-ci" type="text" inputMode="numeric" placeholder="Ej: 1234567" value={deudaCiTitular} onChange={(e) => setDeudaCiTitular(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none focus:border-indigo-500/50" />
+                            </div>
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
