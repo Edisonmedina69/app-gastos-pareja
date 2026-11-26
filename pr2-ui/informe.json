@@ -1,0 +1,136 @@
+{
+  "390-01-login": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-02-inicio": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-03-deudas-activas": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-04-deudas-fijos": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-05-deudas-previsiones": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-10-modal-nueva-deuda": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-11-modal-abonar": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-12-modal-gasto-fijo": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-06-ingresos": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-07-historial": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-08-asistente": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-errores": [],
+  "1440-01-login": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "1440-02-inicio": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 6,
+    "inputsMenos16px": 0
+  },
+  "1440-03-deudas-activas": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 28,
+    "inputsMenos16px": 0
+  },
+  "1440-04-deudas-fijos": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 35,
+    "inputsMenos16px": 0
+  },
+  "1440-05-deudas-previsiones": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 3,
+    "inputsMenos16px": 0
+  },
+  "1440-10-modal-nueva-deuda": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 36,
+    "inputsMenos16px": 0
+  },
+  "1440-11-modal-abonar": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 34,
+    "inputsMenos16px": 0
+  },
+  "1440-12-modal-gasto-fijo": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 35,
+    "inputsMenos16px": 0
+  },
+  "1440-06-ingresos": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 7,
+    "inputsMenos16px": 0
+  },
+  "1440-07-historial": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 20,
+    "inputsMenos16px": 0
+  },
+  "1440-08-asistente": {
+    "overflowX": 0,
+    "desbordes": [],
+    "tactilesChicos": 3,
+    "inputsMenos16px": 0
+  },
+  "1440-errores": []
+}
