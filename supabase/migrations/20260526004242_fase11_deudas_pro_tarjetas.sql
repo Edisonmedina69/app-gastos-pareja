@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_11_DEUDAS_PRO.md · commit 08fba1a 2026-05-25
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    MIGRACIÓN: Módulo Deudas Pro (Fase 1)
    Agrega campos necesarios para Tarjetas de Crédito y Pagos Flexibles.

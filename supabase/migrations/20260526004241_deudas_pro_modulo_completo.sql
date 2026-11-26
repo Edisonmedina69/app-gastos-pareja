@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_MODULO_DEUDAS_PRO_COMPLETO.md · commit 08fba1a 2026-05-25
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    SCRIPT MAESTRO: MÓDULO DEUDAS PRO Y SALUD FINANCIERA
    App: ÑandeFinanza 2.0

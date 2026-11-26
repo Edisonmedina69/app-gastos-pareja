@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: supabase/add_medio_pago_gastos_fijos.sql · commit 0b3120a 2026-07-08
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 -- Agregar columnas de medio de pago y datos bancarios a gastos_programados
 ALTER TABLE public.gastos_programados
 ADD COLUMN IF NOT EXISTS medio_pago TEXT NOT NULL DEFAULT 'transferencia'

@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: supabase/create_gastos_programados.sql · commit 0b0b321 2026-05-27
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 -- Creación de la tabla de Gastos Programados (Fijos)
 CREATE TABLE IF NOT EXISTS public.gastos_programados (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

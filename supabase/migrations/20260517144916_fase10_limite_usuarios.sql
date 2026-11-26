@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_10.md · commit 1554dd9 2026-05-17
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    ACTUALIZACIÓN FASE 10: Planes SaaS y Gestión de Límites
    Ejecutar en el SQL Editor de Supabase

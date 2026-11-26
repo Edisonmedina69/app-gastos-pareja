@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: supabase/update_gastos_programados_rls.sql · commit 0b0b321 2026-05-27
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 -- Actualizar políticas de RLS para usar public.mi_espacio_id()
 -- Esto evita recursiones y estandariza con las demás tablas
 

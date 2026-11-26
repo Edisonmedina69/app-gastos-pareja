@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_17_FIX_LIMITS_AND_RECURSION.md · commit 605484f 2026-05-26
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    ACTUALIZACIÓN FASE 17: Corrección de Recursión RLS y Robustez del Límite de Usuarios
    Ejecutar este script en el SQL Editor de tu Dashboard de Supabase.

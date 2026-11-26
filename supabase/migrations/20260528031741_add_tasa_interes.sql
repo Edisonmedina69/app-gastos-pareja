@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: supabase/add_tasa_interes.sql · commit 3032218 2026-05-28
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 -- MIGRACIÓN: Módulo Deudas Pro - Agregar Tasa de Interés y Fix Cierre Tarjeta
 -- Ejecutá este script en el SQL Editor de tu Dashboard de Supabase.
 

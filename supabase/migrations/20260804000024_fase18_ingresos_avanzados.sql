@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_18_INGRESOS_ADVANCED.md · commit b637913 2026-08-03
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    MIGRACIÓN FASE 18: Mejoras en Ingresos Mensuales e Ingresos Programados (Issue #8)
    Ejecutar este script en el SQL Editor de Supabase.

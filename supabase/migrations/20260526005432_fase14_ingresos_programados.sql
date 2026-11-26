@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_14_INGRESOS.md · commit c6055d1 2026-05-25
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    MIGRACIÓN: Módulo de Gestión de Ingresos (HU-11, HU-12, HU-13)
    Sistema de Ingresos Programados y Variables.

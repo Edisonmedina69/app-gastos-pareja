@@ -1,3 +1,17 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_7.md · commit 692d763 2026-05-16
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
+-- Guarda: nunca re-ejecutar sobre una base que ya tiene el esquema (producción).
+DO $$
+BEGIN
+  IF to_regclass('public.espacios') IS NOT NULL THEN
+    RAISE EXCEPTION 'Migración histórica: la base ya tiene el esquema. Ver supabase/migrations/README.md (usar "supabase migration repair --status applied").';
+  END IF;
+END $$;
+
 /* 
    SCRIPT MAESTRO: REESTRUCTURACIÓN FASE 7 (Multi-tenancy Pro)
    ÑandeFinanza 2.0 - Versión Final Estable

@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_15_HISTORIAL_SALARIOS.md · commit 1cce276 2026-05-25
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    MIGRACIÓN: Módulo de Ajuste de Salario (HU-14)
    Historial de Crecimiento Salarial y Auditoría.

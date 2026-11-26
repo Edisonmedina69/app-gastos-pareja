@@ -1,3 +1,9 @@
+-- =============================================================================
+-- Migración histórica · aplicada a mano en el SQL Editor de Supabase.
+-- Origen: docs/SQL_FASE_13_FINAL_DEUDAS.md · commit 08fba1a 2026-05-25
+-- NO volver a ejecutar en producción: el esquema vigente está en supabase/schema.sql.
+-- =============================================================================
+
 /* 
    MIGRACIÓN: Módulo Deudas Pro (Fase 3, 4 y Salud Financiera)
    Agrega campos para alcance, estados y gestión de solicitudes.
