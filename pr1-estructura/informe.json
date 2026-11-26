@@ -1,0 +1,84 @@
+{
+  "390-01-login": {
+    "overflowX": 0,
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "390-02-inicio": {
+    "overflowX": 0,
+    "tactilesChicos": 4,
+    "inputsMenos16px": 0
+  },
+  "390-03-deudas-activas": {
+    "overflowX": 0,
+    "tactilesChicos": 34,
+    "inputsMenos16px": 0
+  },
+  "390-04-deudas-fijos": {
+    "overflowX": 0,
+    "tactilesChicos": 41,
+    "inputsMenos16px": 0
+  },
+  "390-05-deudas-previsiones": {
+    "overflowX": 0,
+    "tactilesChicos": 9,
+    "inputsMenos16px": 0
+  },
+  "390-06-ingresos": {
+    "overflowX": 0,
+    "tactilesChicos": 5,
+    "inputsMenos16px": 0
+  },
+  "390-07-historial": {
+    "overflowX": 0,
+    "tactilesChicos": 20,
+    "inputsMenos16px": 3
+  },
+  "390-08-asistente": {
+    "overflowX": 0,
+    "tactilesChicos": 1,
+    "inputsMenos16px": 0
+  },
+  "390-errores": [],
+  "1440-01-login": {
+    "overflowX": 0,
+    "tactilesChicos": 0,
+    "inputsMenos16px": 0
+  },
+  "1440-02-inicio": {
+    "overflowX": 0,
+    "tactilesChicos": 6,
+    "inputsMenos16px": 0
+  },
+  "1440-03-deudas-activas": {
+    "overflowX": 0,
+    "tactilesChicos": 37,
+    "inputsMenos16px": 0
+  },
+  "1440-04-deudas-fijos": {
+    "overflowX": 0,
+    "tactilesChicos": 43,
+    "inputsMenos16px": 0
+  },
+  "1440-05-deudas-previsiones": {
+    "overflowX": 0,
+    "tactilesChicos": 11,
+    "inputsMenos16px": 0
+  },
+  "1440-06-ingresos": {
+    "overflowX": 0,
+    "tactilesChicos": 7,
+    "inputsMenos16px": 0
+  },
+  "1440-07-historial": {
+    "overflowX": 0,
+    "tactilesChicos": 22,
+    "inputsMenos16px": 3
+  },
+  "1440-08-asistente": {
+    "overflowX": 0,
+    "tactilesChicos": 3,
+    "inputsMenos16px": 0
+  },
+  "1440-errores": []
+}
