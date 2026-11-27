@@ -152,7 +152,9 @@ select pg_temp.como('00000000-0000-4000-8000-0000000000a2');
 do $$ begin
   perform public.unirse_a_espacio('QACDEV', 'Intruso');
   raise exception 'FALLO 4a tercer miembro aceptado con límite 2';
-exception when raise_exception then raise notice 'OK    4a RPC: %', sqlerrm;
+exception when raise_exception then
+  if sqlerrm not like 'Límite de usuarios alcanzado%' then raise; end if;
+  raise notice 'OK    4a RPC: %', sqlerrm;
 end $$;
 reset role;
 -- El trigger también lo aplica aunque la escritura venga de un superadmin o del servidor
@@ -160,7 +162,9 @@ do $$ begin
   insert into public.perfiles (id, espacio_id, nombre)
   values ('00000000-0000-4000-8000-0000000000a2', '1759040a-d53b-42d7-a0bd-37cb2f2312db', 'Intruso');
   raise exception 'FALLO 4b trigger no aplicó el límite';
-exception when raise_exception then raise notice 'OK    4b trigger SECURITY DEFINER: %', sqlerrm;
+exception when raise_exception then
+  if sqlerrm not like 'Límite de usuarios alcanzado%' then raise; end if;
+  raise notice 'OK    4b trigger SECURITY DEFINER: %', sqlerrm;
 end $$;
 -- Con lugar libre, entra (crea el perfil si no existía)
 select pg_temp.como('00000000-0000-4000-8000-0000000000a2');
