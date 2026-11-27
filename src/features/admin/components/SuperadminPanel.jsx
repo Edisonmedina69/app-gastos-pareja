@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import * as hogarService from "../../../services/hogar.service";
 import { registrarCuentaSinSesion } from "../../../services/auth.service";
 import { eliminarGastosDeEspacio } from "../../../services/gastos.service";
@@ -25,7 +26,11 @@ export default function SuperadminPanel({ datosHogar }) {
   const [espacios, setEspacios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
-  const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const cerrarFormulario = () => location.state?.desdeFormulario ? navigate(-1) : navigate('/admin');
+  const mostrarModalCrear = location.pathname === '/admin/hogares/nuevo';
+  const setMostrarModalCrear = (abrir) => abrir ? navigate('/admin/hogares/nuevo', { state: { desdeFormulario: true } }) : cerrarFormulario();
   const [nuevoHogarNombre, setNuevoNombre] = useState("");
   const [limiteUsuarios, setLimiteUsuarios] = useState(2);
   const [guardando, setGuardando] = useState(false);
@@ -53,7 +58,8 @@ export default function SuperadminPanel({ datosHogar }) {
   const [usuario2Password, setUsuario2Password] = useState("");
 
   // --- MODAL DE CREACIÓN DE USUARIO INDEPENDIENTE ---
-  const [mostrarModalCrearUsuario, setMostrarModalCrearUsuario] = useState(false);
+  const mostrarModalCrearUsuario = location.pathname === '/admin/usuarios/nuevo';
+  const setMostrarModalCrearUsuario = (abrir) => abrir ? navigate('/admin/usuarios/nuevo', { state: { desdeFormulario: true } }) : cerrarFormulario();
   const [usuarioNombre, setUsuarioNombre] = useState("");
   const [usuarioPassword, setUsuarioPassword] = useState("");
   const [usuarioApodo, setUsuarioApodo] = useState("");
@@ -487,6 +493,7 @@ export default function SuperadminPanel({ datosHogar }) {
 
   return (
     <div className="space-y-6 pb-20">
+      {!mostrarModalCrear && !mostrarModalCrearUsuario && <>
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-white flex items-center gap-2">
@@ -542,6 +549,7 @@ export default function SuperadminPanel({ datosHogar }) {
       )}
 
       {/* MODAL CREAR HOGAR */}
+      </>}
       <ModalCrearHogar crearEspacio={crearEspacio} guardando={guardando} limiteUsuarios={limiteUsuarios} mostrarModalCrear={mostrarModalCrear} nuevoHogarNombre={nuevoHogarNombre} setLimiteUsuarios={setLimiteUsuarios} setMostrarModalCrear={setMostrarModalCrear} setNuevoNombre={setNuevoNombre} setUsuario1Nombre={setUsuario1Nombre} setUsuario1Password={setUsuario1Password} setUsuario2Nombre={setUsuario2Nombre} setUsuario2Password={setUsuario2Password} usuario1Nombre={usuario1Nombre} usuario1Password={usuario1Password} usuario2Nombre={usuario2Nombre} usuario2Password={usuario2Password} />
 
       {/* MODAL CREAR USUARIO INDEPENDIENTE */}

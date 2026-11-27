@@ -4,7 +4,7 @@ import { Copy } from 'lucide-react';
 import { formatarInput, desformatearInput } from '../../../../shared/lib/formatters';
 import { insertarGastos } from '../../../../services/gastos.service';
 import { valoresInicialesPagoFijo } from '../../lib/formularios';
-import { Modal } from '../../../../shared/ui/Modal';
+import { FormPage } from '../../../../shared/ui/FormPage';
 
 /** Registra el pago real del mes de un gasto fijo. */
 export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsuario, datosHogar, onClose, onGuardado, onEditarMedioPago }) {
@@ -46,7 +46,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
   };
 
   return (
-    <Modal onClose={onClose} ancho="sm" ariaLabel="Pagar servicio">
+    <FormPage resumen={<><p className="font-bold">{gastoFijoAPagar.concepto}</p><p className="text-2xl tabular-nums mt-3">{pagarMontoFormateado || "0"} {pagarMoneda}</p><p className="text-sm text-muted-foreground mt-2">{pagarMedioPago}</p></>} onClose={onClose} ariaLabel="Pagar servicio">
       <h2 className="text-xl font-black text-white mb-2 uppercase flex items-center gap-2">
         Pagar Servicio 💸
       </h2>
@@ -201,6 +201,6 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
           CONFIRMAR PAGO
         </button>
       </form>
-    </Modal>
+    </FormPage>
   );
 }

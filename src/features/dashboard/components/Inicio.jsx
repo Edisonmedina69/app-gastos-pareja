@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { FormPage } from "../../../shared/ui/FormPage";
 import { insertarGastos } from "../../../services/gastos.service";
 import { toast } from "react-hot-toast";
 import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta } from "../../../shared/lib/formatters";
@@ -15,7 +17,10 @@ export default function Inicio({
   saludFinanciera, gastosProgramados
 }) {
   const [mostrarMagico, setMostrarMagico] = useState(false);
-  const [mostrarModalManual, setMostrarModalManual] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const mostrarModalManual = location.pathname === '/gastos/nuevo';
+  const setMostrarModalManual = (abrir) => abrir ? navigate('/gastos/nuevo', { state: { desdeFormulario: true } }) : location.state?.desdeFormulario ? navigate(-1) : navigate('/');
   const [concepto, setConcepto] = useState("");
   const [montoFormateado, setMontoFormateado] = useState("");
   const [categoria, setCategoria] = useState("Casa");
@@ -131,6 +136,7 @@ export default function Inicio({
 
   return (
     <div className="space-y-6 pb-20">
+      {!mostrarModalManual && <>
       {/* Selector Moneda */}
       <div className="flex justify-center">
         <div className="inline-flex p-1 bg-white/5 border border-white/10 rounded-full backdrop-blur-md">
@@ -227,11 +233,10 @@ export default function Inicio({
          </button>
       </div>
 
+      </>}
       <AnimatePresence>
         {mostrarModalManual && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm glass-panel p-6 rounded-3xl relative">
-              <button onClick={() => { setMostrarModalManual(false); setPrevisionSeleccionada(""); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
+          <FormPage ariaLabel="Nuevo gasto" onClose={() => { setMostrarModalManual(false); setPrevisionSeleccionada(''); }} resumen={<><p className="font-bold">{concepto || 'Gasto manual'}</p><p className="text-2xl tabular-nums mt-3">{formatearNumero(nuevoMontoGasto, monedaGlobal)}</p><p className="text-muted-foreground mt-2">{categoria}</p></>}>
               <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2"><Plus className="text-emerald-400"/> Nuevo Gasto</h2>
               <form onSubmit={guardarGastoManual} className="space-y-4">
                 <input type="text" placeholder="¿En qué gastaste?" className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" value={concepto} onChange={(e) => setConcepto(e.target.value)} required />
@@ -287,8 +292,7 @@ export default function Inicio({
                   {guardando ? <Loader2 className="animate-spin mx-auto"/> : "GUARDAR GASTO"}
                 </button>
               </form>
-            </motion.div>
-          </div>
+          </FormPage>
         )}
       </AnimatePresence>
 

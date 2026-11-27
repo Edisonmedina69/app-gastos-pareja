@@ -5,7 +5,7 @@ import { Loader2, Hash, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { formatarInput, desformatearInput } from '../../../../shared/lib/formatters';
 import * as gastosProgramadosService from '../../../../services/gastosProgramados.service';
 import { valoresInicialesFijo } from '../../lib/formularios';
-import { Modal } from '../../../../shared/ui/Modal';
+import { FormPage } from '../../../../shared/ui/FormPage';
 
 /** Alta o ajuste de un gasto fijo mensual (servicios, alquiler, etc.). */
 export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, monedaGlobal, onClose, onGuardado }) {
@@ -85,7 +85,7 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
   };
 
   return (
-    <Modal onClose={onClose} ancho="md" ariaLabel={idFijoEditando ? 'Ajustar gasto fijo' : 'Programar gasto fijo'}>
+    <FormPage resumen={<><p className="font-bold">{fijoConcepto || "Gasto fijo"}</p><p className="text-2xl tabular-nums mt-3">{fijoMontoFormateado || "0"} {fijoMoneda}</p><p className="text-sm text-muted-foreground mt-2">{`Día ${fijoDiaRecurrencia} de cada mes`}</p></>} onClose={onClose} ariaLabel={idFijoEditando ? 'Ajustar gasto fijo' : 'Programar gasto fijo'}>
 
       {/* Header Wizard Gasto Fijo */}
       <div className="mb-6">
@@ -154,7 +154,7 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
               </select>
             </div>
 
-            <div className="pt-2">
+            <div className="form-actions pt-2">
               <button 
                 type="button" 
                 disabled={!fijoConcepto.trim()} 
@@ -259,7 +259,7 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
               </div>
             )}
 
-            <div className="pt-2 flex gap-3">
+            <div className="form-actions pt-2 flex gap-3">
               <button 
                 type="button" 
                 onClick={() => setPasoFijo(1)} 
@@ -278,6 +278,6 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
           </motion.div>
         )}
       </form>
-    </Modal>
+    </FormPage>
   );
 }

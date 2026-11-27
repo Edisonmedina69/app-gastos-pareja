@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { formatarInput, desformatearInput } from '../../../../shared/lib/formatters';
 import { insertarGastos } from '../../../../services/gastos.service';
 import * as deudasService from '../../../../services/deudas.service';
-import { Modal } from '../../../../shared/ui/Modal';
+import { FormPage } from '../../../../shared/ui/FormPage';
 
 /** Carga una compra en una tarjeta de crédito: gasto + disponible + saldo del ciclo. */
 export default function ModalCompra({ compraSeleccionada, usuarioActual, datosHogar, onClose, onGuardado }) {
@@ -60,7 +60,7 @@ export default function ModalCompra({ compraSeleccionada, usuarioActual, datosHo
 
   if (!compraSeleccionada) return null;
   return (
-    <Modal onClose={onClose} ancho="sm" capa="z-[110]" ariaLabel="Cargar compra">
+    <FormPage resumen={<><p className="font-bold">{compraConcepto || compraSeleccionada.titulo}</p><p className="text-2xl tabular-nums mt-3">{compraMontoFormateado || "0"} {compraSeleccionada.moneda}</p><p className="text-sm text-muted-foreground mt-2">{compraCategoria}</p></>} onClose={onClose} ariaLabel="Cargar compra">
       <h3 className="text-white font-bold text-lg mb-1">Cargar Compra</h3>
       <p className="text-[10px] text-slate-400 font-bold mb-4 uppercase tracking-wider">
         Tarjeta: {compraSeleccionada.titulo}
@@ -121,6 +121,6 @@ export default function ModalCompra({ compraSeleccionada, usuarioActual, datosHo
           </button>
         </div>
       </form>
-    </Modal>
+    </FormPage>
   );
 }

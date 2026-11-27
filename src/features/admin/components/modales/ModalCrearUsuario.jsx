@@ -1,3 +1,4 @@
+import { FormPage } from '../../../../shared/ui/FormPage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Loader2, X } from 'lucide-react';
 
@@ -5,14 +6,7 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
   return (
     <AnimatePresence>
       {mostrarModalCrearUsuario && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }} 
-            animate={{ opacity: 1, scale: 1 }} 
-            exit={{ opacity: 0, scale: 0.95 }} 
-            className="w-full max-w-md glass-panel p-6 rounded-3xl relative"
-          >
-            <button onClick={() => setMostrarModalCrearUsuario(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><X size={24} /></button>
+        <FormPage ariaLabel="Crear usuario" onClose={() => setMostrarModalCrearUsuario(false)}>
             <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
               <Users className="w-5 h-5 text-emerald-400" /> Crear y Vincular Usuario
             </h2>
@@ -85,8 +79,7 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
                 </button>
               </div>
             </form>
-          </motion.div>
-        </div>
+        </FormPage>
       )}
     </AnimatePresence>
   );

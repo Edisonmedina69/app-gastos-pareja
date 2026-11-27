@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { formatarInput, desformatearInput } from '../../../../shared/lib/formatters';
 import * as gastosProgramadosService from '../../../../services/gastosProgramados.service';
 import { valoresInicialesPrevision } from '../../lib/formularios';
-import { Modal } from '../../../../shared/ui/Modal';
+import { FormPage } from '../../../../shared/ui/FormPage';
 
 /** Alta o ajuste de una previsión (tope mensual de gasto por categoría). */
 export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, datosHogar, monedaGlobal, onClose, onGuardado }) {
@@ -58,7 +58,7 @@ export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, 
   };
 
   return (
-    <Modal onClose={onClose} ancho="sm" ariaLabel={idPrevisionEditando ? 'Ajustar previsión' : 'Nueva previsión'}>
+    <FormPage resumen={<><p className="font-bold">{previsionConcepto || "Previsión"}</p><p className="text-2xl tabular-nums mt-3">{previsionMontoFormateado || "0"} {previsionMoneda}</p><p className="text-sm text-muted-foreground mt-2">{"Límite de gasto mensual"}</p></>} onClose={onClose} ariaLabel={idPrevisionEditando ? 'Ajustar previsión' : 'Nueva previsión'}>
       <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
         {idPrevisionEditando ? 'Ajustar Previsión' : 'Nueva Previsión'}
       </h2>
@@ -107,6 +107,6 @@ export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, 
           {guardando ? <Loader2 className="animate-spin mx-auto" /> : "GUARDAR PREVISIÓN"}
         </button>
       </form>
-    </Modal>
+    </FormPage>
   );
 }

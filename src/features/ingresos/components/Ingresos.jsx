@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { formatarInput, desformatearInput, calcularFechaCobroReal } from "../../../shared/lib/formatters";
 import { obtenerCotizacion } from "../../../services/cotizaciones.service";
@@ -36,9 +37,13 @@ export default function Ingresos({
 }) {
   // UI State
   const [activeTab, setActiveTab] = useState("historial"); 
-  const [mostrarModal, setMostrarModal] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const mostrarModal = location.pathname !== '/ingresos';
+  const cerrarFormulario = () => location.state?.desdeFormulario ? navigate(-1) : navigate('/ingresos');
+  const setMostrarModal = (abrir) => { if (!abrir) cerrarFormulario(); };
   const [pasoIngreso, setPasoIngreso] = useState(1); // 1: Datos Básicos, 2: Programación/Descuentos
-  const [tipoRegistro, setTipoIngreso] = useState("variable"); 
+  const tipoRegistro = location.pathname.includes("programar") ? "fijo" : location.pathname.includes("editar") ? "edicion" : "variable"; 
   const [guardando, setGuardando] = useState(false);
 
   // Form State
@@ -318,7 +323,7 @@ export default function Ingresos({
     }
   }
 
-  const abrirEdicion = (p) => {
+  const abrirEdicion = (p, reponer = false) => {
     setIdEditando(p.id); 
     setMontoAnterior(p.monto); 
     setConcepto(p.descripcion);
@@ -339,10 +344,19 @@ export default function Ingresos({
       setConceptoDescuento("");
     }
     
-    setTipoIngreso('edicion');
     setPasoIngreso(1);
-    setMostrarModal(true);
+    if (!reponer) navigate(`/ingresos/${p.id}/editar`, { state: { desdeFormulario: true } });
   };
+
+  useEffect(() => {
+    const match = location.pathname.match(/^\/ingresos\/([^/]+)\/editar$/);
+    const programa = match && programados.find(p => String(p.id) === match[1]);
+    if (programa && idEditando !== programa.id) {
+      abrirEdicion(programa, true);
+    }
+    // La URL identifica el registro; abrirEdicion repone los valores al recargar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, programados]);
 
   const resetForm = () => {
     setMontoFormateado(""); 
@@ -372,7 +386,8 @@ export default function Ingresos({
 
   return (
     <div className="space-y-6 pb-20">
-      <header className="flex items-center justify-between">
+      {!mostrarModal && <>
+      <header className="flex flex-wrap gap-3 items-center justify-between">
         <h2 className="text-xl font-black text-white flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-emerald-400" /> Motor de Ingresos
         </h2>
@@ -390,11 +405,11 @@ export default function Ingresos({
       </header>
 
       <div className="grid grid-cols-2 gap-3">
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setTipoIngreso('variable'); setMostrarModal(true); }} className="p-4 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl flex flex-col items-center gap-2 hover:bg-emerald-600/30 transition-all">
+        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetForm(); navigate('/ingresos/nuevo', { state: { desdeFormulario: true } }); }} className="p-4 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl flex flex-col items-center gap-2 hover:bg-emerald-600/30 transition-all">
           <Plus className="text-emerald-400" />
           <span className="text-[10px] font-black text-white uppercase">Ingreso Rápido</span>
         </motion.button>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setTipoIngreso('fijo'); setMostrarModal(true); }} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/10 transition-all">
+        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetForm(); navigate('/ingresos/programar', { state: { desdeFormulario: true } }); }} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/10 transition-all">
           <RefreshCcw className="text-indigo-400" />
           <span className="text-[10px] font-black text-white uppercase">Programar Fijo</span>
         </motion.button>
@@ -420,6 +435,7 @@ export default function Ingresos({
         )}
       </AnimatePresence>
 
+      </>}
       <ModalIngreso CATEGORIAS_INGRESO={CATEGORIAS_INGRESO} ajusteDiaHabil={ajusteDiaHabil} categoria={categoria} concepto={concepto} conceptoDescuento={conceptoDescuento} deudaVinculadaId={deudaVinculadaId} deudas={deudas} diaRecurrencia={diaRecurrencia} fechaEfectiva={fechaEfectiva} guardando={guardando} modoDescuento={modoDescuento} moneda={moneda} montoAnterior={montoAnterior} montoDescuentoFormateado={montoDescuentoFormateado} montoFormateado={montoFormateado} mostrarModal={mostrarModal} pasoIngreso={pasoIngreso} registrarIngreso={registrarIngreso} resetForm={resetForm} setAjusteDiaHabil={setAjusteDiaHabil} setCategoria={setCategoria} setConcepto={setConcepto} setConceptoDescuento={setConceptoDescuento} setDeudaVinculadaId={setDeudaVinculadaId} setDiaRecurrencia={setDiaRecurrencia} setFechaEfectiva={setFechaEfectiva} setModoDescuento={setModoDescuento} setMoneda={setMoneda} setMontoDescuentoFormateado={setMontoDescuentoFormateado} setMontoFormateado={setMontoFormateado} setMostrarModal={setMostrarModal} setPasoIngreso={setPasoIngreso} setSoloDiasHabiles={setSoloDiasHabiles} soloDiasHabiles={soloDiasHabiles} tipoRegistro={tipoRegistro} />
     </div>
   );

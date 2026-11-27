@@ -1,3 +1,4 @@
+import { FormPage } from '../../../shared/ui/FormPage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, TrendingUp, X, Clock, Loader2, Link2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { formatearNumero, formatarInput, desformatearInput } from '../../../shared/lib/formatters';
@@ -6,9 +7,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
   return (
     <AnimatePresence>
       {mostrarModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md glass-panel p-6 rounded-3xl relative border border-white/10 shadow-2xl my-8">
-            <button onClick={() => { setMostrarModal(false); resetForm(); }} className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/5 transition-colors"><X size={20} /></button>
+        <FormPage ariaLabel={tipoRegistro === 'variable' ? 'Registrar ingreso' : tipoRegistro === 'fijo' ? 'Programar sueldo' : 'Ajustar sueldo'} onClose={() => { setMostrarModal(false); resetForm(); }} resumen={<><p className="font-bold">{concepto || 'Ingreso'}</p><p className="text-2xl tabular-nums mt-3">{formatearNumero(desformatearInput(montoFormateado) || 0, moneda)}</p><p className="text-muted-foreground mt-2">{categoria}</p></>}>
 
             {/* Header Wizard Ingresos */}
             <div className="mb-6">
@@ -90,11 +89,11 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                   )}
 
                   {tipoRegistro === 'variable' ? (
-                    <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl shadow-emerald-900/20 active:scale-95 transition-all mt-2">
+                    <button type="submit" disabled={guardando} className="form-actions w-full py-4 font-black rounded-2xl bg-emerald-700 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/20 active:scale-95 transition-all mt-2">
                       {guardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : "REGISTRAR INGRESO"}
                     </button>
                   ) : (
-                    <div className="pt-2">
+                    <div className="form-actions pt-2">
                       <button 
                         type="button" 
                         disabled={!concepto.trim() || !montoFormateado} 
@@ -209,7 +208,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3"><TrendingUp className="text-emerald-500" size={18} /><p className="text-[10px] text-emerald-200 font-bold uppercase tracking-tighter">¡Crecimiento salarial detectado! 🚀</p></div>
                   )}
 
-                  <div className="pt-2 flex gap-3">
+                  <div className="form-actions pt-2 flex gap-3">
                     <button 
                       type="button" 
                       onClick={() => setPasoIngreso(1)} 
@@ -228,8 +227,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                 </motion.div>
               )}
             </form>
-          </motion.div>
-        </div>
+        </FormPage>
       )}
     </AnimatePresence>
   );

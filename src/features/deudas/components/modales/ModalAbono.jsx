@@ -4,7 +4,7 @@ import { Copy } from 'lucide-react';
 import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta } from '../../../../shared/lib/formatters';
 import { insertarGastos } from '../../../../services/gastos.service';
 import * as deudasService from '../../../../services/deudas.service';
-import { Modal } from '../../../../shared/ui/Modal';
+import { FormPage } from '../../../../shared/ui/FormPage';
 
 /** Abono a la cuota pendiente de una deuda (con cotización si se paga en otra moneda). */
 export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar, monedaGlobal, onClose, onGuardado, onEditarMedioPago }) {
@@ -68,7 +68,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
   const reqT = mon !== maestra.moneda;
 
   return (
-    <Modal onClose={onClose} ancho="sm" capa="z-[110]" ariaLabel={`Abonar a ${maestra.titulo}`}>
+    <FormPage resumen={<><p className="font-bold">{maestra.titulo}</p><p className="text-2xl tabular-nums mt-3">{mFormateado || "0"} {mon}</p><p className="text-sm text-muted-foreground mt-2">{`Cuota ${pagoSeleccionado.cuota.numero_cuota}`}</p></>} onClose={onClose} ariaLabel={`Abonar a ${maestra.titulo}`}>
       <h3 className="text-white font-bold text-lg mb-1">Abonar a {maestra.titulo}</h3>
       <p className="text-[10px] text-slate-400 font-bold mb-3 uppercase tracking-wider">
         Cuota {pagoSeleccionado.cuota.numero_cuota} • Vence: {formatearFechaCorta(pagoSeleccionado.cuota.fecha_vencimiento)}
@@ -204,11 +204,11 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
         )}
 
         {reqT && <input type="number" step="0.0001" value={t} onChange={(e) => setT(e.target.value)} className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-white font-bold text-base" placeholder="Cotización aplicada" />}
-        <div className="flex gap-2 pt-4">
+        <div className="form-actions flex gap-2 pt-4">
           <button onClick={() => onClose()} className="flex-1 py-4 bg-white/5 text-slate-400 font-bold rounded-2xl">CANCELAR</button>
           <button onClick={() => procesarAbono(desformatearInput(mFormateado), mon, t)} disabled={!mFormateado || (reqT && !t)} className="flex-[2] py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-600/30">PAGAR</button>
         </div>
       </div>
-    </Modal>
+    </FormPage>
   );
 }

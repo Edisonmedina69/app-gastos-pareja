@@ -6,7 +6,7 @@ import { formatearNumero, formatarInput, desformatearInput } from '../../../../s
 import * as deudasService from '../../../../services/deudas.service';
 import { ajustarDiaHabil } from '../../lib/ciclosTarjeta';
 import { valoresInicialesDeuda } from '../../lib/formularios';
-import { Modal } from '../../../../shared/ui/Modal';
+import { FormPage } from '../../../../shared/ui/FormPage';
 
 /**
  * Asistente de 3 pasos para crear o editar una deuda (préstamo, cuotas fijas o
@@ -208,7 +208,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
   const zonaPeligro = proyectado > 40;
 
   return (
-    <Modal onClose={onClose} ancho="lg" ariaLabel={deudaEditandoId ? 'Editar compromiso' : 'Nuevo compromiso'}>
+    <FormPage resumen={<><p className="font-bold">{titulo || "Nuevo compromiso"}</p><p className="text-2xl tabular-nums mt-3">{montoTotalFormateado || "0"} {monedaDeuda}</p><p className="text-sm text-muted-foreground mt-2">{`Paso ${pasoDeuda} de 3 · ${cantidadCuotas} cuotas`}</p></>} onClose={onClose} ariaLabel={deudaEditandoId ? 'Editar compromiso' : 'Nuevo compromiso'}>
 
       {/* Header con Indicador de Pasos / Wizard */}
       <div className="mb-6">
@@ -299,7 +299,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               )}
             </div>
 
-            <div className="pt-4 flex justify-end">
+            <div className="form-actions pt-4 flex justify-end">
               <button 
                 type="button" 
                 disabled={!titulo.trim()} 
@@ -418,7 +418,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               </div>
             )}
 
-            <div className="pt-4 flex gap-3">
+            <div className="form-actions pt-4 flex gap-3">
               <button 
                 type="button" 
                 onClick={() => setPasoDeuda(1)} 
@@ -554,7 +554,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               </div>
             )}
 
-            <div className="pt-2 flex gap-3">
+            <div className="form-actions pt-2 flex gap-3">
               <button 
                 type="button" 
                 onClick={() => setPasoDeuda(2)} 
@@ -574,6 +574,6 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
         )}
 
       </form>
-    </Modal>
+    </FormPage>
   );
 }
