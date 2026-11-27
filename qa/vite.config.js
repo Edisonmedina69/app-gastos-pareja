@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => ({
     name: 'qa-isolated-services', enforce: 'pre',
     async load(id) {
       const path = id.split('?')[0];
+      if (path.endsWith('/src/features/espacios/hooks/useEspacios.js')) return `export { useEspacios } from '/qa/hogar.jsx'`;
       if (path.endsWith('/src/features/hogar/hooks/useHogar.js')) return `export { useHogar } from '/qa/hogar.jsx'`;
       if (/\/src\/services\/.*\.service\.js$/.test(path)) {
         const source = readFileSync(path, 'utf8');

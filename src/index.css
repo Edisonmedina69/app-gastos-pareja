@@ -204,9 +204,9 @@ button:disabled { cursor: not-allowed; }
 .form-page :focus-visible { scroll-margin-block: 1rem 6rem; }
 .glass-card { transition-property: background-color, border-color; transition-duration: 150ms; }
 @media (hover: hover) and (pointer: fine) {
-  .form-page button:not(:disabled):not(:focus-visible) { transition: background-color 150ms, color 150ms, transform 120ms cubic-bezier(.23,1,.32,1); }
-  .form-page button:not(:disabled):not(:focus-visible):active { transform: scale(.98); }
+  button:not(:disabled):not(:focus-visible) { transition: background-color 150ms, color 150ms, transform 120ms cubic-bezier(.23,1,.32,1); }
+  button:not(:disabled):not(:focus-visible):active { transform: scale(.97); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .form-page button:active { transform: none; }
+  button:active { transform: none; }
 }

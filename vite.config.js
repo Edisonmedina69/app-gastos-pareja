@@ -6,7 +6,13 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      workbox: {
+        cleanupOutdatedCaches: true,
+        navigateFallbackDenylist: [/^\/auth\//, /^\/rest\//, /^\/storage\//],
+        // Solo precache de assets locales; jamás respuestas financieras ni Storage.
+        runtimeCaching: [],
+      },
       manifest: {
         name: 'ÑandeFinanza - Finanzas en Pareja',
         short_name: 'ÑandeFinanza',
