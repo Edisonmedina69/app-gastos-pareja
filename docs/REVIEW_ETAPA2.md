@@ -20,8 +20,8 @@ Revisión independiente de la Etapa 2 (PR #33 DB, PR #34 UI), aplicada en produc
 | M2 | Medio | Paso de `autoUpdate` a `prompt`: las PWA familiares quedan en el bundle viejo hasta cerrar todas sus ventanas | Corregido en este PR |
 | M3 | Medio | Tras `salir_de_espacio`, el hogar que se crea o al que se une después no entra directo: la sesión queda sin espacio | Corregido en este PR |
 | M4 | Medio | No se puede borrar un hogar con datos o con contexto de sesión (falla `SuperadminPanel`, incluso para service_role en el caso de la FK) | Corregido en este PR |
-| M5 | Medio (preexistente) | El superadmin puede meterse en cualquier hogar y leer sus finanzas | Recomendación |
-| M6 | Medio | Un integrante dado de baja vuelve a entrar con un link multiuso vigente emitido por otro admin | Recomendación |
+| M5 | Medio (preexistente) | El superadmin puede meterse en cualquier hogar y leer sus finanzas | Aceptado por el dueño; sin cambios |
+| M6 | Medio | Un integrante dado de baja vuelve a entrar con un link multiuso vigente emitido por otro admin | Recuperado en migración incremental M6 |
 | B1–B10 | Bajo | Ver la sección Bajo | Recomendaciones |
 
 ---
@@ -102,17 +102,15 @@ Las restrictivas de Etapa 2 sí impiden la lectura directa: el superadmin ve 0 g
 
 **Reproducido:** el superadmin hace `update perfiles set espacio_id = <hogar ajeno>` y pasa a leer sus gastos. Esto contradice el plan («superadmin no se convierte en admin de espacios ajenos»), aunque requiere un acto deliberado.
 
-**Recomendación (decisión del dueño):** quitar al superadmin la escritura de `perfiles.espacio_id` y de `codigo_invitacion`, y reemplazarla por una RPC auditada de soporte que sea break-glass, con motivo y registro.
+**Decisión del dueño (2026-11-27):** el superadmin puede seguir entrando a cualquier espacio como capacidad de soporte; no se cambia esta autorización.
 
 ### M6. Un integrante dado de baja vuelve a entrar con un link multiuso ajeno vigente
 
 Un link de `lectura` con 10 usos que otro admin compartió en un grupo sigue sirviendo después de dar de baja a alguien: el `on conflict` reactiva su membresía. Funciona como un token al portador.
 
-**Recomendación:**
-- Al dar de baja desde `/org/integrantes`, ofrecer «revocar links activos».
-- O registrar `desactivado_at` en `espacio_miembros` y rechazar invitaciones con `created_at` anterior a la baja.
+**Decisión del dueño:** una baja invalida para esa persona los links emitidos antes de su baja; un admin puede reactivarla o emitirle una invitación posterior.
 
-No lo cambié: requiere decidir el comportamiento esperado.
+**Entrega incremental:** [M6_INTEGRACION.md](M6_INTEGRACION.md). El commit `d45aeb6` modificaba la migración de #35, pero no se fusionó con ella. La corrección se recupera en `20261128130000_etapa2_m6_baja_invitaciones.sql` sin cambiar `20261128120000`. Agrega un sello de baja de servidor, conserva la revocación por autoridad vigente y rechaza links previos sin consumir usos ni revocarlos para los demás integrantes.
 
 ## Bajo
 
