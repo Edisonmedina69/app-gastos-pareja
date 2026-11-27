@@ -28,7 +28,7 @@ esta prueba. La consola no registró errores de aplicación.
 El audit de contraste revisa 18 combinaciones de pantalla y ancho sin infracciones
 detectadas; cuatro mediciones de botones fijos quedaron indeterminadas por
 superposición en axe y se verificaron por sus colores computados: contraste
-6,46:1 (mínimo AA 4,5:1). El audit fija las animaciones en su opacidad final dentro de la fixture para
+mínimo 5,48:1 (umbral AA 4,5:1). El audit fija las animaciones en su opacidad final dentro de la fixture para
 medir colores estables. No constituye una auditoría integral de WCAG ni una prueba
 de los permisos, contratos o transacciones reales de Supabase.
 
