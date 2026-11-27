@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "react-hot-toast";
 
-import { escucharCambiosSesion, obtenerSesion } from "../../../services/auth.service";
+import { vigenciaContexto } from "../../../services/espacios.service";
 import { listarMiembros, suscribirCambiosEspacio } from "../../../services/hogar.service";
 import { insertarGastos, listarGastos } from "../../../services/gastos.service";
 import { listarGastosProgramados } from "../../../services/gastosProgramados.service";
@@ -15,7 +15,6 @@ import {
 } from "../../../services/notificaciones.service";
 import { obtenerCotizacion } from "../../../services/cotizaciones.service";
 
-import { verificarPerfil } from "../lib/verificarPerfil";
 import { esSuperadmin as calcularEsSuperadmin } from "../lib/roles";
 import { calcularSaludFinanciera } from "../../dashboard/lib/saludFinanciera";
 import { construirAlertasVencimiento, tarjetasParaCierreAutomatico } from "../../deudas/lib/alertasVencimiento";
@@ -27,113 +26,28 @@ import { sueldosPendientesDeAcreditar } from "../../ingresos/lib/sueldosPrograma
  * notificaciones, gastos fijos), sincronización en tiempo real y tareas
  * automáticas (cierre de tarjetas, sueldos fijos y alertas de vencimiento).
  */
-export function useHogar() {
-  const [session, setSession] = useState(null);
-  const [cargandoPerfil, setCargandoPerfil] = useState(false);
+export function useHogar({ session, datosHogar }) {
+  const montado = useRef(false);
+  useEffect(() => { montado.current = true; return () => { montado.current = false; }; }, []);
   const [usuarios, setUsuarios] = useState([]);
   const [gastos, setGastos] = useState([]);
   const [gastosProgramados, setGastosProgramados] = useState([]);
-  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [usuarioActual, setUsuarioActual] = useState(datosHogar);
   const [otroUsuario, setOtroUsuario] = useState(null);
   const [ingresos, setIngresos] = useState([]);
   const [deudas, setDeudas] = useState([]);
   const [notificaciones, setNotificaciones] = useState([]);
-  const [datosHogar, setDatosHogar] = useState(null);
-  const [verificandoHogar, setVerificandoHogar] = useState(true);
-
-  // Sesión inicial + escucha de cambios de autenticación
-  useEffect(() => {
-    let montado = true;
-    // Red de seguridad: nunca dejar la pantalla de carga más de 4 s.
-    // (Las banderas sólo pasan de true a false, así que basta con forzarlas.)
-    const timerCierre = setTimeout(() => {
-      if (montado) {
-        setVerificandoHogar(false);
-        setCargandoPerfil(false);
-      }
-    }, 4000);
-
-    const inicializar = async () => {
-      try {
-        const {
-          data: { session: s },
-        } = await obtenerSesion();
-        if (!montado) return;
-        setSession(s);
-        if (s) {
-          setCargandoPerfil(true);
-          const perfil = await verificarPerfil(s.user.id, s.user.email);
-          if (montado) {
-            setDatosHogar(perfil);
-            setUsuarioActual(perfil);
-            setCargandoPerfil(false);
-            // Cargar inmediatamente los datos (gastos, deudas, ingresos)
-            if (perfil?.espacio_id) {
-              const eid = perfil.espacio_id;
-              const [resG, resI, resD, resN, resP] = await Promise.all([
-                listarGastos(eid),
-                listarIngresos(eid),
-                listarDeudasConCuotas(eid),
-                listarNotificaciones(eid),
-                listarGastosProgramados(eid),
-              ]);
-              if (resG.data) setGastos(resG.data);
-              if (resI.data) setIngresos(resI.data);
-              if (resD.data) setDeudas(resD.data);
-              if (resN.data) setNotificaciones(resN.data);
-              if (resP.data) setGastosProgramados(resP.data);
-            }
-          }
-        }
-      } catch {
-        if (montado) setDatosHogar(null);
-      } finally {
-        if (montado) {
-          setVerificandoHogar(false);
-          clearTimeout(timerCierre);
-        }
-      }
-    };
-    inicializar();
-
-    const {
-      data: { subscription },
-    } = escucharCambiosSesion(async (event, s) => {
-      if (event === "SIGNED_OUT") {
-        setSession(null);
-        setDatosHogar(null);
-        setUsuarioActual(null);
-      } else if (event === "TOKEN_REFRESHED" && s) {
-        setSession(s);
-      } else if (s && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-        setSession(s);
-        if (montado) {
-          setCargandoPerfil(true);
-          verificarPerfil(s.user.id, s.user.email).then((perfil) => {
-            if (montado) {
-              setDatosHogar(perfil);
-              setUsuarioActual(perfil);
-              setCargandoPerfil(false);
-            }
-          });
-        }
-      }
-    });
-
-    return () => {
-      montado = false;
-      subscription.unsubscribe();
-      clearTimeout(timerCierre);
-    };
-  }, []);
-
   const obtenerDatos = useCallback(async () => {
     if (!datosHogar || !session || !datosHogar.espacio_id) return;
     const eid = datosHogar.espacio_id;
     const usuarioId = session.user.id;
+    const contextoVigente = vigenciaContexto();
+    const vigente = () => montado.current && contextoVigente();
+    if (!vigente()) return;
 
     try {
       const { data: miembros } = await listarMiembros(eid);
+      if (!vigente()) return;
       if (miembros) {
         setUsuarios(miembros);
         const logueado = miembros.find((u) => u.id === usuarioId);
@@ -152,6 +66,7 @@ export function useHogar() {
         listarIngresosProgramados(eid),
       ]);
 
+      if (!vigente()) return;
       const deudasFinal = resD.data || [];
       const ingresosFinal = resI.data || [];
 
@@ -164,6 +79,7 @@ export function useHogar() {
 
       // Tareas automáticas en segundo plano
       setTimeout(async () => {
+        if (!vigente()) return;
         let huboCambiosDeudas = false;
         let huboCambiosIngresos = false;
         const hoy = new Date();
@@ -172,6 +88,7 @@ export function useHogar() {
         // Cierre automático de tarjetas
         for (const { deuda, cuota } of tarjetasParaCierreAutomatico(deudasFinal, hoy)) {
           try {
+            if (!vigente()) return;
             await cerrarCicloTarjeta(deuda, cuota, eid, usuarioId, { verificarArchivo: true });
             huboCambiosDeudas = true;
           } catch (errAuto) {
@@ -183,7 +100,9 @@ export function useHogar() {
         if (resIP.data) {
           for (const prog of sueldosPendientesDeAcreditar(resIP.data, ingresosFinal, usuarioId, hoy)) {
             try {
+              if (!vigente()) return;
               const tasa = prog.moneda === "PYG" ? 1 : await obtenerCotizacion(prog.moneda, "PYG");
+              if (!vigente()) return;
               await insertarIngresos([
                 {
                   usuario_id: prog.usuario_id,
@@ -205,16 +124,19 @@ export function useHogar() {
 
         if (huboCambiosDeudas) {
           const { data: updatedDeudas } = await listarDeudasConCuotas(eid);
+          if (!vigente()) return;
           if (updatedDeudas) setDeudas(updatedDeudas);
         }
 
         if (huboCambiosIngresos) {
           const { data: updatedIngresos } = await listarIngresos(eid);
+          if (!vigente()) return;
           if (updatedIngresos) setIngresos(updatedIngresos);
         }
 
         // Alertas de vencimiento próximas
         const alertasNuevas = construirAlertasVencimiento(deudasFinal, resN.data || [], { espacioId: eid, usuarioId });
+        if (!vigente()) return;
         if (alertasNuevas.length > 0) await insertarNotificaciones(alertasNuevas);
       }, 50);
     } catch {
@@ -293,12 +215,14 @@ export function useHogar() {
   const esSuperadmin = useMemo(() => calcularEsSuperadmin(datosHogar, session), [datosHogar, session]);
 
   useEffect(() => {
-    if (session && !verificandoHogar && datosHogar) obtenerDatos();
-  }, [session, verificandoHogar, datosHogar, obtenerDatos]);
+    if (!session || !datosHogar) return;
+    const timer = setTimeout(obtenerDatos, 0);
+    return () => clearTimeout(timer);
+  }, [session, datosHogar, obtenerDatos]);
 
   return {
     session,
-    cargando: verificandoHogar || cargandoPerfil,
+    cargando: false,
     datosHogar,
     usuarioActual,
     otroUsuario,

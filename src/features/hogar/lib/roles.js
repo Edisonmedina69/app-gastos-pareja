@@ -1,5 +1,3 @@
-/** Cuenta con acceso de superadmin aunque su perfil todavía no tenga el rol. */
+/** El rol global viene del perfil protegido por servidor. */
 export const EMAIL_SUPERADMIN = "edisonmedina415@gmail.com";
-
-export const esSuperadmin = (perfil, session) =>
-  perfil?.rol === "superadmin" || session?.user?.email === EMAIL_SUPERADMIN;
+export const esSuperadmin = perfil => perfil?.rol === "superadmin";

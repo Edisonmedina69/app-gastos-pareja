@@ -1,6 +1,26 @@
 import { useState } from 'react';
 import { db, user } from './store';
 import { calcularSaludFinanciera } from '../src/features/dashboard/lib/saludFinanciera';
+export function useEspacios() {
+  const session = { user: { id: user.id } };
+  const hogar = {
+    id: user.espacio_id,
+    nombre: 'Hogar de prueba',
+    tipo: 'hogar',
+    detalle: { id: user.espacio_id, nombre_familia: 'Hogar de prueba', tipo: 'hogar', moneda_principal: 'PYG', limite_usuarios: 2 },
+    membresia: { id: 'qa-mem-1', espacio_id: user.espacio_id, usuario_id: user.id, rol_plantilla: 'admin', activo: true },
+    perfil: user,
+  };
+  return {
+    session,
+    espacios: [hogar],
+    activo: hogar,
+    cargando: false,
+    error: '',
+    seleccionar: async () => {},
+    refrescar: async () => {},
+  };
+}
 export function useHogar() {
   const [, update] = useState(0);
   return {

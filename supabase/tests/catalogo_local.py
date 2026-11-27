@@ -5,8 +5,8 @@ import subprocess
 import sys
 
 container=sys.argv[1]
-if not container.startswith('supabase_db_etapa1-test-'):
-    raise SystemExit('Solo contenedores locales aislados etapa1-test-*')
+if not container.startswith(('supabase_db_etapa1-test-', 'supabase_db_etapa2-test-')):
+    raise SystemExit('Solo contenedores locales aislados etapa1/etapa2-test-*')
 queries=[
  "select table_name,column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' order by table_name,ordinal_position",
  "select c.relname,con.conname,pg_get_constraintdef(con.oid) definition from pg_constraint con join pg_class c on c.oid=con.conrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' order by 1,2",
