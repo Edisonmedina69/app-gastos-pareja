@@ -74,6 +74,44 @@ select public.actualizar_permisos_miembro(:'org',:'d_id','[]','miembro');
 reset role;
 select pg_temp.check((select revocada_at is not null from public.org_invitaciones where creada_por='40000000-0000-4000-8000-000000000004' and rol='contador'),'degradar admin revoca invitaciones privilegiadas');
 
+-- M6. Baja + link multiuso ajeno vigente: no reabre; reactivar o invitación nueva sí.
+select pg_temp.como(2);
+select token from public.crear_invitacion_org(:'org','lectura',5) \gset multi_
+reset role; select pg_temp.como(9);
+select pg_temp.check(public.aceptar_invitacion_org(:'multi_token',2)->>'espacio_id' = :'org','integrante 9 entra con link multiuso');
+reset role;
+select pg_temp.miembro(9,:'org') as i_id \gset
+select pg_temp.check((select desactivado_at is null from public.espacio_miembros where id=:'i_id'),'membresía activa sin sello de baja');
+select pg_temp.como(2);
+select public.actualizar_permisos_miembro(:'org',:'i_id','[]',null,false);
+reset role;
+select pg_temp.check((select desactivado_at is not null from public.espacio_miembros where id=:'i_id'),'la baja queda sellada');
+select pg_temp.check((select revocada_at is null from public.org_invitaciones where id=(select id from public.org_invitaciones where creada_por='40000000-0000-4000-8000-000000000002' and rol='lectura' and max_usos=5)),'el link del admin que dio la baja sigue vigente para otros');
+select pg_temp.como(9);
+select pg_temp.check(public.aceptar_invitacion_org(:'multi_token',2) ? 'error','dado de baja no reingresa con link multiuso previo');
+reset role;
+select pg_temp.check((select not activo from public.espacio_miembros where id=:'i_id'),'sigue dado de baja');
+select pg_temp.check((select usos from public.org_invitaciones where creada_por='40000000-0000-4000-8000-000000000002' and rol='lectura' and max_usos=5) = 1,'intento rechazado no consume usos');
+-- Invitación nueva, emitida después de la baja: sí.
+select pg_temp.como(2);
+select token from public.crear_invitacion_org(:'org','lectura',1) \gset nueva_
+reset role; select pg_temp.como(9);
+select pg_temp.check(public.aceptar_invitacion_org(:'nueva_token',2)->>'espacio_id' = :'org','invitación nueva posterior a la baja permite volver');
+reset role;
+select pg_temp.check((select activo from public.espacio_miembros where id=:'i_id'),'integrante reactivado por invitación nueva');
+-- Otra baja y reactivación directa por admin: sí.
+select pg_temp.como(2);
+select public.actualizar_permisos_miembro(:'org',:'i_id','[]',null,false);
+select public.actualizar_permisos_miembro(:'org',:'i_id','[]',null,true);
+reset role;
+select pg_temp.check((select activo from public.espacio_miembros where id=:'i_id'),'admin puede reactivar directamente');
+select pg_temp.como(9);
+do $$ begin
+ update public.espacio_miembros set desactivado_at = null;
+ raise exception 'FALLO cliente editó sello de baja';
+exception when insufficient_privilege then raise notice 'OK cliente no puede borrar su sello de baja'; end $$;
+reset role;
+
 -- 4. Salir de un hogar y crear otro no deja la sesión sin espacio.
 select pg_temp.como(6);
 select public.crear_espacio('Hogar viejo','Ana') as h_viejo \gset
