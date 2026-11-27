@@ -39,4 +39,6 @@ jobs:
         with:
           node-version: 22
       - name: Baseline, migración, aislamiento P0, concurrencia y rollback
-        run: bash supabase/tests/run_etapa1.sh
+        run: |
+          bash supabase/tests/run_etapa1.sh
+          SKIP_PLAYWRIGHT_E2E=1 bash supabase/tests/run_etapa2.sh

@@ -57,7 +57,11 @@ diff -u "$local_dir/miembros-antes.txt" "$local_dir/miembros-despues.txt"
 sql < supabase/tests/p0_aislamiento_espacios_test.sql >"$local_dir/p0-rollback.log" 2>&1 || { cat "$local_dir/p0-rollback.log"; exit 1; }
 # Reconstruye solo public dentro del contenedor efímero; no admite destino externo.
 printf 'drop schema public cascade; create schema public; grant usage on schema public to public;\n' | sql >"$local_dir/recrear.log" 2>&1
-sql < supabase/schema.sql >"$local_dir/schema.log" 2>&1 || { cat "$local_dir/schema.log"; exit 1; }
+if [[ -f supabase/baseline/schema_pre_etapa2.sql ]]; then
+  sql < supabase/baseline/schema_pre_etapa2.sql >"$local_dir/schema.log" 2>&1 || { cat "$local_dir/schema.log"; exit 1; }
+else
+  sql < supabase/schema.sql >"$local_dir/schema.log" 2>&1 || { cat "$local_dir/schema.log"; exit 1; }
+fi
 python3 supabase/tests/catalogo_local.py "$container" >"$local_dir/catalogo-schema.json"
 diff -u "$local_dir/catalogo-migrado.json" "$local_dir/catalogo-schema.json"
 sql < supabase/tests/p0_aislamiento_espacios_test.sql >"$local_dir/p0-schema.log" 2>&1 || { cat "$local_dir/p0-schema.log"; exit 1; }
