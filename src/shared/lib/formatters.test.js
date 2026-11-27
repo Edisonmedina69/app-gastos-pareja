@@ -1,0 +1,111 @@
+import { test } from "node:test";
+import assert from "node:assert";
+import {
+  formatearNumero, formatearFecha, formatearFechaCorta, obtenerFechaCierreExacta, obtenerPlanAmortizacion,
+  formatarInput, desformatearInput, estaEnCicloFinanciero, obtenerRangoCicloFinanciero, calcularFechaCobroReal,
+} from "./formatters.js";
+
+test("formatearNumero should format PYG by default", () => {
+  const result = formatearNumero(10000);
+  assert.strictEqual(result, "10.000 Gs.");
+});
+
+test("formatearNumero should format BRL", () => {
+  const result = formatearNumero(10000, "BRL");
+  assert.strictEqual(result, "R$ 10.000");
+});
+
+test("formatearNumero should handle zero", () => {
+  const result = formatearNumero(0);
+  assert.strictEqual(result, "0 Gs.");
+});
+
+test("formatearNumero should handle null or undefined", () => {
+  assert.strictEqual(formatearNumero(null), "0 Gs.");
+  assert.strictEqual(formatearNumero(undefined), "0 Gs.");
+  assert.strictEqual(formatearNumero(""), "0 Gs.");
+});
+
+test("formatearNumero should handle large numbers", () => {
+  const result = formatearNumero(1234567.89);
+  assert.ok(result.includes("Gs."));
+  assert.match(result, /[0-9.,]+ Gs\./);
+});
+
+test("formatearFecha should format valid date string", () => {
+  const dateStr = "2023-10-27T10:30:00";
+  const result = formatearFecha(dateStr);
+  assert.ok(result.length > 0);
+  assert.ok(result.includes("2023"));
+});
+
+test("formatearFecha should handle empty input", () => {
+  assert.strictEqual(formatearFecha(null), "");
+  assert.strictEqual(formatearFecha(""), "");
+});
+
+test("formatearFechaCorta should include the year", () => {
+  assert.strictEqual(formatearFechaCorta("2026-05-28"), "28 May 2026");
+  assert.strictEqual(formatearFechaCorta("2025-12-05T12:00:00Z"), "5 Dic 2025");
+});
+
+test("obtenerFechaCierreExacta should compute credit card closing dates correctly", () => {
+  // Due date June 5, 2026, closing day 25 -> Closing date is May 25, 2026
+  assert.strictEqual(obtenerFechaCierreExacta("2026-06-05", 25), "2026-05-25");
+  // Due date June 28, 2026, closing day 10 -> Closing date is June 10, 2026
+  assert.strictEqual(obtenerFechaCierreExacta("2026-06-28", 10), "2026-06-10");
+  // Due date March 5, 2026, closing day 31 -> Previous month is Feb, which has 28 days in 2026 -> Closing date Feb 28, 2026
+  assert.strictEqual(obtenerFechaCierreExacta("2026-03-05", 31), "2026-02-28");
+});
+
+test("obtenerPlanAmortizacion should calculate principal and interest correctly", () => {
+  const plan = obtenerPlanAmortizacion(300000, 12, 24);
+  assert.strictEqual(plan.length, 12);
+  const sumCuotas = plan.reduce((acc, p) => acc + p.cuota, 0);
+  assert.strictEqual(sumCuotas, 3600000);
+  assert.ok(plan[0].interes > 63000 && plan[0].interes < 64000);
+  assert.ok(plan[0].capital > 236000 && plan[0].capital < 237000);
+});
+
+test("obtenerPlanAmortizacion should calculate principal, interest, and charges correctly", () => {
+  const plan = obtenerPlanAmortizacion(345878, 12, 24, 4501);
+  assert.strictEqual(plan.length, 12);
+  const p6 = plan[5]; // Cuota 6 (index 5)
+  assert.strictEqual(p6.cargos, 4501);
+  // Verify math close to GNB sample values
+  assert.ok(p6.interes > 40000 && p6.interes < 50000);
+  assert.ok(p6.capital > 290000 && p6.capital < 300000);
+});
+
+
+
+test("formatarInput agrega separadores de miles y desformatearInput los quita", () => {
+  const formateado = formatarInput("1500000");
+  assert.strictEqual(formateado, "1.500.000");
+  assert.strictEqual(desformatearInput(formateado), 1500000);
+});
+
+test("obtenerRangoCicloFinanciero con día de cobro 1 equivale al mes calendario", () => {
+  const { inicio, fin } = obtenerRangoCicloFinanciero(1, new Date(2026, 10, 26));
+  assert.strictEqual(inicio.getMonth(), 10);
+  assert.strictEqual(inicio.getDate(), 1);
+  assert.strictEqual(fin.getMonth(), 10);
+  assert.strictEqual(fin.getDate(), 30);
+});
+
+test("estaEnCicloFinanciero rechaza fechas vacías o inválidas", () => {
+  assert.strictEqual(estaEnCicloFinanciero(null), false);
+  assert.strictEqual(estaEnCicloFinanciero("no-es-fecha"), false);
+  assert.strictEqual(estaEnCicloFinanciero(new Date(2026, 10, 15), 1, new Date(2026, 10, 26)), true);
+});
+
+test("calcularFechaCobroReal adelanta al viernes si el cobro cae domingo (ajuste anterior)", () => {
+  const r = calcularFechaCobroReal(15, 11, 2026); // 15/11/2026 es domingo
+  assert.strictEqual(r.fechaStr, "2026-11-13");
+  assert.strictEqual(r.esAjustado, true);
+});
+
+test("calcularFechaCobroReal con ajuste 'siguiente' pasa al lunes y recorta fin de mes", () => {
+  assert.strictEqual(calcularFechaCobroReal(15, 11, 2026, true, "siguiente").fechaStr, "2026-11-16");
+  assert.strictEqual(calcularFechaCobroReal(31, 2, 2026, false).fechaStr, "2026-02-28");
+});

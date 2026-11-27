@@ -15,7 +15,7 @@
 
 *   **👥 Collaborative Spaces:** Synchronized profiles under a single household space (`espacios`).
 *   **💳 Pro Debts Tracker ("Deudas Pro"):** Manage credit cards, installment tracking (*cuotas*), payment percentages, and pending debt balances.
-*   **📊 Interactive Financial Health Dashboard:** Recharts-powered graphs displaying joint/individual indices. Real-time warnings if the debt-to-income ratio exceeds **40%** (critical limit).
+*   **📊 Interactive Financial Health Dashboard:** Joint/individual debt indices. Real-time warnings if the debt-to-income ratio exceeds **40%** (critical limit).
 *   **🤖 Jopara AI Assistant ("ÑandeAsistente"):** A custom chat interface integrated with **DeepSeek API** via Supabase Edge Functions. It acts as an empathetic financial friend (*kape*) injecting real-time metrics and speaking in Jopara (Spanish-Guaraní hybrid).
 *   **⚠️ Proactive Vencimiento Notifications:** Real-time reminders for upcoming debt due dates.
 *   **📱 Progressive Web App (PWA):** Installable on iOS/Android devices for a native-like experience.
@@ -26,7 +26,7 @@
 ## 🛠️ Architecture & Tech Stack
 
 - **Frontend:** React 19, Vite, Tailwind CSS, Lucide Icons.
-- **Charts & Animations:** Recharts (responsive charting) & Framer Motion (premium micro-interactions).
+- **Animations:** Framer Motion (micro-interactions).
 - **Backend-as-a-Service (BaaS):** Supabase (PostgreSQL, Supabase Auth, Row-Level Security (RLS) policies).
 - **Serverless AI Edge Functions:** Deno runtime hosted on Supabase Edge Functions connecting to the DeepSeek API.
 - **Export Capabilities:** SheetJS (`xlsx`) for data extraction.
@@ -63,7 +63,7 @@
 
 4.  **Database & Supabase Configuration:**
     *   Initialize Supabase and set up the schema.
-    *   The SQL migration scripts are located under the [`supabase/`](file:///home/edisonubutun/app-gastos-pareja/supabase) directory. Run these in the Supabase SQL Editor.
+    *   The historical SQL migrations live in [`supabase/migrations/`](supabase/migrations/) (see its README before using the Supabase CLI against production). The current schema is documented in [`supabase/schema.sql`](supabase/schema.sql).
     *   Deploy the Edge Functions and set up the `DEEPSEEK_API_KEY` secret on Supabase:
         ```bash
         supabase secrets set DEEPSEEK_API_KEY=your_deepseek_api_key
@@ -74,6 +74,8 @@
     ```bash
     npm run dev
     ```
+
+6.  **Quality checks:** `npm run lint`, `npm test`, `npm run build`. The code layout is described in [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md).
 
 ---
 
