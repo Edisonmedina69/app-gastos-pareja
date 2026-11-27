@@ -9,6 +9,8 @@ export default defineConfig({
       registerType: 'prompt',
       workbox: {
         cleanupOutdatedCaches: true,
+        // Migración única desde el SW autoUpdate anterior; ver public/sw-migracion.js.
+        importScripts: ['sw-migracion.js'],
         navigateFallbackDenylist: [/^\/auth\//, /^\/rest\//, /^\/storage\//],
         // Solo precache de assets locales; jamás respuestas financieras ni Storage.
         runtimeCaching: [],
