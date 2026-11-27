@@ -1,6 +1,8 @@
 import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+const qaPrefix = randomUUID().slice(0, 8);
 import assert from 'node:assert/strict';
 
 const [, , localDir, container] = process.argv;
@@ -36,8 +38,8 @@ declare
   v_Names text[] := array['Ana', 'Bruno', 'Carla'];
 begin
   for i in 1..3 loop
-    v_uid := ('60000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid;
-    v_email := 'e2e3-' || i || '@nandefinanza.com';
+    v_uid := ('${qaPrefix}-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid;
+    v_email := 'e2e3-${qaPrefix}-' || i || '@nandefinanza.com';
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -56,7 +58,7 @@ begin
     ) on conflict do nothing;
     insert into public.perfiles (id, nombre) values (v_uid, v_Names[i]) on conflict (id) do update set nombre = excluded.nombre;
   end loop;
-  insert into public.org_piloto_usuarios (usuario_id) values ('60000000-0000-4000-8000-000000000001') on conflict do nothing;
+  insert into public.org_piloto_usuarios (usuario_id) values ('${qaPrefix}-0000-4000-8000-000000000001') on conflict do nothing;
 end $$;
 `);
 
@@ -64,7 +66,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const out = fileURLToPath(new URL('../docs/qa', import.meta.url));
 await fs.mkdir(out, { recursive: true });
 
-const vite = spawn('npx', ['vite', '--host', '127.0.0.1', '--port', '5176', '--strictPort'], {
+const vite = spawn(process.execPath, [`${root}/node_modules/vite/bin/vite.js`, '--host', '127.0.0.1', '--port', '5176', '--strictPort'], {
   cwd: root,
   env: { ...process.env, VITE_SUPABASE_URL: supabaseUrl, VITE_SUPABASE_ANON_KEY: anonKey },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -95,11 +97,12 @@ try {
   const ctxAna = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'es-PY', timezoneId: 'America/Asuncion', reducedMotion: 'reduce' });
   const pageAna = await ctxAna.newPage();
   const consoleErrors = [];
+  let falloSubidaIntencional = false;
   pageAna.on('pageerror', err => consoleErrors.push(err.message));
-  pageAna.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+  pageAna.on('console', msg => { if (msg.type() === 'error' && !falloSubidaIntencional) consoleErrors.push(msg.text()); });
 
   // 1. Ana inicia sesión, crea su hogar y luego crea CaninDevs (QA)
-  await login(pageAna, 'e2e3-1@nandefinanza.com');
+  await login(pageAna, `e2e3-${qaPrefix}-1@nandefinanza.com`);
   await pageAna.getByRole('heading', { name: 'Elegí tu espacio' }).waitFor();
   await pageAna.getByRole('button', { name: 'Crear un hogar' }).click();
   await pageAna.locator('input[name="nombre"]').fill('Hogar Ana QA');
@@ -111,6 +114,7 @@ try {
   await pageAna.locator('input[name="nombre"]').fill('CaninDevs (QA)');
   await pageAna.getByRole('button', { name: 'Crear y entrar' }).click();
   await pageAna.getByRole('heading', { name: 'CaninDevs (QA)' }).waitFor();
+  const orgId = sql(`select m.espacio_id from public.espacio_miembros m join public.espacios e on e.id=m.espacio_id where m.usuario_id='${qaPrefix}-0000-4000-8000-000000000001' and e.tipo='organizacion'`);
 
   // 2. Ana crea las cuentas en cero desde la pantalla /org/cuentas/nueva:
   //    - Caja PYG (efectivo, PYG)
@@ -143,7 +147,7 @@ try {
   await pageAna.locator('input[name="nombre"]').fill('Cuenta de Ana PYG');
   await pageAna.locator('select[name="tipo"]').selectOption('socio');
   await pageAna.locator('select[name="moneda"]').selectOption('PYG');
-  const anaMiembroId = sql("select m.id from public.espacio_miembros m join public.perfiles p on p.id=m.usuario_id where p.nombre='Ana' and m.espacio_id in (select id from public.espacios where tipo='organizacion') limit 1");
+  const anaMiembroId = sql(`select id from public.espacio_miembros where usuario_id='${qaPrefix}-0000-4000-8000-000000000001' and espacio_id='${orgId}'`);
   await pageAna.locator('select[name="titular_miembro_id"]').selectOption(anaMiembroId);
   await pageAna.getByRole('button', { name: 'Crear cuenta en cero' }).click();
   await pageAna.getByRole('heading', { name: 'Cuenta de Ana PYG' }).waitFor();
@@ -151,9 +155,9 @@ try {
   // 3. Registrar una transferencia de Cuenta de Ana PYG a Caja PYG (400.000 PYG con confirmación de descubierto)
   await pageAna.getByRole('link', { name: /Nueva transferencia/i }).click();
   await pageAna.getByRole('heading', { name: 'Nueva transferencia o cambio de moneda' }).waitFor();
-  const cAnaId = sql("select id from public.org_cuentas where nombre='Cuenta de Ana PYG' limit 1");
-  const cPygId = sql("select id from public.org_cuentas where nombre='Caja PYG' limit 1");
-  const cUsdId = sql("select id from public.org_cuentas where nombre='Banco USD' limit 1");
+  const cAnaId = sql(`select id from public.org_cuentas where nombre='Cuenta de Ana PYG' and espacio_id='${orgId}'`);
+  const cPygId = sql(`select id from public.org_cuentas where nombre='Caja PYG' and espacio_id='${orgId}'`);
+  const cUsdId = sql(`select id from public.org_cuentas where nombre='Banco USD' and espacio_id='${orgId}'`);
 
   await pageAna.locator('select[name="cuenta_origen_id"]').selectOption(cAnaId);
   await pageAna.locator('select[name="cuenta_destino_id"]').selectOption(cPygId);
@@ -184,9 +188,52 @@ try {
   await pageAna.getByRole('heading', { name: 'Registrar pago con dinero personal del socio' }).waitFor();
   await pageAna.locator('input[name="importe"]').fill('100000');
   await pageAna.locator('input[name="motivo"]').fill('Pago de multa DNIT con dinero personal');
+  const comprobantePdf = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n');
+  async function adjuntar() {
+    await pageAna.locator('input[name="comprobante"]').setInputFiles({ name: 'Recibo QA.pdf', mimeType: 'application/pdf', buffer: comprobantePdf });
+    await pageAna.getByRole('button', { name: 'Subir y verificar comprobante' }).click();
+    await pageAna.getByRole('status').filter({ hasText: 'Comprobante verificado' }).waitFor();
+  }
+  assert(await pageAna.getByRole('button', { name: 'Confirmar operación' }).isDisabled());
+  // Una subida interrumpida muestra recuperación y no crea operación financiera.
+  falloSubidaIntencional = true;
+  await pageAna.route('**/storage/v1/object/org-comprobantes/**', route => route.abort(), { times: 1 });
+  await pageAna.locator('input[name="comprobante"]').setInputFiles({ name: 'Recibo QA.pdf', mimeType: 'application/pdf', buffer: comprobantePdf });
+  await pageAna.getByRole('button', { name: 'Subir y verificar comprobante' }).click();
+  await pageAna.getByRole('button', { name: 'Reintentar subida y verificación' }).waitFor();
+  assert(await pageAna.getByRole('button', { name: 'Confirmar operación' }).isDisabled());
+  falloSubidaIntencional = false;
+  await pageAna.getByRole('button', { name: 'Reintentar subida y verificación' }).click();
+  await pageAna.getByRole('status').filter({ hasText: 'Comprobante verificado' }).waitFor();
+  for (const width of [390, 768, 1440, 1920]) {
+    await pageAna.setViewportSize({ width, height: 1000 });
+    assert.equal(await pageAna.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Desborde en comprobante a ${width}px`);
+    await pageAna.screenshot({ path: `${out}/comprobantes-form-${width}.png`, fullPage: true, animations: 'disabled' });
+  }
+  await pageAna.setViewportSize({ width: 1440, height: 1000 });
+
   await pageAna.getByRole('button', { name: 'Confirmar operación' }).click();
   await pageAna.getByRole('heading', { name: 'Custodia y cuenta corriente de socios' }).waitFor();
   await pageAna.locator('table').first().getByText('100.000 Gs.').first().waitFor();
+  for (const [boton, titulo, importe] of [
+    ['Reembolsar a socio', 'Reembolsar deuda al socio desde caja', '60000'],
+    ['Retiro de socio', 'Registrar retiro personal de socio', '10000'],
+  ]) {
+    await pageAna.getByRole('button', { name: boton, exact: true }).click();
+    await pageAna.getByRole('heading', { name: titulo }).waitFor();
+    await pageAna.locator('input[name="importe"]').fill(importe);
+    await pageAna.locator('input[name="motivo"]').fill(titulo);
+    await adjuntar();
+    await pageAna.getByRole('button', { name: 'Confirmar operación' }).click();
+    await pageAna.getByRole('heading', { name: 'Custodia y cuenta corriente de socios' }).waitFor();
+  }
+  await pageAna.getByRole('button', { name: 'Consultar comprobante' }).and(pageAna.locator(':visible')).first().click();
+  const abrirDocumento = pageAna.getByRole('link', { name: 'Abrir documento (60 s)' });
+  await abrirDocumento.waitFor();
+  const documento = await pageAna.request.get(await abrirDocumento.getAttribute('href'));
+  assert(documento.ok(), 'Lectura privada E2E');
+  assert.deepEqual(await documento.body(), comprobantePdf);
+
 
   // 6. Capturas obligatorias a 390, 768, 1440 y 1920 px de todas las pantallas nuevas de Etapa 3:
   //    - /org/cuentas

@@ -8,6 +8,9 @@ container=sys.argv[1]
 if not container.startswith(('supabase_db_etapa1-test-', 'supabase_db_etapa2-test-', 'supabase_db_etapa3-test-')):
     raise SystemExit('Solo contenedores locales aislados etapa1/etapa2/etapa3-test-*')
 queries=[
+ "select policyname,cmd,permissive,roles,qual,with_check from pg_policies where schemaname='storage' and policyname like 'org_comprobantes_%' order by policyname",
+ "select id,name,public,file_size_limit,allowed_mime_types from storage.buckets where id='org-comprobantes'",
+ "select pg_get_triggerdef(oid) definition from pg_trigger where tgname='proteger_objeto_comprobante_org'",
  "select table_name,column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' order by table_name,ordinal_position",
  "select c.relname,con.conname,pg_get_constraintdef(con.oid) definition from pg_constraint con join pg_class c on c.oid=con.conrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' order by 1,2",
  "select * from pg_indexes where schemaname='public' order by tablename,indexname",

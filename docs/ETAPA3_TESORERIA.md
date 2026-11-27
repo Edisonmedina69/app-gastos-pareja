@@ -2,7 +2,7 @@
 
 Implementa la **Etapa 3: Tesorería mínima** de [PLAN_ORGANIZACION.md](PLAN_ORGANIZACION.md) sobre la base de [ETAPA2_MULTI_ESPACIO.md](ETAPA2_MULTI_ESPACIO.md) y las correcciones de seguridad de [REVIEW_ETAPA2.md](REVIEW_ETAPA2.md). No aplica cambios en producción ni realiza merge sin autorización expresa del dueño.
 
-> Preparación de continuación: main y M6 integrados; PR #36 conserva sus flujos de socios mientras el dueño decide el alcance de comprobantes. Falta la reserva/subida/verificación/consumo de archivos exigida por el plan: ver [COMPROBANTES_TESORERIA.md](COMPROBANTES_TESORERIA.md). Esa condición impide habilitarlos en producción; los checks técnicos por sí solos no autorizan aplicación.
+> #36 ya está fusionado. El complemento implementa comprobantes privados obligatorios para pago personal, reembolso y retiro, con firmas antiguas cerradas. Ver [COMPROBANTES_TESORERIA.md](COMPROBANTES_TESORERIA.md) y la [entrega atómica desde M6](APLICACION_ITEM54_TESORERIA.md).
 
 ## 1. Modelo de datos, inmutabilidad y seguridad (RLS / RPC)
 
@@ -34,8 +34,8 @@ Todas las RPC son `SECURITY DEFINER SET search_path = ''`, invocan `validar_cont
    - En transferencias de la misma moneda conserva el importe.
    - En cambios entre `PYG`, `USD` y `BRL` exige ambos importes y tasa manual confirmada en unidades de `PYG` por `1` unidad de moneda origen/destino (`validar_importe_tasa_org` rechaza `tasa <= 1` en `USD`/`BRL`, impidiendo usar `1` como fallback).
    - Si el saldo calculado de la cuenta origen es insuficiente, aborta salvo que se confirme explícitamente la excepción (`p_confirmar_saldo_insuficiente = true`) con `p_motivo` obligatorio.
-3. **`registrar_pago_personal_socio_org`:** registra en una sola operación (`tipo = 'financiacion_socio'`) la entrada de financiación (`+importe`) y la salida del gasto (`-importe`) en la cuenta de custodia del socio, más el movimiento de deuda (`clase = 'prestamo'`, `+importe`) a favor del socio. La custodia neta no cambia y la empresa pasa a deberle ese importe al socio. Quien tiene `gastos.pagar` puede registrar su propio pago personal; para otro socio exige además `socios.crear` o `socios.pagar`.
-4. **`registrar_movimiento_socio_org`:** requiere `cuentas.pagar` y `socios.pagar`.
+3. **`registrar_pago_personal_socio_org`:** exige `p_comprobante_id` verificado y consumo atómico;  registra en una sola operación (`tipo = 'financiacion_socio'`) la entrada de financiación (`+importe`) y la salida del gasto (`-importe`) en la cuenta de custodia del socio, más el movimiento de deuda (`clase = 'prestamo'`, `+importe`) a favor del socio. La custodia neta no cambia y la empresa pasa a deberle ese importe al socio. Quien tiene `gastos.pagar` puede registrar su propio pago personal; para otro socio exige además `socios.crear` o `socios.pagar`.
+4. **`registrar_movimiento_socio_org`:** exige `p_comprobante_id` verificado y consumo atómico; requiere `cuentas.pagar` y `socios.pagar`.
    - `reembolso_socio`: descuenta de la cuenta empresarial (`-importe`) y reduce lo que la empresa le debe al socio (`-importe`), verificando que no supere la deuda pendiente en esa moneda. La caja conserva la tasa efectiva del reembolso y la deuda cancela su valoración histórica proporcional; el último abono absorbe el redondeo. La diferencia de cambio queda explícita en auditoría, sin dejar deuda base residual cuando la moneda original queda saldada.
    - `retiro_socio`: descuenta de la cuenta empresarial (`-importe`) y aumenta lo que el socio debe a la empresa (`-importe`).
 5. **`revertir_org`:** crea una operación `tipo = 'reversion'` con `reversa_de = p_operacion_id` (`UNIQUE`) y motivo obligatorio, insertando los contraasientos en `org_apuntes` y `org_movimientos_socios` con signo opuesto y las mismas tasas históricas. Exige exactamente `cuentas.anular` para transferencia, `gastos.anular` para pago personal (`financiacion_socio`) y `socios.anular` para reembolso/retiro. Otros tipos se deniegan por defecto. La UI aplica la misma matriz.
@@ -65,13 +65,6 @@ Cobertura verificada en `run_etapa3.sh` (contenedor Supabase local efímero en p
 4. **Concurrencia real (`etapa3_concurrencia.py`)**: doble transferencia idéntica, doble reversión y clave concurrente con importe distinto, verificando filas y conciliación.
 5. **Rollback funcional y equivalencia de esquema**: verificación de `20261129120000_etapa3_tesoreria_minima.down.sql`, suite P0 antes y después del rollback, y `diff -u` exacto entre el catálogo migrado y `supabase/schema.sql`.
 
-## 5. Plan de aplicación para el dueño (requiere su OK; no aplicado en prod)
+## 5. Aplicación y rollback
 
-1. **Precondición:** haber aplicado en producción la migración de correcciones de Etapa 2 (`20261128120000_etapa2_correcciones_revision.sql`, PR #35) y M6 incremental (`20261128130000_etapa2_m6_baja_invitaciones.sql`, PR #37), verificadas individualmente contra historial y catálogo. Orden de merge: #37 antes de #36 (ahora con base main). No se verificó ControlGastos en esta sesión; no hay MCP disponible.
-2. **Backup y ventana:** confirmar backup restaurable y ventana breve de mantenimiento.
-3. **Aplicar migración de Etapa 3:** ejecutar únicamente `supabase/migrations/20261129120000_etapa3_tesoreria_minima.sql`. Configura `lock_timeout = '5s'` y `statement_timeout = '60s'`; no modifica ninguna tabla ni política familiar (`gastos`, `ingresos_mensuales`, `deudas_maestras`, etc.).
-4. **Desplegar frontend actualizado:** publica las pantallas `/org/cuentas`, `/org/cuentas/nueva`, `/org/cuentas/:id`, `/org/transferencias/nueva` y `/org/socios`.
-5. **Verificación post-aplicación:**
-   - Comprobar que los hogares existentes continúan operando sin cambios.
-   - Con la organización piloto en QA, crear una cuenta en PYG y una en USD, verificar que ambas inician en `0`, probar una transferencia y comprobar el reporte de socios en tres columnas.
-6. **Rollback funcional ante contingencia:** ejecutar `supabase/rollback/20261129120000_etapa3_tesoreria_minima.down.sql`. Revoca `EXECUTE` sobre las 6 RPC de escritura de tesorería para frenar nuevos movimientos empresariales, **conservando** `org_cuentas`, `org_operaciones`, `org_apuntes`, `org_movimientos_socios` y las vistas de lectura para auditoría y rescate sin borrar ningún dato financiero.
+Desde M6, aplicar tesorería y complemento en una sola transacción usando [APLICACION_ITEM54_TESORERIA.md](APLICACION_ITEM54_TESORERIA.md). Contiene hashes, precondiciones, orden SQL → verificación → Edge → merge/frontend y rollback compatible. No aplicar #36 aisladamente ni usar su rollback después del complemento. La verificación incluye Storage/Edge reales y carreras de limpieza; el runner contrasta public y Storage entre migraciones, schema.sql y release atómica.

@@ -15,3 +15,7 @@ El 27/11/2026 se confirmó que **existe** `supabase_migrations.schema_migrations
 La consulta de baseline solo comprobó la existencia de la tabla, no sus versiones. Antes de cualquier aplicación, leer las versiones registradas y verificar qué está efectivamente aplicado; registrar únicamente la migración autorizada cuando sea necesario. No reproducir las migraciones históricas desde cero.
 
 Ver [auditoría, pruebas y plan de aplicación de etapa 1](../../docs/ETAPA1_MEMBRESIAS.md). Para pruebas locales, `bash supabase/tests/run_etapa1.sh` crea un stack aislado con réplica de esquema auditada y datos ficticios; no utiliza `db push` ni accede a producción.
+
+## Item 54: tesorería y comprobantes
+
+#36 está fusionado. Desde una base que termina en M6, no aplicar tesorería sin el complemento: usar la [entrega atómica](../../docs/APLICACION_ITEM54_TESORERIA.md), que evita exponer firmas antiguas sin comprobante. Conserva las migraciones fuente intactas y documenta sus hashes y correspondencia con la versión real registrada.

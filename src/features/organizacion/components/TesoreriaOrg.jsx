@@ -1,3 +1,4 @@
+import { AdjuntarComprobanteOrg, VerComprobanteOrg } from './ComprobanteOrg';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowLeftRight, Plus, RotateCcw, Wallet } from 'lucide-react';
@@ -981,6 +982,7 @@ export function PantallaNuevaTransferencia({ cuentas, alTransferir }) {
 }
 
 export function VistaSocios({
+  espacioId,
   reporteSocios,
   cuentas,
   miembros,
@@ -1005,6 +1007,7 @@ export function VistaSocios({
   const [motivo, setMotivo] = useState('');
   const [confirmarSaldo, setConfirmarSaldo] = useState(false);
   const [idempotencia, setIdempotencia] = useState(() => generarUuid());
+  const [comprobanteId, setComprobanteId] = useState(null);
   const [errorForm, setErrorForm] = useState('');
   const [ocupado, setOcupado] = useState(false);
 
@@ -1022,6 +1025,7 @@ export function VistaSocios({
 
   function abrirFormulario(modo, socioPreseleccionado = miembroActualId) {
     const mId = socioPreseleccionado || miembros[0]?.id || '';
+    setComprobanteId(null);
     setModoFormulario(modo);
     setMiembroId(mId);
     if (modo === 'pago_personal') {
@@ -1070,11 +1074,14 @@ export function VistaSocios({
       return;
     }
 
+    if (!comprobanteId) { setErrorForm('Adjuntá y verificá el comprobante antes de confirmar.'); return; }
+    if (ocupado) return;
     setOcupado(true);
     try {
       if (modoFormulario === 'pago_personal') {
         await alRegistrarPagoPersonal({
           idempotencia,
+          comprobanteId,
           miembroId,
           cuentaSocioId: cuentaSeleccionada.id,
           importe: imp,
@@ -1086,6 +1093,7 @@ export function VistaSocios({
       } else {
         await alRegistrarMovimientoSocio({
           idempotencia,
+          comprobanteId,
           tipo: modoFormulario,
           miembroId,
           cuentaId: cuentaSeleccionada.id,
@@ -1141,7 +1149,7 @@ export function VistaSocios({
               {errorForm}
             </p>
           )}
-          <div className="grid gap-5 md:grid-cols-2">
+          <fieldset disabled={ocupado} className="grid gap-5 md:grid-cols-2">
             <Field label="Socio">
               {props => (
                 <Select
@@ -1150,6 +1158,7 @@ export function VistaSocios({
                   value={miembroId}
                   onChange={e => {
                     const nuevoId = e.target.value;
+                    setComprobanteId(null);
                     setMiembroId(nuevoId);
                     if (modoFormulario === 'pago_personal') {
                       const cSocio = cuentas.find(c => c.activa && c.tipo === 'socio' && c.titular_miembro_id === nuevoId);
@@ -1292,10 +1301,13 @@ export function VistaSocios({
                 Autorizar excepción si el saldo disponible en la cuenta seleccionada es insuficiente.
               </label>
             )}
-          </div>
+          </fieldset>
 
+          <AdjuntarComprobanteOrg key={`${modoFormulario}-${miembroId}-${idempotencia}`}
+            espacioId={espacioId} tipo={modoFormulario === 'pago_personal' ? 'financiacion_socio' : modoFormulario}
+            miembroId={miembroId} bloqueado={ocupado} alVerificar={setComprobanteId} />
           <div className="flex flex-wrap gap-3 pt-2 border-t border-border">
-            <Button type="submit" cargando={ocupado}>
+            <Button type="submit" cargando={ocupado} disabled={!comprobanteId}>
               Confirmar operación
             </Button>
             <Button variante="secondary" disabled={ocupado} onClick={() => setModoFormulario(null)}>
@@ -1433,6 +1445,7 @@ export function VistaSocios({
                         {formatearMonedaOrg(ms.importe_deuda_firmado, ms.moneda)}
                       </p>
                     </div>
+                    <VerComprobanteOrg espacioId={espacioId} adjuntoId={op?.comprobante_id} />
                     {op?.motivo && <p className="text-xs text-muted-foreground">{op.motivo}</p>}
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-xs text-muted-foreground">
@@ -1486,7 +1499,8 @@ export function VistaSocios({
                         <td className="py-4 px-4">
                           <span className="font-medium capitalize">{ms.clase}</span>
                           {yaRevertida && <Badge tono="warning" className="ml-2">Revertida</Badge>}
-                          {op?.motivo && <p className="text-xs text-muted-foreground mt-0.5">{op.motivo}</p>}
+                          <VerComprobanteOrg espacioId={espacioId} adjuntoId={op?.comprobante_id} />
+                    {op?.motivo && <p className="text-xs text-muted-foreground mt-0.5">{op.motivo}</p>}
                         </td>
                         <td className="py-4 px-4 text-right font-semibold tabular-nums">
                           {aFavorSocio ? '+' : ''}

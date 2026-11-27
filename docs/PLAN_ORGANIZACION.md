@@ -169,3 +169,7 @@ Riesgos principales: divergencia con producción/P0; corte a clientes viejos dur
 Decisiones del dueño incorporadas: multi-espacio previo al piloto; permisos por integrante a partir de plantillas; PYG/10 miembros/7 días/10 MiB; caja y deuda previa en cero; comprobante obligatorio. Capital y utilidades siguen pospuestos. Afinar durante revisión únicamente el catálogo de permisos y las plantillas iniciales, sin cambiar estos acuerdos.
 
 Aprobación requerida del diseño actualizado antes de implementar. Este PR no aplica migraciones, no crea usuarios QA ni modifica producción.
+
+## Entrega anticipada de comprobantes en tesorería (item 54)
+
+Por decisión posterior del dueño, etapa 3 incluye los comprobantes completos de pago personal/financiación, reembolso y retiro; compromisos/períodos de etapa 4 siguen fuera del complemento. #36 está fusionado y su migración queda intacta. El complemento y aplicación atómica desde M6 están documentados en [COMPROBANTES_TESORERIA.md](COMPROBANTES_TESORERIA.md) y [APLICACION_ITEM54_TESORERIA.md](APLICACION_ITEM54_TESORERIA.md). Estos tres flujos no se habilitan sin archivo verificado; transferencias internas conservan su regla específica.

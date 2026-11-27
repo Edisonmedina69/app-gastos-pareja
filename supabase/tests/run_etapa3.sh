@@ -6,6 +6,10 @@ local_dir=$(mktemp -d /tmp/etapa3-test-XXXXXXXX)
 container="supabase_db_$(basename "$local_dir")"
 cli=(npx --yes supabase@3.4.0)
 cleanup() {
+  exit_status=$?
+  if [[ "${KEEP_ETAPA3_ON_FAILURE:-0}" == "1" && "$exit_status" != "0" ]]; then
+    echo "Stack local conservado para depuración: $local_dir ($container)"; return;
+  fi
   "${cli[@]}" stop --workdir "$local_dir" --no-backup >/dev/null 2>&1 || true
   rm -rf "$local_dir"
 }
@@ -22,7 +26,9 @@ p=sys.argv[1];s=open(p).read()
 for a,b in [('54321','55521'),('54322','55522'),('54320','55520'),('54323','55523'),('54324','55524'),('54327','55527')]: s=s.replace(a,b)
 open(p,'w').write(s)
 PY
-if ! "${cli[@]}" start --workdir "$local_dir" -x studio,imgproxy,edge-runtime,logflare,vector,supavisor >/dev/null 2>&1; then
+mkdir -p "$local_dir/supabase/functions"
+cp -R supabase/functions/comprobantes "$local_dir/supabase/functions/"
+if ! "${cli[@]}" start --workdir "$local_dir" -x studio,imgproxy,logflare,vector,supavisor >/dev/null 2>&1; then
   echo 'Falló supabase start aislado; revisar Docker/puertos 55520–55527.' >&2; exit 1
 fi
 sql() { docker exec -i "$container" psql -U postgres -v ON_ERROR_STOP=1 "$@"; }
@@ -45,21 +51,39 @@ python3 supabase/tests/etapa3_concurrencia.py "$container"
 python3 supabase/tests/etapa2_p0.py | sql >"$local_dir/p0.log" 2>&1 || { cat "$local_dir/p0.log"; exit 1; }
 echo 'OK: regresión P0 con sesiones Auth válidas.'
 
+sql < supabase/migrations/20261129130000_comprobantes_tesoreria.sql >"$local_dir/comprobantes-migracion.log" 2>&1 || { cat "$local_dir/comprobantes-migracion.log"; exit 1; }
+node supabase/tests/comprobantes_storage.mjs "$local_dir" "$container"
 python3 supabase/tests/catalogo_local.py "$container" >"$local_dir/catalogo-migrado.json"
 if [[ -f qa/etapa3-e2e.mjs ]] && [[ "${SKIP_PLAYWRIGHT_E2E:-0}" != "1" ]] && [[ -n "${PLAYWRIGHT_MODULE:-}" || -d /tmp/gastos-playwright || -d "$HOME/.cache/ms-playwright" ]]; then
   node qa/etapa3-e2e.mjs "$local_dir" "$container"
 fi
 
-sql < supabase/rollback/20261129120000_etapa3_tesoreria_minima.down.sql >"$local_dir/rollback3.log" 2>&1 || { cat "$local_dir/rollback3.log"; exit 1; }
+sql < supabase/rollback/20261129130000_comprobantes_tesoreria.down.sql >"$local_dir/rollback3.log" 2>&1 || { cat "$local_dir/rollback3.log"; exit 1; }
 sql -Atc "select not has_function_privilege('authenticated','public.transferir_org(uuid,uuid,uuid,uuid,numeric,numeric,date,numeric,numeric,text,text,boolean)','execute') and exists(select 1 from public.org_operaciones)" | grep -qx t
+sql -Atc "select not has_function_privilege('authenticated','public.registrar_pago_personal_socio_org(uuid,uuid,uuid,uuid,numeric,uuid,numeric,text,date,text)','execute') and not has_function_privilege('service_role','public.confirmar_comprobante_servidor_org(uuid,uuid,uuid,uuid,text,bigint,text)','execute') and has_function_privilege('authenticated','public.obtener_lectura_comprobante_org(uuid,uuid)','execute') and exists(select 1 from public.org_adjuntos where estado='consumido')" | grep -qx t
 python3 supabase/tests/etapa2_p0.py | sql >"$local_dir/p0-rollback.log" 2>&1 || { cat "$local_dir/p0-rollback.log"; exit 1; }
 echo 'OK: rollback funcional de etapa 3 conserva datos, lectura y acceso familiar.'
 
 # Reconstrucción desde schema.sql en este contenedor efímero para verificar equivalencia exacta.
-printf 'drop schema public cascade; create schema public; grant usage on schema public to public;\n' | sql >/dev/null 2>&1
+sql < supabase/tests/comprobantes_reset_schema.sql >"$local_dir/reset-schema.log" 2>&1 || { cat "$local_dir/reset-schema.log"; exit 1; }
 sql < supabase/schema.sql >"$local_dir/schema.log" 2>&1 || { cat "$local_dir/schema.log"; exit 1; }
 python3 supabase/tests/catalogo_local.py "$container" >"$local_dir/catalogo-schema.json"
 diff -u "$local_dir/catalogo-migrado.json" "$local_dir/catalogo-schema.json"
-sql < supabase/tests/etapa3_tesoreria_test.sql >"$local_dir/etapa3-schema-sql.log" 2>&1 || { cat "$local_dir/etapa3-schema-sql.log"; exit 1; }
+sql < supabase/tests/comprobantes_schema.sql >"$local_dir/etapa3-schema-sql.log" 2>&1 || { cat "$local_dir/etapa3-schema-sql.log"; exit 1; }
 python3 supabase/tests/etapa2_p0.py | sql >"$local_dir/p0-schema.log" 2>&1 || { cat "$local_dir/p0-schema.log"; exit 1; }
 echo 'OK: schema.sql equivalente al catálogo migrado; tests Etapa 3 y P0 pasan sobre schema.sql.'
+
+# Validar el payload que usará producción desde M6, sin ventana de firmas legadas.
+python3 supabase/releases/preparar_tesoreria.py --check
+sql < supabase/tests/comprobantes_reset_schema.sql >"$local_dir/reset-schema.log" 2>&1 || { cat "$local_dir/reset-schema.log"; exit 1; }
+for archivo in supabase/baseline/schema_pre_etapa2.sql \
+  supabase/migrations/20261127180000_etapa2_multi_espacio.sql \
+  supabase/migrations/20261128120000_etapa2_correcciones_revision.sql \
+  supabase/migrations/20261128130000_etapa2_m6_baja_invitaciones.sql \
+  supabase/releases/tesoreria_comprobantes_desde_m6.sql; do
+  sql < "$archivo" >"$local_dir/release.log" 2>&1 || { cat "$local_dir/release.log"; exit 1; }
+done
+python3 supabase/tests/catalogo_local.py "$container" >"$local_dir/catalogo-release.json"
+diff -u "$local_dir/catalogo-migrado.json" "$local_dir/catalogo-release.json"
+sql < supabase/tests/comprobantes_schema.sql >/dev/null
+echo 'OK: entrega atómica desde M6 equivale a ambas migraciones y a schema.sql, incluyendo Storage.'

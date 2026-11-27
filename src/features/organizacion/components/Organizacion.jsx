@@ -342,6 +342,7 @@ export default function Organizacion({ activo, refrescarEspacios }) {
         />
       ) : enSocios ? (
         <VistaSocios
+          espacioId={activo.id}
           reporteSocios={datos.reporteSocios}
           cuentas={datos.cuentas}
           miembros={datos.miembros}
