@@ -1,30 +1,11 @@
--- =============================================================================
--- ÑandeFinanza · Esquema de referencia (schema `public`)
---
--- Tablas, columnas y restricciones: leídas el 2026-11-26 del catálogo de la base
--- de producción con consultas de SOLO LECTURA (pg_class, pg_attribute,
--- pg_constraint, pg_proc, pg_trigger, pg_policies, pg_publication_tables).
--- Funciones, triggers, permisos y políticas: estado resultante de aplicar la
--- última migración, supabase/migrations/20261126120000_p0_aislamiento_espacios.sql
--- (P0 de seguridad). Al 2026-11-26 esa migración todavía no estaba aplicada en
--- producción; cuando se aplique, este archivo coincide con la base.
---
--- Es documentación: NO es una migración y no hace falta ejecutarlo. Sirve para
--- saber qué columnas, restricciones y políticas existen hoy sin leer las 18
--- migraciones históricas.
---
--- Notas de lo observado (no se cambió nada):
---   * No hay índices además de las PK y UNIQUE.
---   * Ninguna tabla figura en la publicación `supabase_realtime`, así que la
---     suscripción `postgres_changes` de la app no recibe eventos.
---   * `cuentas_maestras`, `cuentas_pendientes` y `prestamos_personales` son
---     tablas heredadas que la app ya no usa.
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
--- Tablas
--- -----------------------------------------------------------------------------
+-- ÑandeFinanza · esquema de referencia después de etapa 1 (NO aplicado a prod).
+-- Baseline vivo 2026-11-27: baseline/catalogo_vivo_2026-11-27.md.
+-- Public: 13 tablas, 168 columnas, 52 constraints, 14 índices PK/UNIQUE,
+-- 9 funciones, 2 triggers, 21 políticas; coincide con la P0 aplicada.
+-- Storage: sin buckets ni políticas propias; triggers internos administrados
+-- por Supabase (no se reproducen aquí). Sin tablas en publicaciones.
+-- El historial de migraciones YA existe; verificar sus versiones antes de usar CLI.
+-- Este archivo documenta el resultado; no ejecutar sobre producción.
 
 CREATE TABLE public.espacios (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -34,6 +15,8 @@ CREATE TABLE public.espacios (
   codigo_invitacion text,
   created_at timestamp with time zone DEFAULT now(),
   limite_usuarios integer DEFAULT 2,
+  tipo text NOT NULL DEFAULT 'hogar',
+  CONSTRAINT espacios_tipo_check CHECK (tipo IN ('hogar', 'organizacion')),
   CONSTRAINT espacios_codigo_invitacion_key UNIQUE (codigo_invitacion),
   CONSTRAINT espacios_pkey PRIMARY KEY (id)
 );
@@ -288,6 +271,24 @@ CREATE TABLE public.prestamos_personales (
 );
 
 
+create table public.espacio_miembros (
+  id uuid primary key default gen_random_uuid(),
+  espacio_id uuid not null references public.espacios(id) on delete cascade,
+  usuario_id uuid not null references public.perfiles(id) on delete cascade,
+  rol_plantilla text not null default 'miembro'
+    check (rol_plantilla in ('admin', 'miembro', 'contador', 'lectura')),
+  activo boolean not null default true,
+  created_at timestamptz not null default now(),
+  constraint espacio_miembros_espacio_usuario_key unique (espacio_id, usuario_id),
+  constraint espacio_miembros_espacio_id_id_key unique (espacio_id, id)
+);
+-- Guarda temporal de etapa 1: retirar SOLO cuando selector/helpers/RLS estén listos.
+create unique index espacio_miembros_un_activo_por_usuario
+  on public.espacio_miembros(usuario_id) where activo;
+create index espacio_miembros_usuario_activo_idx on public.espacio_miembros(usuario_id, activo);
+create index espacio_miembros_espacio_activo_idx on public.espacio_miembros(espacio_id) where activo;
+
+
 -- -----------------------------------------------------------------------------
 -- Row Level Security (habilitada en todas las tablas)
 -- -----------------------------------------------------------------------------
@@ -361,7 +362,7 @@ begin
     return null;
   end if;
   select e.limite_usuarios into v_limite from public.espacios e where e.id = p_espacio_id;
-  select count(*) into v_actual from public.perfiles p where p.espacio_id = p_espacio_id;
+  select count(*) into v_actual from public.espacio_miembros p where p.espacio_id = p_espacio_id and p.activo;
   return v_limite is null or v_actual < v_limite;
 end;
 $$;
@@ -383,6 +384,10 @@ begin
     return new;
   end if;
 
+  if exists (select 1 from public.espacios where id = new.espacio_id and tipo <> 'hogar') then
+    raise exception 'El circuito familiar solo admite hogares' using errcode = '42501';
+  end if;
+
   -- Bloquea la fila del espacio para que dos altas concurrentes no superen el límite.
   select e.limite_usuarios into v_limite
   from public.espacios e where e.id = new.espacio_id
@@ -393,8 +398,8 @@ begin
   end if;
 
   select count(*)::integer into v_actual
-  from public.perfiles p
-  where p.espacio_id = new.espacio_id and p.id <> new.id;
+  from public.espacio_miembros p
+  where p.espacio_id = new.espacio_id and p.usuario_id <> new.id and p.activo;
 
   if v_actual >= v_limite then
     raise exception 'Límite de usuarios alcanzado para este espacio (%)', v_limite
@@ -457,6 +462,8 @@ begin
   if v_uid is null then
     raise exception 'Necesitás iniciar sesión' using errcode = '28000';
   end if;
+  -- Auth siempre existe, incluso antes del primer perfil. Orden: usuario → espacio → perfil.
+  perform 1 from auth.users where id = v_uid for update;
   if p_codigo is null or length(trim(p_codigo)) < 6 then
     raise exception 'Código de invitación inválido' using errcode = '22023';
   end if;
@@ -468,6 +475,10 @@ begin
     raise exception 'Código de invitación inválido' using errcode = '22023';
   end if;
 
+  if v_esp.tipo <> 'hogar' then
+    raise exception 'El código familiar solo admite hogares' using errcode = '42501';
+  end if;
+
   select * into v_perfil from public.perfiles p where p.id = v_uid for update;
   if found and v_perfil.espacio_id = v_esp.id then
     return v_esp.id;                       -- ya es miembro: idempotente
@@ -476,7 +487,7 @@ begin
     raise exception 'Ya pertenecés a otro espacio' using errcode = '42501';
   end if;
 
-  select count(*) into v_actual from public.perfiles p where p.espacio_id = v_esp.id;
+  select count(*) into v_actual from public.espacio_miembros p where p.espacio_id = v_esp.id and p.activo;
   if v_esp.limite_usuarios is not null and v_actual >= v_esp.limite_usuarios then
     raise exception 'Límite de usuarios alcanzado para este espacio (%)', v_esp.limite_usuarios
       using errcode = 'P0001';
@@ -520,6 +531,8 @@ begin
   if v_uid is null then
     raise exception 'Necesitás iniciar sesión' using errcode = '28000';
   end if;
+  -- Auth siempre existe, incluso antes del primer perfil. Orden: usuario → espacio → perfil.
+  perform 1 from auth.users where id = v_uid for update;
   if p_nombre_espacio is null or length(trim(p_nombre_espacio)) = 0 then
     raise exception 'El nombre del espacio es obligatorio' using errcode = '22023';
   end if;
@@ -702,3 +715,91 @@ CREATE POLICY "Permitir inserción de gastos programados a miembros del hogar" O
   WITH CHECK ((espacio_id = mi_espacio_id()));
 CREATE POLICY "Permitir lectura de gastos programados a miembros del hogar" ON public.gastos_programados AS PERMISSIVE FOR SELECT TO authenticated
   USING ((espacio_id = mi_espacio_id()));
+
+-- Membresías compatibles (etapa 1).
+alter table public.espacio_miembros enable row level security;
+revoke all on public.espacio_miembros from public, anon, authenticated;
+grant select on public.espacio_miembros to authenticated;
+grant all on public.espacio_miembros to service_role;
+-- Solo información propia; no revela otras pertenencias de compañeros.
+create policy "Leer membresías propias" on public.espacio_miembros
+  for select to authenticated using (usuario_id = (select auth.uid()));
+
+create or replace function public.sincronizar_membresia_perfil()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_op = 'UPDATE' and old.espacio_id is distinct from new.espacio_id then
+    update public.espacio_miembros set activo = false
+      where usuario_id = new.id and espacio_id = old.espacio_id and activo;
+  end if;
+  if new.espacio_id is not null then
+    insert into public.espacio_miembros (espacio_id, usuario_id, rol_plantilla, activo)
+    values (new.espacio_id, new.id,
+      case when new.rol = 'admin_hogar' then 'admin' else 'miembro' end, true)
+    on conflict (espacio_id, usuario_id) do update
+      set activo = true, rol_plantilla = excluded.rol_plantilla;
+  end if;
+  return new;
+end;
+$$;
+
+-- Defensa también para escrituras privilegiadas a membresías: no habilitar un
+-- segundo contexto ni unirse a organizaciones por el circuito familiar.
+create or replace function public.validar_membresia_compatible()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare
+  v_limite integer;
+  v_tipo text;
+begin
+  if not new.activo then return new; end if;
+  select limite_usuarios, tipo into v_limite, v_tipo
+    from public.espacios where id = new.espacio_id for update;
+  if v_tipo <> 'hogar' or not exists (
+    select 1 from public.perfiles where id = new.usuario_id and espacio_id = new.espacio_id
+  ) then
+    raise exception 'La membresía debe coincidir con el hogar del perfil en etapa 1'
+      using errcode = '23514';
+  end if;
+  -- Un backfill repetido no debe rechazar miembros históricos si el límite
+  -- fue reducido después del alta: el INSERT no agrega una membresía activa.
+  if tg_op = 'INSERT' and exists (
+    select 1 from public.espacio_miembros
+    where espacio_id = new.espacio_id and usuario_id = new.usuario_id and activo
+  ) then return new; end if;
+  if tg_op = 'UPDATE' and old.activo and old.espacio_id = new.espacio_id
+      and old.usuario_id = new.usuario_id then
+    return new;
+  end if;
+  if v_limite is not null and (
+    select count(*) from public.espacio_miembros
+    where espacio_id = new.espacio_id and activo and usuario_id <> new.usuario_id
+  ) >= v_limite then
+    raise exception 'Límite de usuarios alcanzado para este espacio (%)', v_limite
+      using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger tr_sincronizar_membresia_perfil
+  after insert or update of espacio_id, rol on public.perfiles
+  for each row execute function public.sincronizar_membresia_perfil();
+create trigger tr_validar_membresia_compatible
+  before insert or update on public.espacio_miembros
+  for each row execute function public.validar_membresia_compatible();
+
+
+revoke execute on function public.sincronizar_membresia_perfil(), public.validar_membresia_compatible() from public, anon, authenticated;
+
+-- ACL heredadas de public: RLS restringe el acceso efectivo.
+grant all on public.cuentas_maestras, public.cuentas_pendientes, public.cuotas_detalle,
+  public.deudas_maestras, public.espacios, public.gastos, public.gastos_programados,
+  public.historial_salarios, public.ingresos_mensuales, public.ingresos_programados,
+  public.notificaciones, public.perfiles, public.prestamos_personales
+  to anon, authenticated, service_role;
+revoke all on public.espacio_miembros from public, anon, authenticated;
+grant select on public.espacio_miembros to authenticated;
+
+-- ACL de triggers explícitas, incluso en un esquema local recién creado.
+grant execute on function public.proteger_perfil(), public.validar_limite_usuarios(),
+  public.sincronizar_membresia_perfil(), public.validar_membresia_compatible() to service_role;
