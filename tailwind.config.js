@@ -35,7 +35,7 @@ export default {
       },
       // Escala tipográfica Major Third (1.250) sobre 16 px.
       fontSize: {
-        micro: ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.06em" }], // 11 px, etiquetas
+        micro: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.06em" }], // 12 px, etiquetas
         "title-sm": ["1.25rem", { lineHeight: "1.75rem", letterSpacing: "-0.01em" }], // 20
         "title-md": ["1.5625rem", { lineHeight: "2rem", letterSpacing: "-0.015em" }], // 25
         "title-lg": ["1.953rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em" }], // 31

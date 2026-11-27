@@ -396,7 +396,7 @@ export default function Ingresos({
             <button 
               key={tab} 
               onClick={() => setActiveTab(tab)} 
-              className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}
+              className={`px-3 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}
             >
               {tab === 'historial' ? 'Efectivos' : (tab === 'programados' ? 'Fijos' : <History size={14}/>)}
             </button>
@@ -407,11 +407,11 @@ export default function Ingresos({
       <div className="grid grid-cols-2 gap-3">
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetForm(); navigate('/ingresos/nuevo', { state: { desdeFormulario: true } }); }} className="p-4 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl flex flex-col items-center gap-2 hover:bg-emerald-600/30 transition-all">
           <Plus className="text-emerald-400" />
-          <span className="text-[10px] font-black text-white uppercase">Ingreso Rápido</span>
+          <span className="text-xs font-black text-white uppercase">Ingreso Rápido</span>
         </motion.button>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetForm(); navigate('/ingresos/programar', { state: { desdeFormulario: true } }); }} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/10 transition-all">
           <RefreshCcw className="text-indigo-400" />
-          <span className="text-[10px] font-black text-white uppercase">Programar Fijo</span>
+          <span className="text-xs font-black text-white uppercase">Programar Fijo</span>
         </motion.button>
       </div>
 

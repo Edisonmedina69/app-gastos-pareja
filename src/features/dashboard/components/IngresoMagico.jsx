@@ -106,7 +106,7 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
               </div>
               <div>
                 <h2 className="text-xl font-black text-white leading-none">Ingreso Mágico</h2>
-                <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-black mt-1">Carga Inteligente con IA</p>
+                <p className="text-xs text-indigo-400 uppercase tracking-widest font-black mt-1">Carga Inteligente con IA</p>
               </div>
             </div>
 
@@ -115,7 +115,7 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
                 <div className="relative">
                   <textarea
                     placeholder='Ej: "Cena en Pizza Hut 180mil" o "Carga de nafta 250k"...'
-                    className="w-full h-32 bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-600 italic text-base"
+                    className="w-full h-32 bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-400 italic text-base"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                   />
@@ -133,7 +133,7 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
                     </button>
                   </div>
                 </div>
-                <p className="text-center text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
+                <p className="text-center text-xs text-slate-400 font-bold uppercase tracking-tighter">
                   Podés escribir o subir una foto del ticket
                 </p>
               </div>
@@ -141,21 +141,21 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
                 <div className="p-6 bg-indigo-600/10 border border-indigo-500/20 rounded-2xl space-y-4">
                   <div className="flex justify-between items-start">
-                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Resumen Interpretado</span>
-                    <button onClick={() => setResultado(null)} className="text-[10px] font-bold text-slate-500 hover:text-white underline">Corregir</button>
+                    <span className="text-xs font-black text-indigo-400 uppercase tracking-widest">Resumen Interpretado</span>
+                    <button onClick={() => setResultado(null)} className="text-xs font-bold text-slate-400 hover:text-white underline">Corregir</button>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] text-slate-500 font-bold uppercase">Concepto</label>
+                      <label className="text-xs text-slate-400 font-bold uppercase">Concepto</label>
                       <div className="text-lg font-bold text-white truncate">{resultado.concepto}</div>
                     </div>
                     <div className="text-right">
-                      <label className="text-[10px] text-slate-500 font-bold uppercase">Monto</label>
+                      <label className="text-xs text-slate-400 font-bold uppercase">Monto</label>
                       <div className="text-2xl font-black text-indigo-400">{resultado.monto.toLocaleString()} <span className="text-xs">{resultado.moneda}</span></div>
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-500 font-bold uppercase">Categoría</label>
+                      <label className="text-xs text-slate-400 font-bold uppercase">Categoría</label>
                       <div className="text-sm font-bold text-white px-3 py-1 bg-white/5 rounded-lg w-fit">{resultado.categoria}</div>
                     </div>
                   </div>
@@ -167,7 +167,7 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
                     setResultado(null);
                     onClose();
                   }}
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-emerald-700 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
                 >
                   CONFIRMAR Y GUARDAR <Check size={20} />
                 </button>

@@ -373,16 +373,16 @@ export default function Cuentas({
           <ModalDeuda key={`deuda-${modal.deuda?.id || "nueva"}`} deudaEditando={modal.deuda} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} saludFinanciera={saludFinanciera} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'abono' && (
-          <ModalAbono key="abono" pagoSeleccionado={modal.pago} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
+          <ModalAbono key={`abono-${modal.pago.cuota.id}`} pagoSeleccionado={modal.pago} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
         )}
         {modal?.tipo === 'compra' && (
-          <ModalCompra key="compra" compraSeleccionada={modal.tarjeta} usuarioActual={usuarioActual} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} />
+          <ModalCompra key={`compra-${modal.tarjeta.id}`} compraSeleccionada={modal.tarjeta} usuarioActual={usuarioActual} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'fijo' && (
           <ModalGastoFijo key={`fijo-${modal.fijo?.id || "nuevo"}`} fijo={modal.fijo} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'pagarFijo' && (
-          <ModalPagarFijo key="pagarFijo" gastoFijoAPagar={modal.fijo} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
+          <ModalPagarFijo key={`pagarFijo-${modal.fijo.id}`} gastoFijoAPagar={modal.fijo} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
         )}
         {modal?.tipo === 'prevision' && (
           <ModalPrevision key={`prevision-${modal.prevision?.id || "nueva"}`} prevision={modal.prevision} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />

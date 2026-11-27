@@ -60,7 +60,7 @@ export default function Login() {
             <span className="text-white text-3xl font-bold italic">Ñ</span>
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">ÑandeFinanza</h1>
-          <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">🇵🇾 Sistema 100% Paraguayo</p>
+          <p className="text-emerald-400 text-xs font-black uppercase tracking-[0.2em] mt-1">🇵🇾 Sistema 100% Paraguayo</p>
           <p className="text-slate-400 mt-2 text-sm italic">Hecho con ❤️ y mucho Tereré 🧉</p>
         </div>
 
@@ -73,7 +73,7 @@ export default function Login() {
             <div className="space-y-1.5">
               <Label htmlFor="login-usuario">Usuario o Correo</Label>
               <div className="relative">
-                <Mail aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <Mail aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <Input id="login-usuario" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="Ej: edison o tu@email.com" value={usuario} onChange={(e) => setUsuario(e.target.value)} className="bg-slate-900/50 pl-11" required />
               </div>
             </div>
@@ -81,7 +81,7 @@ export default function Login() {
             <div className="space-y-1.5">
               <Label htmlFor="login-password">Contraseña</Label>
               <div className="relative">
-                <Lock aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <Lock aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <Input id="login-password" type="password" autoComplete="current-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-slate-900/50 pl-11" required />
               </div>
             </div>

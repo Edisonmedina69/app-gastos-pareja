@@ -13,7 +13,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
 
             <form onSubmit={crearEspacio} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre de la Familia / Cliente</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre de la Familia / Cliente</label>
                 <input 
                   type="text" 
                   placeholder="Ej: Familia Medina..." 
@@ -24,7 +24,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Plan / Límite de Usuarios</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Plan / Límite de Usuarios</label>
                 <select 
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" 
                   value={limiteUsuarios} 
@@ -41,7 +41,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
                 <span className="text-xs font-black text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><Users size={14}/> Registrar Usuario 1 (Opcional)</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Nombre de Usuario</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">Nombre de Usuario</label>
                     <input 
                       type="text" 
                       placeholder="Ej: carlos" 
@@ -51,7 +51,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Contraseña</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">Contraseña</label>
                     <input 
                       type="password" 
                       placeholder="••••••••" 
@@ -67,7 +67,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
                 <span className="text-xs font-black text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><Users size={14}/> Registrar Usuario 2 (Opcional)</span>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Nombre de Usuario</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">Nombre de Usuario</label>
                     <input 
                       type="text" 
                       placeholder="Ej: maria" 
@@ -77,7 +77,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Contraseña</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">Contraseña</label>
                     <input 
                       type="password" 
                       placeholder="••••••••" 
@@ -91,7 +91,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
 
               <div className="flex gap-2 pt-4 border-t border-white/10">
                 <button type="button" onClick={() => setMostrarModalCrear(false)} className="flex-1 py-4 bg-white/5 text-slate-400 font-bold rounded-2xl hover:bg-white/10 transition-all text-xs">CANCELAR</button>
-                <button type="submit" disabled={guardando} className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition-all text-xs">
+                <button type="submit" disabled={guardando} className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-600 transition-all text-xs">
                   {guardando ? <Loader2 className="animate-spin mx-auto"/> : "CREAR HOGAR Y CUENTAS"}
                 </button>
               </div>

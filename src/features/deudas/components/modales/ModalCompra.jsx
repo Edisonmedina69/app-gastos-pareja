@@ -62,12 +62,12 @@ export default function ModalCompra({ compraSeleccionada, usuarioActual, datosHo
   return (
     <FormPage resumen={<><p className="font-bold">{compraConcepto || compraSeleccionada.titulo}</p><p className="text-2xl tabular-nums mt-3">{compraMontoFormateado || "0"} {compraSeleccionada.moneda}</p><p className="text-sm text-muted-foreground mt-2">{compraCategoria}</p></>} onClose={onClose} ariaLabel="Cargar compra">
       <h3 className="text-white font-bold text-lg mb-1">Cargar Compra</h3>
-      <p className="text-[10px] text-slate-400 font-bold mb-4 uppercase tracking-wider">
+      <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">
         Tarjeta: {compraSeleccionada.titulo}
       </p>
       <form onSubmit={procesarCompraTarjeta} className="space-y-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Concepto / Comercio</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Concepto / Comercio</label>
           <input 
             type="text" 
             placeholder="Ej: Supermercado, Biggie, combustible..." 
@@ -79,7 +79,7 @@ export default function ModalCompra({ compraSeleccionada, usuarioActual, datosHo
         </div>
         
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Monto de la Compra</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Monto de la Compra</label>
           <div className="relative">
             <input 
               type="text" 
@@ -89,12 +89,12 @@ export default function ModalCompra({ compraSeleccionada, usuarioActual, datosHo
               placeholder="0"
               required
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{compraSeleccionada.moneda}</span>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black uppercase text-xs">{compraSeleccionada.moneda}</span>
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Categoría</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Categoría</label>
           <select 
             value={compraCategoria} 
             onChange={(e) => setCompraCategoria(e.target.value)} 

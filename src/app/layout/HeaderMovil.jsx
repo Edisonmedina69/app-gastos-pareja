@@ -18,7 +18,7 @@ export default function HeaderMovil({ datosHogar, usuarioActual }) {
           <span className="text-xs font-black tracking-tight text-white truncate max-w-[150px]">
             {datosHogar?.nombre_familia || "ÑandeFinanza"}
           </span>
-          {datosHogar?.nombre_familia && <span className="text-[7px] text-indigo-400 font-bold uppercase tracking-wider">Hogar Activo</span>}
+          {datosHogar?.nombre_familia && <span className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Hogar Activo</span>}
         </div>
       </div>
 
@@ -45,7 +45,7 @@ export default function HeaderMovil({ datosHogar, usuarioActual }) {
               >
                 <div className="pb-3 border-b border-white/5 px-1">
                   <div className="text-xs font-black text-white leading-none">{usuarioActual?.nombre || "Usuario"}</div>
-                  <div className="text-[9px] text-slate-500 font-bold uppercase mt-1 tracking-tighter">
+                  <div className="text-xs text-slate-400 font-bold uppercase mt-1 tracking-tighter">
                     {datosHogar?.nombre_familia || "Mi Hogar"} • {datosHogar?.rol || "miembro"}
                   </div>
                 </div>
@@ -63,9 +63,9 @@ export default function HeaderMovil({ datosHogar, usuarioActual }) {
                     setMostrarMenuPerfilMovil(false);
                     confirmarCierreGlobal("Sesiones cerradas");
                   }}
-                  className="w-full flex items-center justify-start gap-2.5 py-2 px-3 text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors border-t border-white/5 pt-3 mt-1"
+                  className="w-full flex items-center justify-start gap-2.5 py-2 px-3 text-xs font-bold text-slate-400 hover:text-slate-300 transition-colors border-t border-white/5 pt-3 mt-1"
                 >
-                  <Shield size={14} className="text-slate-500" /> Cerrar en todos los dispositivos
+                  <Shield size={14} className="text-slate-400" /> Cerrar en todos los dispositivos
                 </button>
               </motion.div>
             </>

@@ -217,7 +217,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
             <CreditCard className="text-indigo-400" size={20} />
             {deudaEditandoId ? 'Editar Compromiso Pro' : 'Nuevo Compromiso Pro'}
           </h2>
-          <span className="shrink-0 whitespace-nowrap text-[10px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
+          <span className="shrink-0 whitespace-nowrap text-xs font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
             Paso {pasoDeuda} de 3
           </span>
         </div>
@@ -235,14 +235,14 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
         {pasoDeuda === 1 && (
           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">1. Alcance de la Deuda</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">1. Alcance de la Deuda</label>
               <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                 {['familiar', 'individual'].map(a => (
                   <button 
                     key={a} 
                     type="button" 
                     onClick={() => setAlcanceDeuda(a)} 
-                    className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                    className={`flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                   >
                     {a === 'familiar' ? '🏠 Compartida (Familiar)' : '👤 Individual'}
                   </button>
@@ -251,7 +251,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">2. Tipo de Compromiso</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">2. Tipo de Compromiso</label>
               <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                 {['fija', 'flexible', 'tarjeta_credito'].map(t => {
                   let label = t;
@@ -263,7 +263,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                       key={t} 
                       type="button" 
                       onClick={() => setTipoDeuda(t)} 
-                      className={`flex-1 py-3 text-[9px] font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                      className={`flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                     >
                       {label}
                     </button>
@@ -273,7 +273,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
             </div>
       
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">3. Nombre / Descripción del Préstamo o Tarjeta</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">3. Nombre / Descripción del Préstamo o Tarjeta</label>
               <input 
                 type="text" 
                 placeholder="Ej: Préstamo Vehículo Itaú, Tarjeta Continental..." 
@@ -284,13 +284,13 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               />
               {tipoDeuda === 'fija' && (
                 <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
-                  <span className="text-[8px] text-slate-500 font-bold uppercase mr-1 self-center">Sugeridos:</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase mr-1 self-center">Sugeridos:</span>
                   {["Préstamo Consumo", "Préstamo Vehículo", "Hipotecario"].map((sug) => (
                     <button
                       key={sug}
                       type="button"
                       onClick={() => setTitulo(sug)}
-                      className="text-[8px] bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-2.5 py-1.5 rounded-lg border border-white/5 transition-all"
+                      className="text-xs bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-2.5 py-1.5 rounded-lg border border-white/5 transition-all"
                     >
                       {sug}
                     </button>
@@ -304,7 +304,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 type="button" 
                 disabled={!titulo.trim()} 
                 onClick={() => setPasoDeuda(2)} 
-                className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-500 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
               >
                 Siguiente: Montos y Cuotas <ArrowRight size={16} />
               </button>
@@ -317,19 +317,19 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
           <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             {tipoDeuda !== 'tarjeta_credito' && (
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Forma de Ingreso del Monto</label>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Forma de Ingreso del Monto</label>
                 <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                   <button
                     type="button"
                     onClick={() => cambiarModoMonto('cuota')}
-                    className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
+                    className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-400'}`}
                   >
                     Ingresar por Cuota
                   </button>
                   <button
                     type="button"
                     onClick={() => cambiarModoMonto('total')}
-                    className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
+                    className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-400'}`}
                   >
                     Ingresar por Monto Total
                   </button>
@@ -339,7 +339,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
 
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">
                   {tipoDeuda === 'tarjeta_credito' 
                     ? 'Monto Deuda Actual' 
                     : (modoMonto === 'cuota' ? 'Monto Cuota Mensual' : 'Monto Total Deuda')
@@ -355,7 +355,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Moneda</label>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Moneda</label>
                 <select 
                   value={monedaDeuda} 
                   onChange={(e) => setMonedaDeuda(e.target.value)} 
@@ -376,7 +376,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 if (modoMonto === 'cuota') {
                   const totalCalculado = inputVal * numCuotas;
                   return (
-                    <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-[11px] text-indigo-200 font-bold flex justify-between items-center">
+                    <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-xs text-indigo-200 font-bold flex justify-between items-center">
                       <span>📊 Monto Total estimado:</span>
                       <span className="text-indigo-400 text-xs font-black">{formatearNumero(totalCalculado, monedaDeuda)}</span>
                     </div>
@@ -384,7 +384,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 } else {
                   const cuotaCalculada = Math.round(inputVal / numCuotas);
                   return (
-                    <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-[11px] text-indigo-200 font-bold flex justify-between items-center">
+                    <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-xs text-indigo-200 font-bold flex justify-between items-center">
                       <span>📊 Cuota estimada (lineal):</span>
                       <span className="text-indigo-400 text-xs font-black">{formatearNumero(cuotaCalculada, monedaDeuda)}</span>
                     </div>
@@ -397,22 +397,22 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
             {tipoDeuda === 'tarjeta_credito' ? (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Pago Mínimo</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Pago Mínimo</label>
                   <input type="text" value={pagoMinimoFormateado} onChange={(e) => setPagoMinimoFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none text-base" placeholder="0" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Línea de Crédito</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Línea de Crédito</label>
                   <input type="text" value={lineaCreditoFormateada} onChange={(e) => setLineaCreditoFormateada(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none text-base" placeholder="0" />
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Cuotas Totales</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Cuotas Totales</label>
                   <input type="number" min="1" value={cantidadCuotas} onChange={(e) => setCantidadCuotas(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none text-base" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Cuotas Ya Pagadas</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Cuotas Ya Pagadas</label>
                   <input type="number" min="0" max={cantidadCuotas} value={cuotasPagadas} onChange={(e) => setCuotasPagadas(e.target.value)} className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3.5 text-emerald-400 font-bold outline-none text-base" />
                 </div>
               </div>
@@ -430,7 +430,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 type="button" 
                 disabled={!montoTotalFormateado} 
                 onClick={() => setPasoDeuda(3)} 
-                className="flex-1 py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-500 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                className="flex-1 py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
               >
                 Siguiente: Vencimiento <ArrowRight size={16} />
               </button>
@@ -443,20 +443,20 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
           <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-wider ml-1">Fecha 1º Vencimiento</label>
+                <label className="text-xs font-black text-indigo-400 uppercase tracking-wider ml-1">Fecha 1º Vencimiento</label>
                 <input type="date" value={fechaInicioDeuda} onChange={(e) => setFechaInicioDeuda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white text-base font-bold outline-none" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Día de Cobro Mensual</label>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Día de Cobro Mensual</label>
                 <input type="number" min="1" max="31" value={diaVencimiento} onChange={(e) => setDiaVencimiento(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none text-base" />
               </div>
             </div>
 
             {tipoDeuda === 'tarjeta_credito' && (
               <div className="space-y-1">
-                <label htmlFor="deuda-dia-cierre" className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Día de Cierre de la Tarjeta</label>
+                <label htmlFor="deuda-dia-cierre" className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Día de Cierre de la Tarjeta</label>
                 <input id="deuda-dia-cierre" type="number" inputMode="numeric" min="1" max="31" value={fechaCierreTarjeta} onChange={(e) => setFechaCierreTarjeta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none text-base focus:border-indigo-500/50" />
-                <p className="text-[10px] text-slate-500 ml-1">Ese día se cierra el ciclo y se genera el saldo del mes siguiente.</p>
+                <p className="text-xs text-slate-400 ml-1">Ese día se cierra el ciclo y se genera el saldo del mes siguiente.</p>
               </div>
             )}
 
@@ -486,11 +486,11 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                   {tipoDeuda === 'tarjeta_credito' && (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos</label>
+                        <label className="text-xs font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Hash size={12}/> Últimos 4 dígitos</label>
                         <input type="text" maxLength="4" placeholder="Ej: 1234" value={nroTarjeta} onChange={(e) => setNroTarjeta(e.target.value.replace(/\D/g,''))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white font-black tracking-widest outline-none text-base" />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                        <label className="text-xs font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
                         <input type="number" step="0.01" min="0" placeholder="Ej: 15" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" />
                       </div>
                     </div>
@@ -499,11 +499,11 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                   {tipoDeuda === 'fija' && (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
+                        <label className="text-xs font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1"><Percent size={12}/> Interés Anual (%)</label>
                         <input type="number" step="0.01" min="0" placeholder="Ej: 24" value={tasaInteres} onChange={(e) => setTasaInteres(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">🛡️ Seguros / Cuota</label>
+                        <label className="text-xs font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">🛡️ Seguros / Cuota</label>
                         <input type="text" placeholder="Ej: 4.500" value={cargosMensualesFormateado} onChange={(e) => setCargosMensualesFormateado(formatarInput(e.target.value))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" />
                       </div>
                     </div>
@@ -511,18 +511,18 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
 
                   {/* Medio de pago & Cuenta */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago habitual</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">Medio de Pago habitual</label>
                     <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                      <button type="button" onClick={() => setDeudaMedioPago('transferencia')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Transferencia</button>
-                      <button type="button" onClick={() => setDeudaMedioPago('efectivo')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'}`}>Efectivo</button>
+                      <button type="button" onClick={() => setDeudaMedioPago('transferencia')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Transferencia</button>
+                      <button type="button" onClick={() => setDeudaMedioPago('efectivo')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'}`}>Efectivo</button>
                     </div>
                   </div>
 
                   {deudaMedioPago === 'transferencia' && (
                     <div className="space-y-2">
                       <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                        <button type="button" onClick={() => setDeudaTipoCuenta('alias')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Alias / CBU</button>
-                        <button type="button" onClick={() => setDeudaTipoCuenta('nro_cuenta')} className={`flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Nro. Cuenta</button>
+                        <button type="button" onClick={() => setDeudaTipoCuenta('alias')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Alias / CBU</button>
+                        <button type="button" onClick={() => setDeudaTipoCuenta('nro_cuenta')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Nro. Cuenta</button>
                       </div>
                       {deudaTipoCuenta === 'alias' ? (
                         <input type="text" aria-label="Alias o CBU" placeholder="Ej: mi.alias.banco" value={deudaAliasCuenta} onChange={(e) => setDeudaAliasCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none" />
@@ -531,11 +531,11 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                           <input type="text" aria-label="Número de cuenta" placeholder="Ej: 001-123456-00" value={deudaNroCuenta} onChange={(e) => setDeudaNroCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none" />
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label htmlFor="deuda-titular" className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre del Titular</label>
+                              <label htmlFor="deuda-titular" className="text-xs font-bold text-slate-400 uppercase ml-1">Nombre del Titular</label>
                               <input id="deuda-titular" type="text" autoComplete="name" placeholder="Titular de la cuenta" value={deudaNombreTitular} onChange={(e) => setDeudaNombreTitular(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none focus:border-indigo-500/50" />
                             </div>
                             <div className="space-y-1">
-                              <label htmlFor="deuda-ci" className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
+                              <label htmlFor="deuda-ci" className="text-xs font-bold text-slate-400 uppercase ml-1">CI / Documento</label>
                               <input id="deuda-ci" type="text" inputMode="numeric" placeholder="Ej: 1234567" value={deudaCiTitular} onChange={(e) => setDeudaCiTitular(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none focus:border-indigo-500/50" />
                             </div>
                           </div>
@@ -550,7 +550,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
             {zonaPeligro && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-center">
                 <AlertTriangle className="text-red-500 shrink-0" size={20} />
-                <p className="text-[10px] text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP (40%).</p>
+                <p className="text-xs text-red-200 font-bold">🚨 ¡Índice al {proyectado.toFixed(1)}%! Superás el límite saludable del BCP (40%).</p>
               </div>
             )}
 
@@ -565,7 +565,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               <button 
                 type="submit" 
                 disabled={guardando} 
-                className={`flex-1 py-4 font-black uppercase text-xs rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600 hover:bg-indigo-500'} text-white active:scale-95`}
+                className={`flex-1 py-4 font-black uppercase text-xs rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600 hover:bg-indigo-600'} text-white active:scale-95`}
               >
                 {guardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : (deudaEditandoId ? "GUARDAR CAMBIOS" : "FINALIZAR Y REGISTRAR")}
               </button>

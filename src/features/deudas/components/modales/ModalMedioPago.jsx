@@ -50,13 +50,13 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
       <h2 className="text-lg font-black text-white mb-4 uppercase">Medio de Pago</h2>
       <form onSubmit={guardarMedioPago} className="space-y-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Medio de Pago</label>
           <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
             <button
               type="button"
               onClick={() => setMpEditMedioPago('transferencia')}
-              className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                mpEditMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                mpEditMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
               Transferencia
@@ -64,8 +64,8 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
             <button
               type="button"
               onClick={() => setMpEditMedioPago('efectivo')}
-              className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                mpEditMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                mpEditMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
               Efectivo
@@ -76,13 +76,13 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
         {mpEditMedioPago === 'transferencia' && (
           <>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Tipo de Cuenta</label>
+              <label className="text-xs font-bold text-slate-400 uppercase ml-1">Tipo de Cuenta</label>
               <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                 <button
                   type="button"
                   onClick={() => setMpEditTipoCuenta('alias')}
-                  className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                    mpEditTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                    mpEditTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
                   }`}
                 >
                   Alias / CBU
@@ -90,8 +90,8 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
                 <button
                   type="button"
                   onClick={() => setMpEditTipoCuenta('nro_cuenta')}
-                  className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                    mpEditTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                    mpEditTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
                   }`}
                 >
                   Nro. de Cuenta
@@ -101,7 +101,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
 
             {mpEditTipoCuenta === 'alias' ? (
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                <label className="text-xs font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
                   <Hash size={12} /> Alias / CBU
                 </label>
                 <input
@@ -115,7 +115,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
             ) : (
               <>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
+                  <label className="text-xs font-bold text-indigo-400 uppercase ml-1 flex items-center gap-1">
                     <Hash size={12} /> Número de Cuenta
                   </label>
                   <input
@@ -128,7 +128,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre Completo</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">Nombre Completo</label>
                     <input
                       type="text"
                       placeholder="Titular de la cuenta"
@@ -138,7 +138,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CI / Documento</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">CI / Documento</label>
                     <input
                       type="text"
                       placeholder="Ej: 1234567"

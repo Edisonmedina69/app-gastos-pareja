@@ -6,15 +6,15 @@ export default function ListaPrevisiones({ previsiones, calcularGastoPrevision, 
   return (
     previsiones.length === 0 ? (
       <div className="glass-card py-12 text-center">
-        <Calendar size={40} className="mx-auto mb-3 text-slate-500 opacity-40" />
+        <Calendar size={40} className="mx-auto mb-3 text-slate-400 opacity-40" />
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Sin previsiones de gasto definidas</p>
-        <p className="text-[10px] text-slate-500 mt-2 max-w-xs mx-auto px-4">
+        <p className="text-xs text-slate-400 mt-2 max-w-xs mx-auto px-4">
           Establecé límites mensuales para categorías específicas (ocio, belleza, salidas) para controlar tus gastos de manera inteligente y ver tu progreso en tiempo real.
         </p>
         <div className="flex flex-col gap-2 mt-6 max-w-xs mx-auto px-4">
           <button 
             onClick={() => { abrirNuevaPrevision(); }} 
-            className="py-3 px-4 bg-indigo-600 text-white text-[10px] font-black rounded-xl uppercase hover:bg-indigo-500 active:scale-95 transition-all shadow-lg"
+            className="py-3 px-4 bg-indigo-600 text-white text-xs font-black rounded-xl uppercase hover:bg-indigo-600 active:scale-95 transition-all shadow-lg"
           >
             Definir Nueva Previsión 🎯
           </button>
@@ -23,12 +23,12 @@ export default function ListaPrevisiones({ previsiones, calcularGastoPrevision, 
     ) : (
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+          <span className="text-xs font-black text-slate-400 uppercase tracking-wider">
             Previsiones de Gasto Activas ({previsiones.length})
           </span>
           <button 
             onClick={() => { abrirNuevaPrevision(); }} 
-            className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter hover:underline"
+            className="text-xs font-black text-indigo-400 uppercase tracking-tighter hover:underline"
           >
             + Nueva Previsión
           </button>
@@ -57,20 +57,20 @@ export default function ListaPrevisiones({ previsiones, calcularGastoPrevision, 
                   <h4 className="font-black text-white text-sm uppercase tracking-tight flex items-center gap-2">
                     {nombreLimpio}
                   </h4>
-                  <span className="inline-block mt-1 text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/5">
+                  <span className="inline-block mt-1 text-xs font-black uppercase px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/5">
                     {p.para_quien === 'Ambos' ? '👥 Compartido' : `👤 Para: ${obtenerNombreDestinatario(p)}`}
                   </span>
                 </div>
                 <div className="flex gap-1">
                   <button 
-                    onClick={() => abrirEdicionPrevision(p)} 
-                    className="p-1.5 text-slate-500 hover:text-indigo-400 transition-colors"
+                    aria-label={`Editar ${p.concepto}`} onClick={() => abrirEdicionPrevision(p)}
+                    className="p-1.5 text-slate-400 hover:text-indigo-400 transition-colors"
                   >
                     <Edit2 size={15}/>
                   </button>
                   <button 
-                    onClick={() => eliminarPrevision(p.id, p.concepto)} 
-                    className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                    aria-label={`Eliminar ${p.concepto}`} onClick={() => eliminarPrevision(p.id, p.concepto)}
+                    className="p-1.5 text-slate-400 hover:text-red-400 transition-colors"
                   >
                     <Trash2 size={15}/>
                   </button>
@@ -79,7 +79,7 @@ export default function ListaPrevisiones({ previsiones, calcularGastoPrevision, 
 
               <div className="space-y-2 mt-4">
                 <div className="flex justify-between items-end">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Consumido este mes</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase">Consumido este mes</span>
                   <span className="text-sm font-black text-white">
                     {formatearNumero(consumido, p.moneda)} / <span className="text-slate-400 text-xs">{limite > 0 ? formatearNumero(limite, p.moneda) : 'Variable'}</span>
                   </span>
@@ -93,11 +93,11 @@ export default function ListaPrevisiones({ previsiones, calcularGastoPrevision, 
                         style={{ width: `${Math.min(100, porc)}%` }}
                       />
                     </div>
-    <div className="flex justify-between items-center mt-2 text-[9px] font-bold uppercase tracking-wider">
-                      <span className={porc > 100 ? "text-rose-400" : "text-slate-500"}>
+    <div className="flex justify-between items-center mt-2 text-xs font-bold uppercase tracking-wider">
+                      <span className={porc > 100 ? "text-rose-400" : "text-slate-400"}>
                         {porc > 100 ? `Excedido por ${formatearNumero(consumido - limite, p.moneda)}` : `Disponible: ${formatearNumero(limite - consumido, p.moneda)}`}
                       </span>
-                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-black border ${colorClase}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-black border ${colorClase}`}>
                         {porc.toFixed(0)}%
                       </span>
                     </div>

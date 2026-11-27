@@ -23,7 +23,7 @@ export default function ModalEditarPerfil({ editPerfilNombre, editPerfilRol, gua
             </h2>
             <form onSubmit={guardarEdicionPerfil} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Apodo en la Aplicación</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Apodo en la Aplicación</label>
                 <input 
                   type="text" 
                   placeholder="Ej: Bianca..." 
@@ -34,7 +34,7 @@ export default function ModalEditarPerfil({ editPerfilNombre, editPerfilRol, gua
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rol del Miembro</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Rol del Miembro</label>
                 <select 
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" 
                   value={editPerfilRol} 
@@ -56,7 +56,7 @@ export default function ModalEditarPerfil({ editPerfilNombre, editPerfilRol, gua
                 <button 
                   type="submit" 
                   disabled={guardando} 
-                  className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition-all"
+                  className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-600 transition-all"
                 >
                   {guardando ? <Loader2 className="animate-spin mx-auto"/> : "GUARDAR CAMBIOS"}
                 </button>

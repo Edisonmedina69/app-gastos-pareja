@@ -23,9 +23,9 @@ export default function ModalVincularUsuario({ ejecutarVinculacionUsuarioExisten
             </h2>
             <form onSubmit={ejecutarVinculacionUsuarioExistente} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Seleccionar Usuario Huérfano</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Seleccionar Usuario Huérfano</label>
                 {perfilesHuerfanos.length === 0 ? (
-                  <div className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-500 italic mt-1">
+                  <div className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-400 italic mt-1">
                     No hay usuarios huérfanos registrados actualmente.
                   </div>
                 ) : (
@@ -43,7 +43,7 @@ export default function ModalVincularUsuario({ ejecutarVinculacionUsuarioExisten
                 )}
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Hogar Destino</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Hogar Destino</label>
                 <select 
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-base text-white outline-none" 
                   value={vincularEspacioId} 
@@ -67,7 +67,7 @@ export default function ModalVincularUsuario({ ejecutarVinculacionUsuarioExisten
                 <button 
                   type="submit" 
                   disabled={guardando || perfilesHuerfanos.length === 0} 
-                  className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all text-xs disabled:opacity-50"
+                  className="flex-[2] bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 transition-all text-xs disabled:opacity-50"
                 >
                   {guardando ? <Loader2 className="animate-spin mx-auto"/> : "VINCULAR USUARIO"}
                 </button>

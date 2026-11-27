@@ -1,0 +1,169 @@
+{
+  "checks": [
+    "390: / mínimo12px, sin desborde",
+    "390: /gastos/nuevo mínimo12px, sin desborde",
+    "390: /deudas/nueva mínimo12px, sin desborde",
+    "390: /fijos/nuevo mínimo12px, sin desborde",
+    "390: /ingresos/nuevo mínimo12px, sin desborde",
+    "390: /historial mínimo12px, sin desborde",
+    "768: / mínimo12px, sin desborde",
+    "768: /gastos/nuevo mínimo12px, sin desborde",
+    "768: /deudas/nueva mínimo12px, sin desborde",
+    "768: /fijos/nuevo mínimo12px, sin desborde",
+    "768: /ingresos/nuevo mínimo12px, sin desborde",
+    "768: /historial mínimo12px, sin desborde",
+    "1440: / mínimo12px, sin desborde",
+    "1440: /gastos/nuevo mínimo12px, sin desborde",
+    "1440: /deudas/nueva mínimo12px, sin desborde",
+    "1440: /fijos/nuevo mínimo12px, sin desborde",
+    "1440: /ingresos/nuevo mínimo12px, sin desborde",
+    "1440: /historial mínimo12px, sin desborde",
+    "Atrás del navegador vuelve del gasto al inicio",
+    "Acceso directo: Volver usa la ruta del dominio",
+    "Demo disponible para superadmin",
+    "/admin/hogares/nuevo: pantalla propia",
+    "/admin/usuarios/nuevo: pantalla propia",
+    "Administración protegida en el shell"
+  ],
+  "contrast": [
+    {
+      "width": 390,
+      "path": "/",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 390,
+      "path": "/gastos/nuevo",
+      "incomplete": 1,
+      "violations": []
+    },
+    {
+      "width": 390,
+      "path": "/deudas/nueva",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 390,
+      "path": "/fijos/nuevo",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 390,
+      "path": "/ingresos/nuevo",
+      "incomplete": 1,
+      "violations": []
+    },
+    {
+      "width": 390,
+      "path": "/historial",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 768,
+      "path": "/",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 768,
+      "path": "/gastos/nuevo",
+      "incomplete": 1,
+      "violations": []
+    },
+    {
+      "width": 768,
+      "path": "/deudas/nueva",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 768,
+      "path": "/fijos/nuevo",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 768,
+      "path": "/ingresos/nuevo",
+      "incomplete": 1,
+      "violations": []
+    },
+    {
+      "width": 768,
+      "path": "/historial",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 1440,
+      "path": "/",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 1440,
+      "path": "/gastos/nuevo",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 1440,
+      "path": "/deudas/nueva",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 1440,
+      "path": "/fijos/nuevo",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 1440,
+      "path": "/ingresos/nuevo",
+      "incomplete": 0,
+      "violations": []
+    },
+    {
+      "width": 1440,
+      "path": "/historial",
+      "incomplete": 0,
+      "violations": []
+    }
+  ],
+  "consoleErrors": [],
+  "fixedButtonContrast": [
+    {
+      "width": 390,
+      "path": "/gastos/nuevo",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "oklab(0.508122 -0.101623 0.0260828)",
+      "ratio": 5.483924052498799
+    },
+    {
+      "width": 390,
+      "path": "/ingresos/nuevo",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "oklab(0.508122 -0.101623 0.0260828)",
+      "ratio": 5.483924052498799
+    },
+    {
+      "width": 768,
+      "path": "/gastos/nuevo",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "oklab(0.508122 -0.101623 0.0260828)",
+      "ratio": 5.483924052498799
+    },
+    {
+      "width": 768,
+      "path": "/ingresos/nuevo",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "oklab(0.508122 -0.101623 0.0260828)",
+      "ratio": 5.483924052498799
+    }
+  ]
+}

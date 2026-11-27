@@ -69,13 +69,13 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
 
         <div className="glass-card p-8 shadow-2xl">
           <div className="flex p-1 bg-white/5 rounded-xl border border-white/5 mb-8">
-            <button type="button" onClick={() => setModo('unirse')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${modo === 'unirse' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Unirme a mi Pareja 🏠</button>
-            <button type="button" onClick={() => setModo('crear')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${modo === 'crear' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}>Crear Hogar Nuevo ✨</button>
+            <button type="button" onClick={() => setModo('unirse')} className={`flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${modo === 'unirse' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Unirme a mi Pareja 🏠</button>
+            <button type="button" onClick={() => setModo('crear')} className={`flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${modo === 'crear' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Crear Hogar Nuevo ✨</button>
           </div>
 
           <form onSubmit={modo === 'unirse' ? manejarVinculacion : manejarCreacion} className="space-y-5">
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tu Nombre o Apodo</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Tu Nombre o Apodo</label>
               <input
                 type="text"
                 placeholder="Ej: Edison, Bianca..."
@@ -84,14 +84,14 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
                 onChange={(e) => setNombreUsuario(e.target.value)}
                 required
               />
-              <p className="text-[9px] text-slate-500 mt-1 ml-1">Como quieres que tu pareja te vea en la aplicación.</p>
+              <p className="text-xs text-slate-400 mt-1 ml-1">Como quieres que tu pareja te vea en la aplicación.</p>
             </div>
 
             {modo === 'unirse' ? (
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Código de invitación</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Código de invitación</label>
                 <div className="relative">
-                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="text"
                     placeholder="Ej: K7M2QX9P"
@@ -101,13 +101,13 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
                     required
                   />
                 </div>
-                <p className="text-[9px] text-slate-500 mt-1.5 ml-1">
+                <p className="text-xs text-slate-400 mt-1.5 ml-1">
                   Ingresá el código de invitación que te compartió tu pareja.
                 </p>
               </div>
             ) : (
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre de la Familia / Hogar</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre de la Familia / Hogar</label>
                 <div className="relative font-semibold">
                   <input
                     type="text"
@@ -118,14 +118,14 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
                     required
                   />
                 </div>
-                <p className="text-[9px] text-slate-500 mt-1 ml-1">Un nombre identificativo para su espacio compartido.</p>
+                <p className="text-xs text-slate-400 mt-1 ml-1">Un nombre identificativo para su espacio compartido.</p>
               </div>
             )}
 
             <button 
               type="submit" 
               disabled={guardando}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-6"
+              className="w-full bg-indigo-600 hover:bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-6"
             >
               {guardando ? <Loader2 className="animate-spin" /> : <>{modo === 'unirse' ? 'VINCULAR A MI PAREJA' : 'INICIAR MI HOGAR'} <ArrowRight size={18} /></>}
             </button>
@@ -134,7 +134,7 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
           <div className="mt-8 pt-4 border-t border-white/5 text-center">
             <button 
               onClick={() => cerrarSesion()} 
-              className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-red-400 transition-colors"
+              className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-red-400 transition-colors"
             >
               Cerrar Sesión / Volver
             </button>

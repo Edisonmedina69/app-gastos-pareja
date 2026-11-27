@@ -17,7 +17,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                   {tipoRegistro === 'variable' ? 'Registrar Ingreso' : (tipoRegistro === 'fijo' ? 'Programar Sueldo' : 'Ajustar Sueldo')}
                 </h2>
                 {(tipoRegistro === 'fijo' || tipoRegistro === 'edicion') && (
-                  <span className="text-[10px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
+                  <span className="text-xs font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
                     Paso {pasoIngreso} de 2
                   </span>
                 )}
@@ -35,7 +35,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
               {(pasoIngreso === 1 || tipoRegistro === 'variable') && (
                 <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 mb-1 block">Categoría de Ingreso</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1 mb-1 block">Categoría de Ingreso</label>
                     <select 
                       value={categoria} 
                       onChange={(e) => setCategoria(e.target.value)} 
@@ -48,13 +48,13 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Concepto / Fuente</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Concepto / Fuente</label>
                     <input type="text" placeholder="Ej: Sueldo Itaú, Honorarios Proyecto..." value={concepto} onChange={(e) => setConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none focus:border-emerald-500 text-base" required />
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div className="col-span-2 space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Monto del Ingreso</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Monto del Ingreso</label>
                       <input 
                         type="text" 
                         value={montoFormateado} 
@@ -65,7 +65,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Moneda</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Moneda</label>
                       <select value={moneda} onChange={(e) => setMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-3 py-3.5 text-white font-bold outline-none text-base" disabled={tipoRegistro === 'edicion'}>
                         <option value="PYG">PYG</option>
                         <option value="BRL">BRL</option>
@@ -76,14 +76,14 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
 
                   {tipoRegistro === 'variable' && (
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-emerald-400 uppercase tracking-wider ml-1">Fecha de Ingreso</label>
+                      <label className="text-xs font-black text-emerald-400 uppercase tracking-wider ml-1">Fecha de Ingreso</label>
                       <input type="date" value={fechaEfectiva} onChange={(e) => setFechaEfectiva(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none text-base" required />
                     </div>
                   )}
 
                   {(tipoRegistro === 'fijo' || tipoRegistro === 'edicion') && (
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-indigo-400 uppercase tracking-wider ml-1">Día de Cobro Mensual (1-31)</label>
+                      <label className="text-xs font-black text-indigo-400 uppercase tracking-wider ml-1">Día de Cobro Mensual (1-31)</label>
                       <input type="number" min="1" max="31" value={diaRecurrencia} onChange={(e) => setDiaRecurrencia(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-black outline-none text-base" required />
                     </div>
                   )}
@@ -98,7 +98,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                         type="button" 
                         disabled={!concepto.trim() || !montoFormateado} 
                         onClick={() => setPasoIngreso(2)} 
-                        className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-500 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all"
+                        className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all"
                       >
                         Siguiente: Reglas y Descuentos <ArrowRight size={16} />
                       </button>
@@ -122,7 +122,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                     </div>
                     {soloDiasHabiles && (
                       <div className="space-y-1 pt-2 border-t border-white/5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase block">Si cae Fin de Semana:</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase block">Si cae Fin de Semana:</label>
                         <select 
                           value={ajusteDiaHabil} 
                           onChange={(e) => setAjusteDiaHabil(e.target.value)}
@@ -150,7 +150,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                           key={modo.id}
                           type="button"
                           onClick={() => setModoDescuento(modo.id)}
-                          className={`py-1.5 text-[9px] font-black uppercase rounded-lg transition-all ${modoDescuento === modo.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-white'}`}
+                          className={`py-1.5 text-xs font-black uppercase rounded-lg transition-all ${modoDescuento === modo.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
                         >
                           {modo.label}
                         </button>
@@ -159,7 +159,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
 
                     {modoDescuento === 'vinculado' && (
                       <div className="space-y-2 pt-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase block">Seleccionar Cuenta o Deuda Registrada</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase block">Seleccionar Cuenta o Deuda Registrada</label>
                         <select
                           value={deudaVinculadaId}
                           onChange={(e) => setDeudaVinculadaId(e.target.value)}
@@ -177,7 +177,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                           })}
                         </select>
                         {deudaVinculadaId && (
-                          <p className="text-[9px] text-emerald-400 font-bold">
+                          <p className="text-xs text-emerald-400 font-bold">
                             Al cobrar el sueldo, se debitará y pagará automáticamente la cuota pendiente de esta cuenta.
                           </p>
                         )}
@@ -205,7 +205,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                   </div>
 
                   {tipoRegistro === 'edicion' && desformatearInput(montoFormateado) > montoAnterior && (
-                     <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3"><TrendingUp className="text-emerald-500" size={18} /><p className="text-[10px] text-emerald-200 font-bold uppercase tracking-tighter">¡Crecimiento salarial detectado! 🚀</p></div>
+                     <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3"><TrendingUp className="text-emerald-500" size={18} /><p className="text-xs text-emerald-200 font-bold uppercase tracking-tighter">¡Crecimiento salarial detectado! 🚀</p></div>
                   )}
 
                   <div className="form-actions pt-2 flex gap-3">
@@ -219,7 +219,7 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
                     <button 
                       type="submit" 
                       disabled={guardando} 
-                      className="flex-1 py-4 font-black text-xs uppercase rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 py-4 font-black text-xs uppercase rounded-2xl bg-indigo-600 hover:bg-indigo-600 text-white shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       {guardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : "FINALIZAR Y CONSOLIDAR"}
                     </button>
