@@ -6,7 +6,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   // `scratch/` son scripts sueltos de mantenimiento (Node), fuera de la app.
-  globalIgnores(['dist', 'dev-dist', 'scratch']),
+  globalIgnores(['dist', 'dev-dist', 'scratch', '.agents/skills/impeccable/scripts/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
