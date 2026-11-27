@@ -28,11 +28,14 @@ fi
 sql() { docker exec -i "$container" psql -U postgres -v ON_ERROR_STOP=1 "$@"; }
 sql < supabase/baseline/schema_pre_etapa2.sql >"$local_dir/baseline.log" 2>&1 || { cat "$local_dir/baseline.log"; exit 1; }
 sql < supabase/migrations/20261127180000_etapa2_multi_espacio.sql >"$local_dir/migracion.log" 2>&1 || { cat "$local_dir/migracion.log"; exit 1; }
-echo 'OK: migración etapa 2 sobre baseline de etapa 1.'
+sql < supabase/migrations/20261128120000_etapa2_correcciones_revision.sql >"$local_dir/correcciones.log" 2>&1 || { cat "$local_dir/correcciones.log"; exit 1; }
+echo 'OK: migración etapa 2 y correcciones de revisión sobre baseline de etapa 1.'
 if [[ -f supabase/tests/etapa2_multi_test.sql ]]; then
   sql < supabase/tests/etapa2_multi_test.sql >"$local_dir/sql.log" 2>&1 || { cat "$local_dir/sql.log"; exit 1; }
   "${log_filter[@]}" 'NOTICE:  OK' "$local_dir/sql.log" || true
 fi
+sql < supabase/tests/etapa2_correcciones_test.sql >"$local_dir/correcciones-test.log" 2>&1 || { cat "$local_dir/correcciones-test.log"; exit 1; }
+"${log_filter[@]}" 'NOTICE:  OK' "$local_dir/correcciones-test.log" || true
 if [[ -f supabase/tests/etapa2_p0.py ]]; then
   python3 supabase/tests/etapa2_p0.py | sql >"$local_dir/p0.log" 2>&1 || { cat "$local_dir/p0.log"; exit 1; }
   echo 'OK: regresión P0 con sesiones Auth válidas.'
@@ -42,6 +45,7 @@ python3 supabase/tests/catalogo_local.py "$container" >"$local_dir/catalogo-migr
 if [[ -f qa/etapa2-e2e.mjs ]] && [[ "${SKIP_PLAYWRIGHT_E2E:-0}" != "1" ]] && [[ -n "${PLAYWRIGHT_MODULE:-}" || -d /tmp/gastos-playwright || -d "$HOME/.cache/ms-playwright" ]]; then
   node qa/etapa2-e2e.mjs "$local_dir" "$container"
 fi
+sql < supabase/rollback/20261128120000_etapa2_correcciones_revision.down.sql >"$local_dir/rollback-correcciones.log" 2>&1 || { cat "$local_dir/rollback-correcciones.log"; exit 1; }
 sql < supabase/rollback/20261127180000_etapa2_multi_espacio.down.sql >"$local_dir/rollback.log" 2>&1 || { cat "$local_dir/rollback.log"; exit 1; }
 python3 supabase/tests/etapa2_p0.py | sql >"$local_dir/p0-rollback.log" 2>&1 || { cat "$local_dir/p0-rollback.log"; exit 1; }
 echo 'OK: rollback funcional conserva acceso familiar y contexto.'

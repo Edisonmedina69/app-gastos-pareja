@@ -1,0 +1,80 @@
+-- Rollback de 20261128120000: vuelve a las definiciones de etapa 2 (con las
+-- vulnerabilidades documentadas en docs/REVIEW_ETAPA2.md). Conserva datos;
+-- las invitaciones ya revocadas por el trigger quedan revocadas.
+begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
+alter table public.sesiones_espacio drop constraint sesiones_espacio_espacio_id_fkey,
+  add constraint sesiones_espacio_espacio_id_fkey foreign key (espacio_id) references public.espacios(id);
+drop trigger tr_revocar_invitaciones_de_baja on public.espacio_miembros;
+drop function public.revocar_invitaciones_de_baja();
+create or replace function public.aceptar_invitacion_org(p_token text, p_version integer)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_i public.org_invitaciones%rowtype; v_mid uuid; v_intentos integer; v_eid uuid;
+begin
+  if public.sesion_auth_id() is null then raise exception 'Sesión inválida o cerrada' using errcode = '28000'; end if;
+  if p_version is distinct from 2 then raise exception 'Recargá la app para usar varios espacios' using errcode = '22023'; end if;
+  perform 1 from auth.users where id = auth.uid() for update;
+  insert into public.org_intentos_invitacion(usuario_id,intentos) values(auth.uid(),1)
+  on conflict(usuario_id) do update set
+    intentos = case when org_intentos_invitacion.ventana < now() - interval '15 minutes' then 1 else org_intentos_invitacion.intentos + 1 end,
+    ventana = case when org_intentos_invitacion.ventana < now() - interval '15 minutes' then now() else org_intentos_invitacion.ventana end
+  returning intentos into v_intentos;
+  if v_intentos > 20 then return jsonb_build_object('error','Demasiados intentos; reintentá en 15 minutos'); end if;
+  -- Orden único: usuario → espacio → invitación → membresía. Nunca invertirlo.
+  select espacio_id into v_eid from public.org_invitaciones where token_hash = encode(extensions.digest(trim(p_token),'sha256'),'hex');
+  perform 1 from public.espacios where id = v_eid and tipo = 'organizacion' for update;
+  select * into v_i from public.org_invitaciones where espacio_id = v_eid and token_hash = encode(extensions.digest(trim(p_token),'sha256'),'hex') for update;
+  if not found or v_i.revocada_at is not null or v_i.vence_at <= now() then return jsonb_build_object('error','Invitación inválida, vencida o revocada'); end if;
+  select id into v_mid from public.espacio_miembros where espacio_id = v_i.espacio_id and usuario_id = auth.uid() and activo;
+  if found then return jsonb_build_object('espacio_id',v_i.espacio_id); end if;
+  if v_i.usos >= v_i.max_usos then return jsonb_build_object('error','La invitación agotó sus usos'); end if;
+  if (select count(*) from public.espacio_miembros where espacio_id = v_i.espacio_id and activo) >=
+    (select limite_usuarios from public.espacios where id = v_i.espacio_id) then return jsonb_build_object('error','Límite de usuarios alcanzado'); end if;
+  insert into public.perfiles(id,nombre) values(auth.uid(),'Integrante') on conflict do nothing;
+  insert into public.espacio_miembros(espacio_id,usuario_id,rol_plantilla) values(v_i.espacio_id,auth.uid(),v_i.rol)
+    on conflict(espacio_id,usuario_id) do update set activo = true, rol_plantilla = excluded.rol_plantilla returning id into v_mid;
+  perform public.aplicar_plantilla_miembro(v_mid,v_i.rol);
+  update public.org_invitaciones set usos = usos + 1 where org_invitaciones.id = v_i.id;
+  insert into public.org_auditoria(espacio_id,actor_id,entidad,entidad_id,accion) values(v_i.espacio_id,auth.uid(),'miembros',v_mid,'unirse');
+  return jsonb_build_object('espacio_id',v_i.espacio_id);
+end $$;
+
+create or replace function public.salir_de_espacio(p_espacio_id_esperado uuid)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  perform public.validar_contexto(p_espacio_id_esperado);
+  perform 1 from public.espacios where id = p_espacio_id_esperado for update;
+  update public.espacio_miembros set activo = false where espacio_id = p_espacio_id_esperado and usuario_id = auth.uid() and activo;
+  update public.perfiles set espacio_id = null where id = auth.uid() and espacio_id = p_espacio_id_esperado;
+end $$;
+
+create or replace function public.validar_escritura_hogar()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_eid uuid; v_esperado text;
+begin
+  if current_setting('role',true) not in ('authenticated','anon') then
+    if tg_op = 'DELETE' then return old; else return new; end if;
+  end if;
+  v_eid := case when tg_op = 'DELETE' then old.espacio_id else new.espacio_id end;
+  v_esperado := nullif(current_setting('request.headers',true),'')::jsonb->>'x-espacio-id-esperado';
+  if v_esperado is null and (select count(*) from public.espacio_miembros where usuario_id = auth.uid() and activo) > 1 then
+    raise exception 'Recargá la app y seleccioná un espacio' using errcode = '42501';
+  end if;
+  perform public.validar_contexto(coalesce(v_esperado::uuid,v_eid));
+  if v_eid is distinct from public.mi_espacio_id() or not public.es_hogar(v_eid) then raise exception 'Espacio familiar inválido' using errcode = '42501'; end if;
+  if tg_op = 'UPDATE' and old.espacio_id is distinct from new.espacio_id then raise exception 'No se puede mover un registro entre espacios' using errcode = '42501'; end if;
+  if tg_table_name = 'cuotas_detalle' and tg_op <> 'DELETE' then
+   if not exists(select 1 from public.deudas_maestras where id = new.deuda_maestra_id and espacio_id = v_eid) then
+    raise exception 'Deuda de otro espacio' using errcode = '23514';
+   end if;
+  end if;
+  if tg_table_name = 'historial_salarios' and tg_op <> 'DELETE' then
+   if new.ingreso_programado_id is not null and not exists(select 1 from public.ingresos_programados where id = new.ingreso_programado_id and espacio_id = v_eid) then
+    raise exception 'Salario de otro espacio' using errcode = '23514';
+   end if;
+  end if;
+  if tg_op = 'DELETE' then return old; else return new; end if;
+end $$;
+drop function public.invitacion_vigente(uuid);
+commit
