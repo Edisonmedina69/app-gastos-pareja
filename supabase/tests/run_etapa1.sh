@@ -29,7 +29,7 @@ for a,b in [('54321','55421'),('54322','55422'),('54320','55420'),('54323','5542
 open(p,'w').write(s)
 PY
 # No imprimir salida de start/status: incluye credenciales del stack local.
-if ! "${cli[@]}" start --workdir "$local_dir" -x studio,imgproxy,edge-runtime,logflare,vector,supavisor >"$local_dir/start.log" 2>&1; then
+if ! "${cli[@]}" start --workdir "$local_dir" -x studio,imgproxy,edge-runtime,logflare,vector,supavisor >/dev/null 2>&1; then
   echo 'Falló supabase start local; revisar Docker/puertos 55420–55427.' >&2
   exit 1
 fi

@@ -49,7 +49,7 @@ npm test
 npm run build
 ```
 
-El runner fija Supabase CLI 3.4.0, crea un proyecto efímero `etapa1-test-*` con puertos 55420–55427, ejecuta `supabase start`, carga únicamente el baseline auditado y elimina el stack/volúmenes al terminar. No acepta URLs ni credenciales remotas, no enlaza el proyecto de producción y no ejecuta migraciones históricas. La salida de start se oculta porque contiene credenciales locales.
+El runner fija Supabase CLI 3.4.0, crea un proyecto efímero `etapa1-test-*` con puertos 55420–55427, ejecuta `supabase start`, carga únicamente el baseline auditado y elimina el stack/volúmenes al terminar. No acepta URLs ni credenciales remotas, no enlaza el proyecto de producción y no ejecuta migraciones históricas. La salida de start se descarta porque contiene credenciales locales; no se guarda en logs.
 
 Cobertura SQL:
 
