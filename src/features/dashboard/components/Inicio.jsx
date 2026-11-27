@@ -4,7 +4,6 @@ import { FormPage } from "../../../shared/ui/FormPage";
 import { insertarGastos } from "../../../services/gastos.service";
 import { toast } from "react-hot-toast";
 import { formatearNumero, formatarInput, desformatearInput, formatearFechaCorta } from "../../../shared/lib/formatters";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Wallet, TrendingUp, AlertTriangle, Users, 
   Sparkles, CreditCard, HeartPulse, Activity, User, X, Loader2
@@ -107,7 +106,7 @@ export default function Inicio({
       }]);
       if (error) throw error;
       toast.success("¡Gasto registrado! 💸", { id: toastId });
-      
+
       if (isExceeded) {
         toast(() => (
           <span className="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-wider">
@@ -141,16 +140,16 @@ export default function Inicio({
       <div className="flex justify-center">
         <div className="inline-flex p-1 bg-white/5 border border-white/10 rounded-full backdrop-blur-md">
           {[{id:"PYG", f:"🇵🇾"}, {id:"BRL", f:"🇧🇷"}].map(m => (
-            <button key={m.id} onClick={() => setMonedaGlobal(m.id)} className={`px-4 py-1.5 rounded-full text-xs font-black transition-all ${monedaGlobal===m.id?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}><span>{m.f}</span> {m.id}</button>
+            <button key={m.id} onClick={() => setMonedaGlobal(m.id)} className={`px-4 py-1.5 rounded-full text-xs font-black transition-colors duration-150 ${monedaGlobal===m.id?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}><span>{m.f}</span> {m.id}</button>
           ))}
         </div>
       </div>
 
       {/* DASHBOARD PRINCIPAL */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
         {/* SALUD FINANCIERA */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card flex flex-col justify-between p-4 relative overflow-hidden min-h-[110px]">
-          <div className="flex justify-between items-start w-full">
+        <div className="glass-card flex flex-col justify-between p-4 relative overflow-hidden min-h-[110px]">
+          <div className="flex flex-wrap gap-3 justify-between items-start w-full">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${getColorSalud(metricasActivas.indice)}`}><Activity size={20} /></div>
               <div>
@@ -158,7 +157,7 @@ export default function Inicio({
                 <div className={`text-2xl font-black leading-none ${getColorSalud(metricasActivas.indice)}`}>{metricasActivas.indice.toFixed(1)}%</div>
               </div>
             </div>
-            
+
             {/* Selector de Filtro */}
             <div className="flex bg-white/5 p-0.5 rounded-lg border border-white/5 backdrop-blur-md">
               {['individual', 'familiar'].map(f => (
@@ -166,22 +165,22 @@ export default function Inicio({
                   key={f}
                   type="button"
                   onClick={() => setFiltroSalud(f)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-black uppercase transition-all ${filtroSalud === f ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400'}`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-black uppercase transition-colors duration-150 ${filtroSalud === f ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400'}`}
                 >
                   {f === 'individual' ? 'Yo' : 'Hogar'}
                 </button>
               ))}
             </div>
           </div>
-          
-          <div className="mt-3 border-t border-white/5 pt-2 flex justify-between items-center text-xs text-slate-400 font-bold uppercase tracking-wider">
+
+          <div className="mt-3 border-t border-white/5 pt-2 flex flex-wrap gap-2 justify-between items-center text-xs text-slate-400 font-bold uppercase tracking-wider">
             <span>Carga: {formatearNumero(metricasActivas.carga, monedaGlobal)}</span>
             <span>Ingresos: {formatearNumero(metricasActivas.ingresos, monedaGlobal)}</span>
           </div>
-          
+
           <p className="text-xs text-slate-400 italic mt-1.5">{metricasActivas.indice <= 35 ? '✅ ¡Excelente control!' : '⚠️ Cuidado con las cuotas.'}</p>
           <div className="absolute -bottom-2 -right-2 opacity-5"><HeartPulse size={56} /></div>
-        </motion.div>
+        </div>
 
         {/* SALDOS */}
         <div className="contents">
@@ -194,18 +193,24 @@ export default function Inicio({
              <div className="text-lg font-black text-indigo-400">{formatearNumero(saludFinanciera.balanceHogar, monedaGlobal)}</div><p className="text-sm text-muted-foreground mt-3">Disponible tras gastos y compromisos del hogar.</p>
           </div>
         </div>
+        <section className="hidden 2xl:block glass-card border-l-4 border-l-amber-500">
+          <h3 className="text-xs font-black text-muted-foreground uppercase">Deudas activas</h3>
+          <p className="text-2xl font-black tabular-nums mt-2">{deudas?.filter(d => d.estado !== 'cerrada').length || 0}</p>
+          <p className="text-sm text-muted-foreground mt-3">{proximosVencimientos.length} cuotas vencen en los próximos 7 días.</p>
+          <button onClick={() => navigate('/deudas')} className="text-sm text-indigo-300 underline mt-3 min-h-touch">Revisar deudas</button>
+        </section>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
       {/* ALERTAS VENCIMIENTO */}
-      <AnimatePresence>
+
         {(
-          <motion.section initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="glass-card border-l-4 border-l-amber-500">
+          <section className="glass-card border-l-4 border-l-amber-500">
             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4"><AlertTriangle size={16} className="text-amber-500" /> Vencimientos Críticos</h3>
             <p className="text-sm text-muted-foreground mb-4">{proximosVencimientos.length} cuotas pendientes en los próximos 7 días.</p>
             <div className="space-y-2">
               {proximosVencimientos.map(v => (
-                <div key={v.id} className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5 group hover:bg-white/10 transition-all">
+                <div key={v.id} className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5 group hover:bg-white/10 transition-colors duration-150">
                   <div>
                     <div className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors">{v.titulo}</div>
                     <div className="text-xs text-slate-400 font-bold uppercase">Cuota {v.numero_cuota}</div>
@@ -219,11 +224,11 @@ export default function Inicio({
                 </div>
               ))}
             </div>
-          </motion.section>
+          </section>
         )}
-      </AnimatePresence>
 
-      <section className="glass-card">
+
+      <section className="glass-card 2xl:col-span-2">
         <h3 className="font-bold mb-4">Últimos movimientos</h3>
         <div className="divide-y divide-white/10">
           {[...(gastos || []).map(g => ({ ...g, tipoMovimiento: 'Gasto', fechaMovimiento: g.fecha || g.created_at })), ...ingresos.map(i => ({ ...i, tipoMovimiento: 'Ingreso', fechaMovimiento: i.fecha_efectiva || i.fecha || i.created_at }))]
@@ -241,28 +246,27 @@ export default function Inicio({
 
       {/* BOTONES DE REGISTRO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-         <button onClick={() => setMostrarMagico(true)} className="glass-card flex items-center justify-center gap-3 py-8 border-2 border-dashed border-indigo-500/30 hover:bg-indigo-600/5 hover:border-indigo-500 transition-all active:scale-95 group">
-            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 group-hover:animate-bounce"><Sparkles size={24} /></div>
+         <button onClick={() => setMostrarMagico(true)} className="glass-card flex items-center justify-center gap-3 py-8 border-2 border-dashed border-indigo-500/30 hover:bg-indigo-600/5 hover:border-indigo-500 transition-colors duration-150 active:scale-[0.98] group">
+            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 "><Sparkles size={24} /></div>
             <div className="text-left"><span className="block text-sm font-black text-white uppercase tracking-tight">Gasto Inteligente</span><span className="block text-xs text-slate-400 font-bold uppercase tracking-widest">Voz o Foto de Ticket</span></div>
          </button>
-         <button onClick={() => setMostrarModalManual(true)} className="glass-card flex items-center justify-center gap-3 py-8 border-2 border-dashed border-emerald-500/30 hover:bg-emerald-600/5 hover:border-emerald-500 transition-all active:scale-95">
+         <button onClick={() => setMostrarModalManual(true)} className="glass-card flex items-center justify-center gap-3 py-8 border-2 border-dashed border-emerald-500/30 hover:bg-emerald-600/5 hover:border-emerald-500 transition-colors duration-150 active:scale-[0.98]">
             <div className="w-12 h-12 bg-emerald-700 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-600/20"><Plus size={24} /></div>
             <div className="text-left"><span className="block text-sm font-black text-white uppercase tracking-tight">Gasto Manual</span><span className="block text-xs text-slate-400 font-bold uppercase tracking-widest">Registro Tradicional</span></div>
          </button>
       </div>
 
       </>}
-      <AnimatePresence>
+
         {mostrarModalManual && (
           <FormPage ariaLabel="Nuevo gasto" onClose={() => { setMostrarModalManual(false); setPrevisionSeleccionada(''); }} resumen={<><p className="font-bold">{concepto || 'Gasto manual'}</p><p className="text-2xl tabular-nums mt-3">{formatearNumero(nuevoMontoGasto, monedaGlobal)}</p><p className="text-muted-foreground mt-2">{categoria}</p></>}>
-              <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2"><Plus className="text-emerald-400"/> Nuevo Gasto</h2>
               <form onSubmit={guardarGastoManual} className="space-y-4">
                 <input type="text" placeholder="¿En qué gastaste?" className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" value={concepto} onChange={(e) => setConcepto(e.target.value)} required />
                 <div className="relative">
                   <input type="text" placeholder="0" className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-emerald-400 outline-none" value={montoFormateado} onChange={(e) => setMontoFormateado(formatarInput(e.target.value))} required />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black">{monedaGlobal}</span>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-400 uppercase ml-1">Categoría</label>
@@ -270,7 +274,7 @@ export default function Inicio({
                        {["Casa", "Supermercado", "Ocio", "Salud", "Transporte", "Otros"].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-400 uppercase ml-1">Previsión (Opcional)</label>
                     <select 
@@ -296,25 +300,23 @@ export default function Inicio({
 
                 {/* ALERTA DE LÍMITE EXCEDIDO */}
                 {superado && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
+                  <div
                     className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-400 font-bold uppercase tracking-tight flex items-center gap-2"
                   >
                     <AlertTriangle size={14} className="text-amber-500 shrink-0" />
                     <span>¡Alerta! Este gasto superará el límite de la previsión por {formatearNumero(exceso, monedaGlobal)}.</span>
-                  </motion.div>
+                  </div>
                 )}
 
-                <button type="submit" disabled={guardando} className="w-full py-4 bg-emerald-700 text-white font-black rounded-2xl shadow-lg shadow-emerald-900/20 active:scale-95 transition-all mt-2">
+                <button type="submit" disabled={guardando} className="w-full py-4 bg-emerald-700 text-white font-black rounded-2xl shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-colors duration-150 mt-2">
                   {guardando ? <Loader2 className="animate-spin mx-auto"/> : "GUARDAR GASTO"}
                 </button>
               </form>
           </FormPage>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>{mostrarMagico && <IngresoMagico isOpen={mostrarMagico} onClose={() => setMostrarMagico(false)} onConfirm={confirmarGastoMagico} monedaGlobal={monedaGlobal} />}</AnimatePresence>
+
+      {mostrarMagico && <IngresoMagico isOpen={mostrarMagico} onClose={() => setMostrarMagico(false)} onConfirm={confirmarGastoMagico} monedaGlobal={monedaGlobal} />}
     </div>
   );
 }

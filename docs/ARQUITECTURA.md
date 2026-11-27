@@ -89,9 +89,11 @@ Vercel ya envía las rutas internas a `index.html`.
 
 ## Escritorio y verificación visual
 
-El shell admite hasta 1536 px incluyendo la barra lateral; el contenido útil usa
-`max-w-7xl` (1280 px). El inicio presenta tres indicadores y dos paneles de
-vencimientos y movimientos recientes desde `xl`. El Libro Mayor comparte filtros,
+El shell ocupa todo el ancho: sidebar fija de 240 px desde `lg` y contenido
+fluido con padding, sin max-width en el contenedor principal. Los formularios
+conservan un máximo de 1280 px para facilitar la lectura. El inicio presenta
+grillas de dos columnas, tres desde `xl` y cuatro indicadores desde `2xl`, con
+paneles de vencimientos y movimientos recientes. El Libro Mayor comparte filtros,
 paginación y permisos entre una tabla desde `lg` y una lista en móvil. Las cifras
 de la tabla usan `tabular-nums`.
 

@@ -67,7 +67,7 @@ export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, 
           <label className="text-xs font-bold text-slate-400 uppercase ml-1">Nombre de la Previsión / Sobre</label>
           <input type="text" placeholder="Ej: Belleza, Ocio, Cine, Ropa..." value={previsionConcepto} onChange={(e) => setPrevisionConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50 text-base" required />
         </div>
-  
+
         <div className="space-y-1">
           <label className="text-xs font-bold text-slate-400 uppercase ml-1">Monto Límite Mensual</label>
           <div className="relative">
@@ -103,7 +103,7 @@ export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, 
           </div>
         </div>
 
-        <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 active:scale-95 transition-all mt-4">
+        <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 transition-colors duration-150 mt-4">
           {guardando ? <Loader2 className="animate-spin mx-auto" /> : "GUARDAR PREVISIÓN"}
         </button>
       </form>

@@ -1,0 +1,55 @@
+[
+  {
+    "viewport": 390,
+    "clientWidth": 384,
+    "mainLeft": 0,
+    "mainRight": 384,
+    "mainWidth": 384,
+    "cardWidths": [
+      360,
+      360,
+      360
+    ],
+    "sidebarPosition": "static"
+  },
+  {
+    "viewport": 768,
+    "clientWidth": 762,
+    "mainLeft": 0,
+    "mainRight": 762,
+    "mainWidth": 762,
+    "cardWidths": [
+      349,
+      349,
+      349
+    ],
+    "sidebarPosition": "static"
+  },
+  {
+    "viewport": 1440,
+    "clientWidth": 1440,
+    "mainLeft": 240,
+    "mainRight": 1440,
+    "mainWidth": 1200,
+    "cardWidths": [
+      373,
+      373,
+      373
+    ],
+    "sidebarPosition": "fixed"
+  },
+  {
+    "viewport": 1920,
+    "clientWidth": 1920,
+    "mainLeft": 240,
+    "mainRight": 1920,
+    "mainWidth": 1680,
+    "cardWidths": [
+      396,
+      396,
+      396,
+      396
+    ],
+    "sidebarPosition": "fixed"
+  }
+]

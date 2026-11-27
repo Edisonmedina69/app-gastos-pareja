@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, Loader2, AlertTriangle, ChevronDown, ChevronUp, Hash, Percent, Settings2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { formatearNumero, formatarInput, desformatearInput } from '../../../../shared/lib/formatters';
 import * as deudasService from '../../../../services/deudas.service';
@@ -70,7 +69,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
   const projectedHealth = () => {
     const inputVal = desformatearInput(montoTotalFormateado) || 0;
     if (!inputVal || !saludFinanciera.ingresos) return saludFinanciera.indice;
-    
+
     let cuotaNueva = 0;
     if (tipoDeuda === 'tarjeta_credito') {
       cuotaNueva = inputVal / (parseInt(cantidadCuotas) || 1);
@@ -81,7 +80,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
         cuotaNueva = inputVal / (parseInt(cantidadCuotas) || 1);
       }
     }
-    
+
     const impact = alcanceDeuda === 'individual' ? cuotaNueva : cuotaNueva * 0.5;
     const cargaNueva = saludFinanciera.carga + impact;
     return (cargaNueva / saludFinanciera.ingresos) * 100;
@@ -99,7 +98,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
       const yaPagadas = parseInt(cuotasPagadas) || 0;
       const inputMonto = desformatearInput(montoTotalFormateado) || 0;
       const lineaTotal = desformatearInput(lineaCreditoFormateada);
-      
+
       let montoCuota = 0;
       let totalMonto = 0;
 
@@ -183,7 +182,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
       for (let i = 1; i <= numCuotas; i++) {
         let fv = new Date(anioBase, mesInicio + (i - 1), parseInt(diaVencimiento));
         fv = ajustarDiaHabil(fv);
-        
+
         const esPagada = i <= yaPagadas;
 
         cuotas.push({
@@ -223,17 +222,17 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
         </div>
         {/* Progress bar */}
         <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden flex gap-1 p-0.5">
-          <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoDeuda >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
-          <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoDeuda >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
-          <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoDeuda >= 3 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoDeuda >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoDeuda >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoDeuda >= 3 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
         </div>
       </div>
 
       <form onSubmit={guardarDeudaPro} className="space-y-5">
-  
+
         {/* ── PASO 1: Alcance, Tipo y Descripción ── */}
         {pasoDeuda === 1 && (
-          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">1. Alcance de la Deuda</label>
               <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
@@ -242,7 +241,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                     key={a} 
                     type="button" 
                     onClick={() => setAlcanceDeuda(a)} 
-                    className={`flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                    className={`flex-1 py-3 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${alcanceDeuda === a ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                   >
                     {a === 'familiar' ? '🏠 Compartida (Familiar)' : '👤 Individual'}
                   </button>
@@ -263,7 +262,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                       key={t} 
                       type="button" 
                       onClick={() => setTipoDeuda(t)} 
-                      className={`flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                      className={`flex-1 py-3 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${tipoDeuda === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                     >
                       {label}
                     </button>
@@ -271,7 +270,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 })}
               </div>
             </div>
-      
+
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">3. Nombre / Descripción del Préstamo o Tarjeta</label>
               <input 
@@ -279,7 +278,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 placeholder="Ej: Préstamo Vehículo Itaú, Tarjeta Continental..." 
                 value={titulo} 
                 onChange={(e) => setTitulo(e.target.value)} 
-                className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white text-base font-bold outline-none focus:border-indigo-500 transition-all shadow-inner" 
+                className="w-full bg-slate-900 border border-white/10 rounded-2xl px-5 py-4 text-white text-base font-bold outline-none focus:border-indigo-500 transition-colors duration-150 shadow-inner"
                 required 
               />
               {tipoDeuda === 'fija' && (
@@ -290,7 +289,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                       key={sug}
                       type="button"
                       onClick={() => setTitulo(sug)}
-                      className="text-xs bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-2.5 py-1.5 rounded-lg border border-white/5 transition-all"
+                      className="text-xs bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-2.5 py-1.5 rounded-lg border border-white/5 transition-colors duration-150"
                     >
                       {sug}
                     </button>
@@ -304,17 +303,17 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 type="button" 
                 disabled={!titulo.trim()} 
                 onClick={() => setPasoDeuda(2)} 
-                className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-colors duration-150"
               >
                 Siguiente: Montos y Cuotas <ArrowRight size={16} />
               </button>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* ── PASO 2: Montos, Moneda y Cuotas ── */}
         {pasoDeuda === 2 && (
-          <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+          <div className="space-y-4">
             {tipoDeuda !== 'tarjeta_credito' && (
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Forma de Ingreso del Monto</label>
@@ -322,14 +321,14 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                   <button
                     type="button"
                     onClick={() => cambiarModoMonto('cuota')}
-                    className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-400'}`}
+                    className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${modoMonto === 'cuota' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-400'}`}
                   >
                     Ingresar por Cuota
                   </button>
                   <button
                     type="button"
                     onClick={() => cambiarModoMonto('total')}
-                    className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-400'}`}
+                    className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${modoMonto === 'total' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-400'}`}
                   >
                     Ingresar por Monto Total
                   </button>
@@ -371,7 +370,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               const inputVal = desformatearInput(montoTotalFormateado) || 0;
               const numCuotas = parseInt(cantidadCuotas) || 1;
               if (!inputVal) return null;
-        
+
               if (tipoDeuda !== 'tarjeta_credito') {
                 if (modoMonto === 'cuota') {
                   const totalCalculado = inputVal * numCuotas;
@@ -422,7 +421,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               <button 
                 type="button" 
                 onClick={() => setPasoDeuda(1)} 
-                className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-all"
+                className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-colors duration-150"
               >
                 <ArrowLeft size={16} /> Atrás
               </button>
@@ -430,17 +429,17 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                 type="button" 
                 disabled={!montoTotalFormateado} 
                 onClick={() => setPasoDeuda(3)} 
-                className="flex-1 py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                className="flex-1 py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-colors duration-150"
               >
                 Siguiente: Vencimiento <ArrowRight size={16} />
               </button>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* ── PASO 3: Vencimientos y Opciones Avanzadas ── */}
         {pasoDeuda === 3 && (
-          <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-black text-indigo-400 uppercase tracking-wider ml-1">Fecha 1º Vencimiento</label>
@@ -465,7 +464,7 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               <button
                 type="button"
                 onClick={() => setModoAvanzadoDeuda(!modoAvanzadoDeuda)}
-                className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-indigo-300 text-xs font-bold rounded-2xl flex items-center justify-between transition-all"
+                className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-indigo-300 text-xs font-bold rounded-2xl flex items-center justify-between transition-colors duration-150"
               >
                 <span className="flex items-center gap-2">
                   <Settings2 size={16} />
@@ -475,12 +474,9 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               </button>
             </div>
 
-            <AnimatePresence>
+
               {modoAvanzadoDeuda && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
+                <div
                   className="space-y-3 overflow-hidden pt-2 border-t border-white/10"
                 >
                   {tipoDeuda === 'tarjeta_credito' && (
@@ -513,16 +509,16 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-400 uppercase ml-1">Medio de Pago habitual</label>
                     <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                      <button type="button" onClick={() => setDeudaMedioPago('transferencia')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Transferencia</button>
-                      <button type="button" onClick={() => setDeudaMedioPago('efectivo')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'}`}>Efectivo</button>
+                      <button type="button" onClick={() => setDeudaMedioPago('transferencia')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${deudaMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Transferencia</button>
+                      <button type="button" onClick={() => setDeudaMedioPago('efectivo')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${deudaMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'}`}>Efectivo</button>
                     </div>
                   </div>
 
                   {deudaMedioPago === 'transferencia' && (
                     <div className="space-y-2">
                       <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
-                        <button type="button" onClick={() => setDeudaTipoCuenta('alias')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Alias / CBU</button>
-                        <button type="button" onClick={() => setDeudaTipoCuenta('nro_cuenta')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Nro. Cuenta</button>
+                        <button type="button" onClick={() => setDeudaTipoCuenta('alias')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${deudaTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Alias / CBU</button>
+                        <button type="button" onClick={() => setDeudaTipoCuenta('nro_cuenta')} className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${deudaTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Nro. Cuenta</button>
                       </div>
                       {deudaTipoCuenta === 'alias' ? (
                         <input type="text" aria-label="Alias o CBU" placeholder="Ej: mi.alias.banco" value={deudaAliasCuenta} onChange={(e) => setDeudaAliasCuenta(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base outline-none" />
@@ -543,9 +539,9 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
                       )}
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
+
 
             {zonaPeligro && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-center">
@@ -558,19 +554,19 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
               <button 
                 type="button" 
                 onClick={() => setPasoDeuda(2)} 
-                className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-all"
+                className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-colors duration-150"
               >
                 <ArrowLeft size={16} /> Atrás
               </button>
               <button 
                 type="submit" 
                 disabled={guardando} 
-                className={`flex-1 py-4 font-black uppercase text-xs rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600 hover:bg-indigo-600'} text-white active:scale-95`}
+                className={`flex-1 py-4 font-black uppercase text-xs rounded-2xl shadow-xl transition-colors duration-150 flex items-center justify-center gap-2 ${zonaPeligro ? 'bg-red-600' : 'bg-indigo-600 hover:bg-indigo-600'} text-white`}
               >
                 {guardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : (deudaEditandoId ? "GUARDAR CAMBIOS" : "FINALIZAR Y REGISTRAR")}
               </button>
             </div>
-          </motion.div>
+          </div>
         )}
 
       </form>

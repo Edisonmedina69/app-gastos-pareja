@@ -100,7 +100,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
             <button
               type="button"
               onClick={() => setPagarMedioPago('transferencia')}
-              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                 pagarMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
@@ -109,7 +109,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
             <button
               type="button"
               onClick={() => setPagarMedioPago('efectivo')}
-              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                 pagarMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
@@ -197,7 +197,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
           </div>
         )}
 
-        <button type="submit" className="w-full py-4 font-black rounded-2xl bg-emerald-700 text-white shadow-xl shadow-emerald-950/30 active:scale-95 transition-all mt-4">
+        <button type="submit" className="w-full py-4 font-black rounded-2xl bg-emerald-700 text-white shadow-xl shadow-emerald-950/30 transition-colors duration-150 mt-4">
           CONFIRMAR PAGO
         </button>
       </form>

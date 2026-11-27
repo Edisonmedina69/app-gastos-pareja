@@ -194,3 +194,19 @@
   .form-page-fields form > .space-y-4 > .pt-1,
   .form-page-fields form:has(> div.space-y-1) > button { grid-column: 1 / -1; }
 }
+
+/* Pulido de superficies nativas: contraste y foco por encima de los efectos. */
+::selection { background: oklch(var(--primary)); color: oklch(var(--primary-foreground)); }
+input, textarea { caret-color: oklch(var(--foreground)); }
+input::placeholder, textarea::placeholder { color: oklch(var(--muted-foreground)); opacity: 1; }
+a, button { text-underline-offset: .2em; }
+button:disabled { cursor: not-allowed; }
+.form-page :focus-visible { scroll-margin-block: 1rem 6rem; }
+.glass-card { transition-property: background-color, border-color; transition-duration: 150ms; }
+@media (hover: hover) and (pointer: fine) {
+  .form-page button:not(:disabled):not(:focus-visible) { transition: background-color 150ms, color 150ms, transform 120ms cubic-bezier(.23,1,.32,1); }
+  .form-page button:not(:disabled):not(:focus-visible):active { transform: scale(.98); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-page button:active { transform: none; }
+}

@@ -54,7 +54,12 @@ def goto(path, width):
     cmd('viewport', '--page', PAGE, '--width', str(width), '--height', '1000')
 
 def screenshot(page, name):
-    data = cmd('screenshot', '--page', page)
+    if os.environ.get('QA_SKIP_SCREENSHOTS') == '1':
+        return
+    cmd('tab', 'switch', '--page', page)
+    width = int(name.rsplit('-', 1)[-1])
+    cmd('viewport', '--page', page, '--width', str(width), '--height', '1000')
+    data = cmd('full-screenshot', '--page', page)
     shutil.copyfile(data['path'], OUT / (name + '.png'))
 
 def run_suite(widths):
@@ -111,11 +116,12 @@ def run_suite(widths):
         goto('/deudas/qa-tarjeta/compras/nueva', width)
         run(f'{width}: compra con tarjeta', "await fill('main input[type=text]', 'QA compra'); await fill('main input[placeholder=\"0\"]', '2000'); await submit(); assert(db().gastos.some(g=>g.concepto.includes('QA compra')), 'No registró compra');")
         goto('/historial', width)
+        run(f'{width}: fechas completas en Libro Mayor', "assert(db().gastos.every(g=>g.fecha), 'La fixture omitió el default fecha de Supabase'); assert([...document.querySelectorAll('table tbody tr td:first-child')].every(e=>e.textContent.trim()), 'Hay fechas vacías en la tabla');")
         screenshot(PAGE, f'despues-libro-{width}')
         run(f'{width}: tabla/lista y edición de gasto', "assert(document.documentElement.scrollWidth <= innerWidth, 'Desborde en libro'); window.prompt=()=> '24000'; const b=[...document.querySelectorAll('main button')].find(e=>visible(e) && (e.getAttribute('aria-label')||'')==='Editar QA gasto'); assert(b,'No hay acción editar gasto'); b.click();await pause();assert(db().gastos.find(g=>g.concepto==='QA gasto').monto===24000,'Edición gasto falló');")
         goto('/deudas', width)
         run(f'{width}: demo oculta, filtros eliminados', "const text=document.querySelector('main').innerText; assert(!text.toLowerCase().includes('cargar deudas demo'),'Demo expuesta'); assert(!text.includes('Míos'),'Filtro Míos visible');")
-    print(json.dumps({'checks':len(results), 'screenshots':len(list(OUT.glob('*.png')))}, ensure_ascii=False))
+    print(json.dumps({'checks':len(results), 'screenshots':len(list(OUT.glob('*.png'))), 'screenshotsSkipped':os.environ.get('QA_SKIP_SCREENSHOTS') == '1'}, ensure_ascii=False))
 
 if __name__ == '__main__':
-    run_suite(map(int, sys.argv[1:] or (390, 768, 1440)))
+    run_suite(map(int, sys.argv[1:] or (390, 768, 1440, 1920)))

@@ -99,19 +99,19 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
           </span>
         </div>
         <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden flex gap-1 p-0.5">
-          <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoFijo >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
-          <div className={`h-full flex-1 rounded-full transition-all duration-300 ${pasoFijo >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoFijo >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoFijo >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
         </div>
       </div>
 
       <form onSubmit={guardarGastoFijo} className="space-y-4">
         {pasoFijo === 1 && (
-          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Concepto / Servicio</label>
               <input type="text" placeholder="Ej: Luz (ANDE), Agua, Alquiler..." value={fijoConcepto} onChange={(e) => setFijoConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-bold outline-none focus:border-indigo-500 text-base" required />
             </div>
-      
+
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Monto Estimado</label>
@@ -159,23 +159,23 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
                 type="button" 
                 disabled={!fijoConcepto.trim()} 
                 onClick={() => setPasoFijo(2)} 
-                className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all"
+                className="w-full py-4 bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-600 text-white font-black text-xs uppercase rounded-2xl shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-colors duration-150"
               >
                 Siguiente: Datos de Pago (Opcional) <ArrowRight size={16} />
               </button>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {pasoFijo === 2 && (
-          <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">Medio de Pago habitual</label>
               <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
                 <button
                   type="button"
                   onClick={() => setFijoMedioPago('transferencia')}
-                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                     fijoMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
                   }`}
                 >
@@ -184,7 +184,7 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
                 <button
                   type="button"
                   onClick={() => setFijoMedioPago('efectivo')}
-                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                     fijoMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'
                   }`}
                 >
@@ -199,7 +199,7 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
                   <button
                     type="button"
                     onClick={() => setFijoTipoCuenta('alias')}
-                    className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${
+                    className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                       fijoTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
                     }`}
                   >
@@ -208,7 +208,7 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
                   <button
                     type="button"
                     onClick={() => setFijoTipoCuenta('nro_cuenta')}
-                    className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-all ${
+                    className={`flex-1 py-2 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                       fijoTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
                     }`}
                   >
@@ -263,19 +263,19 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
               <button 
                 type="button" 
                 onClick={() => setPasoFijo(1)} 
-                className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-all"
+                className="py-4 px-5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs uppercase rounded-2xl flex items-center justify-center gap-1 transition-colors duration-150"
               >
                 <ArrowLeft size={16} /> Atrás
               </button>
               <button 
                 type="submit" 
                 disabled={guardando} 
-                className="flex-1 py-4 font-black text-xs uppercase rounded-2xl bg-indigo-600 hover:bg-indigo-600 text-white shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-4 font-black text-xs uppercase rounded-2xl bg-indigo-600 hover:bg-indigo-600 text-white shadow-xl shadow-indigo-600/20 transition-colors duration-150 flex items-center justify-center gap-2"
               >
                 {guardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : "FINALIZAR Y GUARDAR"}
               </button>
             </div>
-          </motion.div>
+          </div>
         )}
       </form>
     </FormPage>

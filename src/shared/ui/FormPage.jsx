@@ -9,7 +9,7 @@ export function FormPage({ children, onClose, ariaLabel = 'Registro', resumen })
     window.scrollTo(0, 0);
   }, []);
   return (
-    <section className="form-page" aria-label={ariaLabel}>
+    <section className="form-page w-full max-w-7xl mx-auto" aria-label={ariaLabel}>
       <header className="mb-6 flex items-center gap-3">
         <button type="button" onClick={onClose} aria-label="Volver" className="min-h-touch min-w-touch rounded-xl border border-border flex items-center justify-center hover:bg-white/10"><ArrowLeft size={20} /></button>
         <h1 ref={heading} tabIndex={-1} className="text-title-sm font-black outline-none">{ariaLabel}</h1>

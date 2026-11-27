@@ -27,7 +27,7 @@ export async function call(name, args) {
     if (/^actualizar/.test(name)) Object.assign(db[key].find(r => r.id === value), changes);
     if (/^eliminar/.test(name)) db[key] = db[key].filter(r => r.id !== value);
     if (/^(insertar|crear)/.test(name)) {
-      const rows = (Array.isArray(value) ? value : [value]).map(r => ({ id: crypto.randomUUID(), created_at: today, cuotas_detalle: [], ...r }));
+      const rows = (Array.isArray(value) ? value : [value]).map(r => ({ id: crypto.randomUUID(), created_at: today, ...(key === 'gastos' || key === 'ingresos' ? { fecha: new Date().toISOString() } : {}), cuotas_detalle: [], ...r }));
       db[key].push(...rows); save(); return { data: Array.isArray(value) ? rows : rows[0], error: null };
     }
   }

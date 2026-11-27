@@ -5,7 +5,6 @@ import { actualizarIngreso, eliminarIngreso } from "../../../services/ingresos.s
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { formatearNumero, formatearFecha } from "../../../shared/lib/formatters";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
   History, 
   Download, 
@@ -126,14 +125,12 @@ export default function Historial({
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <History className="w-5 h-5 text-indigo-400" /> Libro Mayor
         </h2>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={exportarExcel}
-          className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/20 transition-all"
+          className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/20 transition-colors duration-150"
         >
           <Download size={14} /> EXPORTAR
-        </motion.button>
+        </button>
       </div>
 
       {/* PANEL DE FILTROS */}
@@ -187,10 +184,10 @@ export default function Historial({
             <p className="text-slate-400 text-sm">No se encontraron movimientos con los filtros seleccionados.</p>
           </div>
         ) : (
-          <AnimatePresence mode="popLayout">
+          <>
             {movimientosPaginados.map((m) => {
               const esIngreso = m.tipo === "ingreso";
-              
+
               let displayConcept = m.concepto;
               let budgetName = null;
               let isFijo = false;
@@ -208,13 +205,10 @@ export default function Historial({
               }
 
               return (
-                <motion.div
-                  layout
+                <div
+
                   key={`${m.tipo}-${m.id}`}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className={`glass-card p-4 border-l-4 transition-all hover:bg-white/10 ${esIngreso ? 'border-l-emerald-500' : 'border-l-red-500'}`}
+                  className={`glass-card p-4 border-l-4 transition-colors duration-150 hover:bg-white/10 ${esIngreso ? 'border-l-emerald-500' : 'border-l-red-500'}`}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex gap-4">
@@ -258,10 +252,10 @@ export default function Historial({
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-          </AnimatePresence>
+          </>
         )}
       </div>
 
@@ -297,7 +291,7 @@ export default function Historial({
           >
             <ChevronLeft size={20} />
           </button>
-          
+
           <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
             Página <span className="text-white">{paginaActual}</span> de <span className="text-white">{totalPaginas}</span>
           </div>

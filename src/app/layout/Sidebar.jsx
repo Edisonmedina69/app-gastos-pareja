@@ -6,7 +6,7 @@ import { obtenerSecciones } from "../navegacion";
 /** Barra lateral de escritorio (≥ lg). */
 export default function Sidebar({ datosHogar, usuarioActual, activeTab, setActiveTab, esSuperadmin }) {
   return (
-    <aside className="hidden lg:flex flex-col w-60 shrink-0 p-5 border-r border-white/5 space-y-8">
+    <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex flex-col w-60 p-5 border-r border-white/5 space-y-8 bg-background overflow-y-auto">
       <div className="flex items-center gap-3 px-2">
         <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20 flex-shrink-0"><span className="text-xl font-black text-white">Ñ</span></div>
         <div className="flex flex-col min-w-0">
@@ -18,7 +18,7 @@ export default function Sidebar({ datosHogar, usuarioActual, activeTab, setActiv
       </div>
       <nav className="flex-1 space-y-2">
         {obtenerSecciones(esSuperadmin).map((link) => (
-          <button key={link.id} onClick={() => setActiveTab(link.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === link.id ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}`}>
+          <button key={link.id} onClick={() => setActiveTab(link.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors duration-150 ${activeTab === link.id ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}`}>
             <link.icon size={20} /> {link.label}
           </button>
         ))}

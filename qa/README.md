@@ -43,3 +43,16 @@ rm qa/axe.min.cjs
 El audit fija la opacidad final de las animaciones en la fixture antes de medir
 el contraste, porque el navegador embebido puede suspender los cuadros en segundo plano. Se revisan las reglas de contraste de texto; no representa una
 certificación de accesibilidad de toda la aplicación.
+
+Para renovar las capturas y medir que el shell llene el ancho a 390, 768, 1440 y
+1920 px, ejecutar después del flujo CRUD:
+
+```bash
+QA_BROWSER_PAGE=<pagina-5173> QA_BEFORE_PAGE=<pagina-5174> python3 qa/browser-layout-check.py 1920
+```
+
+Se puede pasar cualquiera de los cuatro anchos o ejecutar sin argumento para
+revisarlos todos. Registra medidas en `docs/qa/layout-fluido.json`, verifica que
+la tabla no tenga fechas vacías y renueva las capturas de Dashboard, gasto manual
+y Libro Mayor. Usa capturas completas para evitar la suspensión de cuadros de
+algunas ventanas de Orca en segundo plano.

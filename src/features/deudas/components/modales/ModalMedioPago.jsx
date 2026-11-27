@@ -55,7 +55,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
             <button
               type="button"
               onClick={() => setMpEditMedioPago('transferencia')}
-              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                 mpEditMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
@@ -64,7 +64,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
             <button
               type="button"
               onClick={() => setMpEditMedioPago('efectivo')}
-              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                 mpEditMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
@@ -81,7 +81,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
                 <button
                   type="button"
                   onClick={() => setMpEditTipoCuenta('alias')}
-                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                     mpEditTipoCuenta === 'alias' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
                   }`}
                 >
@@ -90,7 +90,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
                 <button
                   type="button"
                   onClick={() => setMpEditTipoCuenta('nro_cuenta')}
-                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${
+                  className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
                     mpEditTipoCuenta === 'nro_cuenta' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
                   }`}
                 >
@@ -153,7 +153,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
           </>
         )}
 
-        <button type="submit" disabled={mpGuardando} className="w-full py-3.5 font-black rounded-2xl bg-indigo-600 text-white shadow-xl active:scale-95 transition-all mt-4">
+        <button type="submit" disabled={mpGuardando} className="w-full py-3.5 font-black rounded-2xl bg-indigo-600 text-white shadow-xl transition-colors duration-150 mt-4">
           {mpGuardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : "GUARDAR"}
         </button>
       </form>

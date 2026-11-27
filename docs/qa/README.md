@@ -49,3 +49,30 @@ Los resultados completos están en [resultados.json](resultados.json) y
 
 Libro Mayor: [390](despues-libro-390.png), [768](despues-libro-768.png),
 [1440](despues-libro-1440.png).
+
+## Seguimiento de ancho completo y revisión de diseño
+
+Se quitó el max-width del shell y del contenedor de contenido: a 1920 px el main
+ocupa los 1680 px que deja la sidebar fija de 240 px, con cuatro indicadores de
+396 px. A 1440 px el main ocupa 1200 px y muestra tres indicadores. Los formularios
+conservan su medida máxima para lectura. Las medidas de los cuatro anchos, sin
+scroll horizontal, están en [layout-fluido.json](layout-fluido.json).
+
+Las fechas vacías de la captura inicial eran un defecto de la fixture. El esquema
+real define `gastos.fecha DEFAULT now()` (`supabase/schema.sql:65`), pero el mock
+solo completaba `created_at`. Ahora replica ese default para gastos e ingresos.
+La comprobación añadida del Libro Mayor exige fechas no vacías en la fixture y
+en todas las filas de la tabla. No se modificaron consultas, datos ni formateadores
+productivos. El flujo completo a 1920 px pasa, sumando 129 comprobaciones
+funcionales registradas.
+
+El pulido y sus decisiones se documentan en [revision-diseno.md](revision-diseno.md).
+Las skills copiadas están en un commit separado (`116d6b4`). Lint, los 43 tests y
+build pasan; la consola de la nueva pasada no presenta errores.
+
+Pendiente de esta pasada: renovar las capturas después del pulido. El navegador
+embebido de Orca responde a consultas y operaciones, pero la captura falla con
+`the browser page did not draw a frame`, también con pestañas nuevas y captura
+completa. Las imágenes enlazadas arriba corresponden a la primera pasada, no al
+layout fluido final. `QA_SKIP_SCREENSHOTS=1` permite repetir las mediciones y las
+operaciones mientras se resuelve ese bloqueo del navegador; no genera imágenes.

@@ -79,7 +79,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
             type="text" 
             value={mFormateado} 
             onChange={(e) => setMFormateado(formatarInput(e.target.value))} 
-            className={`w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black outline-none transition-all ${esFija ? 'text-slate-400 bg-slate-950/60' : 'text-white'}`} 
+            className={`w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black outline-none transition-colors duration-150 ${esFija ? 'text-slate-400 bg-slate-950/60' : 'text-white'}`}
             placeholder="0" 
           />
           {esFija && (
@@ -95,7 +95,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
                   const minPago = pagoSeleccionado.cuota.pago_minimo || pagoSeleccionado.cuota.monto_cuota;
                   setMFormateado(formatarInput(Math.max(0, minPago - Number(pagoSeleccionado.cuota.monto_abonado))));
                 }}
-                className="flex-1 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-black uppercase border border-indigo-500/20 transition-all"
+                className="flex-1 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-black uppercase border border-indigo-500/20 transition-colors duration-150"
               >
                 Mínimo: {formatearNumero(Math.max(0, (pagoSeleccionado.cuota.pago_minimo || pagoSeleccionado.cuota.monto_cuota) - Number(pagoSeleccionado.cuota.monto_abonado)), maestra.moneda)}
               </button>
@@ -104,14 +104,14 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
                 onClick={() => {
                   setMFormateado(formatarInput(Math.max(0, pagoSeleccionado.cuota.monto_cuota - Number(pagoSeleccionado.cuota.monto_abonado))));
                 }}
-                className="flex-1 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 rounded-xl text-xs font-black uppercase border border-emerald-500/20 transition-all"
+                className="flex-1 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 rounded-xl text-xs font-black uppercase border border-emerald-500/20 transition-colors duration-150"
               >
                 Total: {formatearNumero(Math.max(0, pagoSeleccionado.cuota.monto_cuota - Number(pagoSeleccionado.cuota.monto_abonado)), maestra.moneda)}
               </button>
             </div>
           )}
         </div>
-        
+
         <div className="grid grid-cols-3 gap-2">
           {['PYG', 'BRL', 'USD'].map(m => (
             <button 
@@ -119,7 +119,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
               type="button"
               disabled={esFija}
               onClick={() => setMon(m)} 
-              className={`py-2 rounded-xl text-xs font-black border transition-all ${mon === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-slate-400'} ${esFija && mon !== m ? 'opacity-30 cursor-not-allowed' : ''}`}
+              className={`py-2 rounded-xl text-xs font-black border transition-colors duration-150 ${mon === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-slate-400'} ${esFija && mon !== m ? 'opacity-30 cursor-not-allowed' : ''}`}
             >
               {m}
             </button>
