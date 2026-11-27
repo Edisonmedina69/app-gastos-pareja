@@ -234,7 +234,7 @@ export default function Inicio({
               <button onClick={() => { setMostrarModalManual(false); setPrevisionSeleccionada(""); }} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
               <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2"><Plus className="text-emerald-400"/> Nuevo Gasto</h2>
               <form onSubmit={guardarGastoManual} className="space-y-4">
-                <input type="text" placeholder="¿En qué gastaste?" className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" value={concepto} onChange={(e) => setConcepto(e.target.value)} required />
+                <input type="text" placeholder="¿En qué gastaste?" className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" value={concepto} onChange={(e) => setConcepto(e.target.value)} required />
                 <div className="relative">
                   <input type="text" placeholder="0" className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black text-emerald-400 outline-none" value={montoFormateado} onChange={(e) => setMontoFormateado(formatarInput(e.target.value))} required />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">{monedaGlobal}</span>
@@ -243,7 +243,7 @@ export default function Inicio({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Categoría</label>
-                    <select className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+                    <select className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
                        {["Casa", "Supermercado", "Ocio", "Salud", "Transporte", "Otros"].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -251,7 +251,7 @@ export default function Inicio({
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Previsión (Opcional)</label>
                     <select 
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white"
+                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base"
                       value={previsionSeleccionada} 
                       onChange={(e) => setPrevisionSeleccionada(e.target.value)}
                     >

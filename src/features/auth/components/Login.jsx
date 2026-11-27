@@ -2,7 +2,8 @@ import { useState } from "react";
 import { iniciarSesion } from "../../../services/auth.service";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
-import { Lock, ArrowRight, Loader2, ShieldCheck, Mail } from "lucide-react";
+import { Lock, ArrowRight, ShieldCheck, Mail } from "lucide-react";
+import { Button, Input, Label } from "../../../shared/ui";
 
 export default function Login() {
   const [usuario, setUsuario] = useState("");
@@ -63,31 +64,31 @@ export default function Login() {
           <p className="text-slate-400 mt-2 text-sm italic">Hecho con ❤️ y mucho Tereré 🧉</p>
         </div>
 
-        <div className="glass-card border-white/10 p-8 shadow-2xl relative overflow-hidden">
+        <div className="glass-card border-white/10 p-6 sm:p-8 shadow-2xl relative overflow-hidden">
           <h2 className="text-xl font-semibold text-white mb-6">
             Iniciar Sesión
           </h2>
           
           <form onSubmit={handleAuth} className="space-y-5">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Usuario o Correo</label>
+            <div className="space-y-1.5">
+              <Label htmlFor="login-usuario">Usuario o Correo</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                <input type="text" placeholder="Ej: edison o tu@email.com" value={usuario} onChange={(e) => setUsuario(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-indigo-500/50 transition-all" required />
+                <Mail aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <Input id="login-usuario" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="Ej: edison o tu@email.com" value={usuario} onChange={(e) => setUsuario(e.target.value)} className="bg-slate-900/50 pl-11" required />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Contraseña</label>
+            <div className="space-y-1.5">
+              <Label htmlFor="login-password">Contraseña</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-indigo-500/50 transition-all" required />
+                <Lock aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                <Input id="login-password" type="password" autoComplete="current-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-slate-900/50 pl-11" required />
               </div>
             </div>
 
-            <button type="submit" disabled={cargando} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
-              {cargando ? <Loader2 className="w-5 h-5 animate-spin" /> : <>ENTRAR <ArrowRight size={18} /></>}
-            </button>
+            <Button type="submit" tamano="lg" cargando={cargando} className="w-full">
+              ENTRAR <ArrowRight size={18} aria-hidden="true" />
+            </Button>
           </form>
 
         </div>
