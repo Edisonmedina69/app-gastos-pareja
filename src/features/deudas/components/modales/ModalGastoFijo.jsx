@@ -89,18 +89,14 @@ export default function ModalGastoFijo({ fijo, usuarioActual, datosHogar, moneda
 
       {/* Header Wizard Gasto Fijo */}
       <div className="mb-6">
-        <div className="flex items-center justify-between gap-2 mb-2 pr-12">
-          <h2 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-            <Clock className="text-indigo-400" size={20} />
-            {idFijoEditando ? 'Ajustar Gasto Fijo' : 'Programar Gasto Fijo'}
-          </h2>
+        <div className="flex items-center justify-between gap-2 mb-2">
           <span className="shrink-0 whitespace-nowrap text-xs font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
             Paso {pasoFijo} de 2
           </span>
         </div>
         <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden flex gap-1 p-0.5">
-          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoFijo >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
-          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoFijo >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 ${pasoFijo >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 ${pasoFijo >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
         </div>
       </div>
 

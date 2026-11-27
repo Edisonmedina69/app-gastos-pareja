@@ -1,27 +1,27 @@
 [
   {
     "viewport": 390,
-    "clientWidth": 384,
+    "clientWidth": 390,
     "mainLeft": 0,
-    "mainRight": 384,
-    "mainWidth": 384,
+    "mainRight": 390,
+    "mainWidth": 390,
     "cardWidths": [
-      360,
-      360,
-      360
+      366,
+      366,
+      366
     ],
     "sidebarPosition": "static"
   },
   {
     "viewport": 768,
-    "clientWidth": 762,
+    "clientWidth": 768,
     "mainLeft": 0,
-    "mainRight": 762,
-    "mainWidth": 762,
+    "mainRight": 768,
+    "mainWidth": 768,
     "cardWidths": [
-      349,
-      349,
-      349
+      352,
+      352,
+      352
     ],
     "sidebarPosition": "static"
   },

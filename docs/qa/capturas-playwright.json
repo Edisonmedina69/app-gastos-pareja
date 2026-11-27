@@ -1,0 +1,72 @@
+{
+  "browser": "Chromium headless shell 1255",
+  "locale": "es-PY",
+  "timezone": "America/Asuncion",
+  "fixtures": "Servicios en memoria del servidor de QA, sin llamadas externas",
+  "results": [
+    {
+      "width": 390,
+      "ledgerRows": 7,
+      "ledgerDates": [
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m."
+      ],
+      "consoleErrors": [],
+      "externalRequests": [],
+      "fullPageScreenshots": 6
+    },
+    {
+      "width": 768,
+      "ledgerRows": 7,
+      "ledgerDates": [
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m."
+      ],
+      "consoleErrors": [],
+      "externalRequests": [],
+      "fullPageScreenshots": 6
+    },
+    {
+      "width": 1440,
+      "ledgerRows": 7,
+      "ledgerDates": [
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m."
+      ],
+      "consoleErrors": [],
+      "externalRequests": [],
+      "fullPageScreenshots": 6
+    },
+    {
+      "width": 1920,
+      "ledgerRows": 7,
+      "ledgerDates": [
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m.",
+        "27/11/2026 09:17 a. m."
+      ],
+      "consoleErrors": [],
+      "externalRequests": [],
+      "fullPageScreenshots": 6
+    }
+  ]
+}

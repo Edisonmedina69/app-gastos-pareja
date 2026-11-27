@@ -17,7 +17,8 @@ skills a otra versión. La revisión se hizo en esta sesión, sin trabajadores e
 | `transition-all` en los controles revisados | Transiciones de color de 150 ms y presión de 120 ms con curva `.23,1,.32,1` solo para puntero | Limitar propiedades y evitar movimiento al navegar con teclado |
 | Elevación al hover y rebote decorativo | Color de hover, foco visible y controles quietos | Evitar saltos visuales y falsos hovers táctiles |
 | Placeholder y caret del navegador | Colores semánticos, selección y margen de scroll para el foco | Completar estados nativos y proteger el foco frente a la barra inferior |
-| Doble título de gasto manual | Un único título de pantalla | Aclarar la jerarquía sin cambiar textos de dominio |
+| Títulos duplicados en gasto manual y wizards | Un único título de pantalla, con indicador de paso separado | Aclarar la jerarquía sin cambiar textos de dominio |
+| Resumen adicional debajo de formularios móviles | Resumen lateral desde escritorio | Priorizar los campos y la acción fija en celular |
 
 El detector se ejecutó una vez sobre los archivos UI modificados. Sus cuatro
 advertencias se revisaron: tipografía Inter, colores indigo de campos monetarios

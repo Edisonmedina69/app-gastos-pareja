@@ -1,6 +1,7 @@
 # Verificación de formularios y escritorio
 
-Pruebas en el navegador embebido de Orca con datos sintéticos, sin conexión a
+Pruebas funcionales en Orca y capturas finales con Chromium headless mediante
+Playwright, autorizado por el coordinador, con datos sintéticos y sin conexión a
 Supabase. El servidor optativo de QA y los comandos reproducibles están en
 [qa/README.md](../../qa/README.md). La comparación anterior usa las fuentes y el
 CSS compilado del commit `bac4f70` con las mismas fixtures.
@@ -10,6 +11,7 @@ CSS compilado del commit `bac4f70` con las mismas fixtures.
 | 390 px | 33 pasan | 1 columna | pantalla con acción fija | lista |
 | 768 px | 33 pasan | 2 columnas | pantalla con acción fija | lista |
 | 1440 px | 33 pasan | 3 indicadores, 2 paneles | editor y resumen lateral | tabla |
+| 1920 px | 30 pasan | 4 indicadores, 2 paneles | editor de ancho limitado y resumen lateral | tabla fluida |
 
 Se comprobaron altas, precarga por URL, edición y eliminación de deudas, tarjetas,
 gastos fijos, previsiones e ingresos programados. También altas de gastos e
@@ -43,12 +45,18 @@ Los resultados completos están en [resultados.json](resultados.json) y
 | Dashboard 390 | [ver](antes-dashboard-390.png) | [ver](despues-dashboard-390.png) |
 | Dashboard 768 | [ver](antes-dashboard-768.png) | [ver](despues-dashboard-768.png) |
 | Dashboard 1440 | [ver](antes-dashboard-1440.png) | [ver](despues-dashboard-1440.png) |
+| Dashboard 1920 | [ver](antes-dashboard-1920.png) | [ver](despues-dashboard-1920.png) |
 | Gasto manual 390 | [ver](antes-gasto-390.png) | [ver](despues-gasto-390.png) |
 | Gasto manual 768 | [ver](antes-gasto-768.png) | [ver](despues-gasto-768.png) |
 | Gasto manual 1440 | [ver](antes-gasto-1440.png) | [ver](despues-gasto-1440.png) |
+| Gasto manual 1920 | [ver](antes-gasto-1920.png) | [ver](despues-gasto-1920.png) |
 
 Libro Mayor: [390](despues-libro-390.png), [768](despues-libro-768.png),
-[1440](despues-libro-1440.png).
+[1440](despues-libro-1440.png), [1920](despues-libro-1920.png).
+
+Formulario largo (deuda, paso 3 y opciones avanzadas):
+[390](despues-deuda-390.png), [768](despues-deuda-768.png),
+[1440](despues-deuda-1440.png), [1920](despues-deuda-1920.png).
 
 ## Seguimiento de ancho completo y revisión de diseño
 
@@ -70,9 +78,11 @@ El pulido y sus decisiones se documentan en [revision-diseno.md](revision-diseno
 Las skills copiadas están en un commit separado (`116d6b4`). Lint, los 43 tests y
 build pasan; la consola de la nueva pasada no presenta errores.
 
-Pendiente de esta pasada: renovar las capturas después del pulido. El navegador
-embebido de Orca responde a consultas y operaciones, pero la captura falla con
-`the browser page did not draw a frame`, también con pestañas nuevas y captura
-completa. Las imágenes enlazadas arriba corresponden a la primera pasada, no al
-layout fluido final. `QA_SKIP_SCREENSHOTS=1` permite repetir las mediciones y las
-operaciones mientras se resuelve ese bloqueo del navegador; no genera imágenes.
+La captura de Orca se bloqueó con `the browser page did not draw a frame`.
+El coordinador autorizó Chromium headless como alternativa: las 24 capturas de
+esta carpeta ya están renovadas a página completa, con locale `es-PY` y zona
+`America/Asuncion`. Dashboard, Libro Mayor, gasto manual y el formulario largo
+se comprobaron a 390/768/1440/1920 px sin scroll horizontal; la tabla muestra
+fecha válida en sus siete filas. No hubo errores de consola ni peticiones
+externas. El recibo es [capturas-playwright.json](capturas-playwright.json).
+Playwright se instaló fuera del repositorio, sin modificar sus dependencias.

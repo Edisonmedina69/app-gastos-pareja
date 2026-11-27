@@ -56,3 +56,22 @@ revisarlos todos. Registra medidas en `docs/qa/layout-fluido.json`, verifica que
 la tabla no tenga fechas vacías y renueva las capturas de Dashboard, gasto manual
 y Libro Mayor. Usa capturas completas para evitar la suspensión de cuadros de
 algunas ventanas de Orca en segundo plano.
+
+## Capturas con Chromium headless
+
+Cuando el navegador de Orca no dibuja cuadros para sus capturas, se puede usar
+el fallback autorizado de Playwright contra los mismos servidores de QA. No es
+una dependencia de la aplicación: instalarlo en una carpeta temporal y señalar
+el módulo y el ejecutable de Chromium que ya esté instalado:
+
+```bash
+npm install --prefix /tmp/gastos-playwright --no-save playwright
+PLAYWRIGHT_MODULE=file:///tmp/gastos-playwright/node_modules/playwright/index.mjs \
+CHROMIUM_EXECUTABLE="$HOME/.cache/ms-playwright/chromium_headless_shell-1255/chrome-headless-shell-linux64/chrome-headless-shell" \
+node qa/capture-playwright.mjs
+```
+
+El script guarda 24 capturas completas: Dashboard anterior/actual, gasto manual
+anterior/actual, Libro Mayor y deuda con opciones avanzadas, a los cuatro anchos.
+Comprueba fechas no vacías, ancho fluido, ausencia de scroll horizontal, errores
+de consola y peticiones externas. El recibo guarda locale y zona horaria.

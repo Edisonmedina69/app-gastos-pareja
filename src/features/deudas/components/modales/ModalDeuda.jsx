@@ -211,20 +211,16 @@ export default function ModalDeuda({ deudaEditando, usuarioActual, datosHogar, m
 
       {/* Header con Indicador de Pasos / Wizard */}
       <div className="mb-6">
-        <div className="flex items-center justify-between gap-2 mb-2 pr-12">
-          <h2 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-            <CreditCard className="text-indigo-400" size={20} />
-            {deudaEditandoId ? 'Editar Compromiso Pro' : 'Nuevo Compromiso Pro'}
-          </h2>
+        <div className="flex items-center justify-between gap-2 mb-2">
           <span className="shrink-0 whitespace-nowrap text-xs font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
             Paso {pasoDeuda} de 3
           </span>
         </div>
         {/* Progress bar */}
         <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden flex gap-1 p-0.5">
-          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoDeuda >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
-          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoDeuda >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
-          <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoDeuda >= 3 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 ${pasoDeuda >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 ${pasoDeuda >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+          <div className={`h-full flex-1 rounded-full transition-colors duration-150 ${pasoDeuda >= 3 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
         </div>
       </div>
 

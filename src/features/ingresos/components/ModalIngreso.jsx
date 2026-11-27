@@ -9,12 +9,8 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
         <FormPage ariaLabel={tipoRegistro === 'variable' ? 'Registrar ingreso' : tipoRegistro === 'fijo' ? 'Programar sueldo' : 'Ajustar sueldo'} onClose={() => { setMostrarModal(false); resetForm(); }} resumen={<><p className="font-bold">{concepto || 'Ingreso'}</p><p className="text-2xl tabular-nums mt-3">{formatearNumero(desformatearInput(montoFormateado) || 0, moneda)}</p><p className="text-muted-foreground mt-2">{categoria}</p></>}>
 
             {/* Header Wizard Ingresos */}
-            <div className="mb-6">
+            <div className="mb-6" hidden={tipoRegistro === 'variable'}>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                  {tipoRegistro === 'variable' ? <Plus className="text-emerald-400" size={20}/> : <Clock className="text-indigo-400" size={20}/>}
-                  {tipoRegistro === 'variable' ? 'Registrar Ingreso' : (tipoRegistro === 'fijo' ? 'Programar Sueldo' : 'Ajustar Sueldo')}
-                </h2>
                 {(tipoRegistro === 'fijo' || tipoRegistro === 'edicion') && (
                   <span className="text-xs font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
                     Paso {pasoIngreso} de 2
@@ -23,8 +19,8 @@ export default function ModalIngreso({ CATEGORIAS_INGRESO, ajusteDiaHabil, categ
               </div>
               {(tipoRegistro === 'fijo' || tipoRegistro === 'edicion') && (
                 <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden flex gap-1 p-0.5">
-                  <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoIngreso >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
-                  <div className={`h-full flex-1 rounded-full transition-colors duration-150 duration-300 ${pasoIngreso >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+                  <div className={`h-full flex-1 rounded-full transition-colors duration-150 ${pasoIngreso >= 1 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+                  <div className={`h-full flex-1 rounded-full transition-colors duration-150 ${pasoIngreso >= 2 ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
                 </div>
               )}
             </div>
