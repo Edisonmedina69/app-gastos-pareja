@@ -115,7 +115,7 @@ export default function IngresoMagico({ isOpen, onClose, onConfirm, monedaGlobal
                 <div className="relative">
                   <textarea
                     placeholder='Ej: "Cena en Pizza Hut 180mil" o "Carga de nafta 250k"...'
-                    className="w-full h-32 bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-600 italic"
+                    className="w-full h-32 bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-600 italic text-base"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                   />

@@ -145,7 +145,7 @@ export default function Historial({
           <select
             value={filtroUsuario}
             onChange={(e) => { setFiltroUsuario(e.target.value); setPaginaActual(1); }}
-            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-indigo-500/50"
+            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-3 py-2 text-white text-base outline-none focus:border-indigo-500/50"
           >
             <option value="todos">Todos los usuarios</option>
             {usuarios.map((u) => (
@@ -161,7 +161,7 @@ export default function Historial({
             type="date"
             value={fechaInicio}
             onChange={(e) => { setFechaInicio(e.target.value); setPaginaActual(1); }}
-            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-indigo-500/50"
+            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-3 py-2 text-white text-base outline-none focus:border-indigo-500/50"
           />
         </div>
         <div className="space-y-1">
@@ -172,7 +172,7 @@ export default function Historial({
             type="date"
             value={fechaFin}
             onChange={(e) => { setFechaFin(e.target.value); setPaginaActual(1); }}
-            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-indigo-500/50"
+            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-3 py-2 text-white text-base outline-none focus:border-indigo-500/50"
           />
         </div>
       </div>

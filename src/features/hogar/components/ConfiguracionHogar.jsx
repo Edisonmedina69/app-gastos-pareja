@@ -79,7 +79,7 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
               <input
                 type="text"
                 placeholder="Ej: Edison, Bianca..."
-                className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50 transition-all"
+                className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50 transition-all text-base"
                 value={nombreUsuario}
                 onChange={(e) => setNombreUsuario(e.target.value)}
                 required
@@ -95,14 +95,14 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
                   <input
                     type="text"
                     placeholder="Ej: K7M2QX9P"
-                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white outline-none focus:border-indigo-500/50 transition-all"
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white outline-none focus:border-indigo-500/50 transition-all text-base"
                     value={codigo}
                     onChange={(e) => setCodigo(e.target.value)}
                     required
                   />
                 </div>
                 <p className="text-[9px] text-slate-500 mt-1.5 ml-1">
-                  Ingresá el **Apodo/Nombre** exacto de tu pareja para vincularte a su hogar.
+                  Ingresá el código de invitación que te compartió tu pareja.
                 </p>
               </div>
             ) : (
@@ -112,7 +112,7 @@ const ConfiguracionHogar = ({ onHogarCreado }) => {
                   <input
                     type="text"
                     placeholder="Ej: Familia Medina-Ubutun..."
-                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50 transition-all"
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50 transition-all text-base"
                     value={nuevoHogarNombre}
                     onChange={(e) => setNuevoHogarNombre(e.target.value)}
                     required
