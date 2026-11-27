@@ -5,7 +5,6 @@ import { actualizarIngreso, eliminarIngreso } from "../../../services/ingresos.s
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { formatearNumero, formatearFecha } from "../../../shared/lib/formatters";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
   History, 
   Download, 
@@ -126,20 +125,18 @@ export default function Historial({
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <History className="w-5 h-5 text-indigo-400" /> Libro Mayor
         </h2>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={exportarExcel}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/20 transition-all"
+          className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/20 transition-colors duration-150"
         >
           <Download size={14} /> EXPORTAR
-        </motion.button>
+        </button>
       </div>
 
       {/* PANEL DE FILTROS */}
       <div className="glass-card grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
             <UserIcon size={10} /> Usuario
           </label>
           <select
@@ -154,7 +151,7 @@ export default function Historial({
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
             <Calendar size={10} /> Desde
           </label>
           <input
@@ -165,7 +162,7 @@ export default function Historial({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
             <Calendar size={10} /> Hasta
           </label>
           <input
@@ -178,19 +175,19 @@ export default function Historial({
       </div>
 
       {/* LISTA DE MOVIMIENTOS */}
-      <div className="space-y-3">
+      <div className="lg:hidden space-y-3">
         {movimientosPaginados.length === 0 ? (
           <div className="glass-card py-12 text-center">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-slate-600 mx-auto mb-4">
+            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
               <Search size={32} />
             </div>
-            <p className="text-slate-500 text-sm">No se encontraron movimientos con los filtros seleccionados.</p>
+            <p className="text-slate-400 text-sm">No se encontraron movimientos con los filtros seleccionados.</p>
           </div>
         ) : (
-          <AnimatePresence mode="popLayout">
+          <>
             {movimientosPaginados.map((m) => {
               const esIngreso = m.tipo === "ingreso";
-              
+
               let displayConcept = m.concepto;
               let budgetName = null;
               let isFijo = false;
@@ -208,13 +205,10 @@ export default function Historial({
               }
 
               return (
-                <motion.div
-                  layout
+                <div
+
                   key={`${m.tipo}-${m.id}`}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className={`glass-card p-4 border-l-4 transition-all hover:bg-white/10 ${esIngreso ? 'border-l-emerald-500' : 'border-l-red-500'}`}
+                  className={`glass-card p-4 border-l-4 transition-colors duration-150 hover:bg-white/10 ${esIngreso ? 'border-l-emerald-500' : 'border-l-red-500'}`}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex gap-4">
@@ -225,17 +219,17 @@ export default function Historial({
                         <div className="font-bold text-white text-sm leading-none mb-1.5 flex items-center gap-2 flex-wrap">
                           <span>{displayConcept}</span>
                           {budgetName && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                               {budgetName}
                             </span>
                           )}
                           {isFijo && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-slate-500/10 text-slate-400 border border-white/5">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase bg-slate-500/10 text-slate-400 border border-white/5">
                               Fijo
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                        <div className="text-xs text-slate-400 uppercase tracking-widest font-bold">
                           {getNombreUsuario(m.usuarioRef)} • {formatearFecha(m.fechaRef)}
                         </div>
                       </div>
@@ -247,10 +241,10 @@ export default function Historial({
                       <div className="flex gap-2 mt-2 justify-end">
                         {(m.usuarioRef === datosHogar?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'jefe' || datosHogar?.rol === 'admin_hogar') && (
                           <>
-                            <button onClick={() => editarMontoMovimiento(m)} className="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-colors">
+                            <button aria-label={`Editar ${m.concepto}`} onClick={() => editarMontoMovimiento(m)} className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-colors">
                               <Edit3 size={14} />
                             </button>
-                            <button onClick={() => eliminarMovimiento(m.id, m.tipo)} className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                            <button aria-label={`Eliminar ${m.concepto}`} onClick={() => eliminarMovimiento(m.id, m.tipo)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
                               <Trash2 size={14} />
                             </button>
                           </>
@@ -258,11 +252,33 @@ export default function Historial({
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-          </AnimatePresence>
+          </>
         )}
+      </div>
+
+      <div className="hidden lg:block overflow-x-auto rounded-2xl border border-border bg-card">
+        <table className="w-full text-sm tabular-nums">
+          <caption className="sr-only">Libro Mayor de movimientos del hogar</caption>
+          <thead className="bg-white/5 text-muted-foreground text-xs uppercase"><tr>{['Fecha', 'Concepto', 'Tipo', 'Usuario', 'Categoría', 'Monto', 'Acciones'].map(t => <th key={t} scope="col" className={`px-4 py-3 ${t === 'Monto' ? 'text-right' : 'text-left'}`}>{t}</th>)}</tr></thead>
+          <tbody className="divide-y divide-white/10">
+            {movimientosPaginados.map(m => <tr key={`${m.tipo}-${m.id}`} className="hover:bg-white/5">
+              <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{formatearFecha(m.fechaRef)}</td>
+              <td className="px-4 py-3 font-semibold">{m.concepto}</td>
+              <td className="px-4 py-3">{m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}</td>
+              <td className="px-4 py-3">{getNombreUsuario(m.usuarioRef)}</td>
+              <td className="px-4 py-3 text-muted-foreground">{m.categoria || m.tipo_ingreso || '—'}</td>
+              <td className={`px-4 py-3 text-right font-bold whitespace-nowrap ${m.tipo === 'ingreso' ? 'text-emerald-300' : 'text-foreground'}`}>{m.tipo === 'ingreso' ? '+' : '−'} {formatearNumero(m.monto, m.moneda)}</td>
+              <td className="px-4 py-3">{(m.usuarioRef === datosHogar?.id || ['superadmin', 'jefe', 'admin_hogar'].includes(datosHogar?.rol)) && <div className="flex gap-1">
+                <button aria-label={`Editar ${m.concepto}`} onClick={() => editarMontoMovimiento(m)} className="min-h-touch min-w-touch hover:bg-white/10 rounded-lg flex items-center justify-center"><Edit3 size={16} /></button>
+                <button aria-label={`Eliminar ${m.concepto}`} onClick={() => eliminarMovimiento(m.id, m.tipo)} className="min-h-touch min-w-touch text-red-300 hover:bg-white/10 rounded-lg flex items-center justify-center"><Trash2 size={16} /></button>
+              </div>}</td>
+            </tr>)}
+            {!movimientosPaginados.length && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No hay movimientos para estos filtros.</td></tr>}
+          </tbody>
+        </table>
       </div>
 
       {/* PAGINACIÓN */}
@@ -275,8 +291,8 @@ export default function Historial({
           >
             <ChevronLeft size={20} />
           </button>
-          
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
             Página <span className="text-white">{paginaActual}</span> de <span className="text-white">{totalPaginas}</span>
           </div>
 

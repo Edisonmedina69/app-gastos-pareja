@@ -25,7 +25,7 @@ export function SegmentedControl({ opciones, valor, onChange, etiqueta, classNam
               "shrink-0 min-h-touch px-3 rounded-lg font-black uppercase transition-all duration-200",
               estirar && "flex-1 px-2",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              tamano === "sm" ? "text-micro" : "text-[11px] sm:text-xs",
+              tamano === "sm" ? "text-micro" : "text-xs sm:text-xs",
               activa ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
             )}
           >

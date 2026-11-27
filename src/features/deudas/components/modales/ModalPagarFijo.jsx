@@ -50,10 +50,10 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
       <h2 className="text-xl font-black text-white mb-2 uppercase flex items-center gap-2">
         Pagar Servicio 💸
       </h2>
-      <p className="text-[11px] text-slate-400 mb-4">{gastoFijoAPagar.concepto}</p>
+      <p className="text-xs text-slate-400 mb-4">{gastoFijoAPagar.concepto}</p>
       <form onSubmit={registrarPagoGastoFijo} className="space-y-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Monto Real a Pagar (Factura)</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Monto Real a Pagar (Factura)</label>
           <div className="relative">
             <input 
               type="text" 
@@ -63,20 +63,20 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
               placeholder="0"
               required 
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{pagarMoneda}</span>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black uppercase text-xs">{pagarMoneda}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
+            <label className="text-xs font-bold text-slate-400 uppercase ml-1">Moneda</label>
             <select value={pagarMoneda} onChange={(e) => setPagarMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base">
               <option value="PYG">PYG</option>
               <option value="BRL">BRL</option>
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Quién Pagó</label>
+            <label className="text-xs font-bold text-slate-400 uppercase ml-1">Quién Pagó</label>
             <select value={pagarPagadorId} onChange={(e) => setPagarPagadorId(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base">
               <option value={usuarioActual?.id}>{usuarioActual?.nombre} (Yo)</option>
               {otroUsuario && <option value={otroUsuario.id}>{otroUsuario.nombre}</option>}
@@ -85,7 +85,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
         </div>
 
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Alcance del Gasto</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Alcance del Gasto</label>
           <select value={pagarParaQuien} onChange={(e) => setPagarParaQuien(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base">
             <option value="Ambos">Ambos (Compartido 50/50)</option>
             <option value="Yo">Solo Yo</option>
@@ -95,13 +95,13 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
 
         {/* ── MEDIO DE PAGO ── */}
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Medio de Pago</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Medio de Pago</label>
           <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
             <button
               type="button"
               onClick={() => setPagarMedioPago('transferencia')}
-              className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                pagarMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
+                pagarMedioPago === 'transferencia' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
               Transferencia
@@ -109,8 +109,8 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
             <button
               type="button"
               onClick={() => setPagarMedioPago('efectivo')}
-              className={`flex-1 py-2.5 text-[9px] font-black uppercase rounded-xl transition-all ${
-                pagarMedioPago === 'efectivo' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'
+              className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-colors duration-150 ${
+                pagarMedioPago === 'efectivo' ? 'bg-amber-700 text-white shadow-lg' : 'text-slate-400'
               }`}
             >
               Efectivo
@@ -124,7 +124,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
             {gastoFijoAPagar?.tipo_cuenta === 'alias' && gastoFijoAPagar?.alias_cuenta && (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Alias / CBU para transferir</p>
+                  <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Alias / CBU para transferir</p>
                   <p className="text-sm font-black text-white">{gastoFijoAPagar.alias_cuenta}</p>
                 </div>
                 <button
@@ -133,7 +133,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
                     navigator.clipboard.writeText(gastoFijoAPagar.alias_cuenta);
                     toast.success("¡Alias copiado al portapapeles! 📋", { icon: "✨" });
                   }}
-                  className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                  className="flex items-center gap-1 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-600/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
                 >
                   <Copy size={12} /> Copiar Alias
                 </button>
@@ -143,7 +143,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
                     <p className="text-sm font-black text-white">{gastoFijoAPagar.nro_cuenta}</p>
                   </div>
                   <button
@@ -152,20 +152,20 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
                       navigator.clipboard.writeText(gastoFijoAPagar.nro_cuenta);
                       toast.success("¡Número de cuenta copiado! 📋", { icon: "✨" });
                     }}
-                    className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                    className="flex items-center gap-1 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-600/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
                   >
                     <Copy size={12} /> Copiar Cuenta
                   </button>
                 </div>
                 {gastoFijoAPagar.nombre_titular && (
                   <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
                     <p className="text-sm font-black text-white">{gastoFijoAPagar.nombre_titular}</p>
                   </div>
                 )}
                 {gastoFijoAPagar.ci_titular && (
                   <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
                     <p className="text-sm font-black text-white">{gastoFijoAPagar.ci_titular}</p>
                   </div>
                 )}
@@ -180,7 +180,7 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
                     onClose();
                     onEditarMedioPago(gastoFijoAPagar, 'gasto_fijo');
                   }}
-                  className="text-[10px] text-indigo-400 font-bold underline cursor-pointer"
+                  className="text-xs text-indigo-400 font-bold underline cursor-pointer"
                 >
                   + Agregar datos
                 </button>
@@ -193,11 +193,11 @@ export default function ModalPagarFijo({ gastoFijoAPagar, usuarioActual, otroUsu
         {pagarMedioPago === 'efectivo' && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
             <span className="text-lg">💵</span>
-            <p className="text-[10px] font-bold text-amber-400 uppercase">Pago en efectivo — no requiere datos de cuenta</p>
+            <p className="text-xs font-bold text-amber-400 uppercase">Pago en efectivo — no requiere datos de cuenta</p>
           </div>
         )}
 
-        <button type="submit" className="w-full py-4 font-black rounded-2xl bg-emerald-600 text-white shadow-xl shadow-emerald-950/30 active:scale-95 transition-all mt-4">
+        <button type="submit" className="w-full py-4 font-black rounded-2xl bg-emerald-700 text-white shadow-xl shadow-emerald-950/30 transition-colors duration-150 mt-4">
           CONFIRMAR PAGO
         </button>
       </form>

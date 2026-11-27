@@ -51,13 +51,13 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, moned
           <div className="w-10 h-10 bg-indigo-600/20 rounded-xl flex items-center justify-center text-indigo-400"><Bot size={24} /></div>
           <div>
             <h2 className="text-sm font-bold text-white leading-none">ÑandeAsistente</h2>
-            <div className="flex items-center gap-1 mt-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span><span className="text-[10px] text-slate-500 font-bold uppercase">En línea</span></div>
+            <div className="flex items-center gap-1 mt-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span><span className="text-xs text-slate-400 font-bold uppercase">En línea</span></div>
           </div>
         </div>
         {/* Widget Salud en Chat */}
         <div className="text-right">
           <div className={`text-xs font-black ${saludFinanciera.indice > 40 ? 'text-red-400' : 'text-emerald-400'}`}>{saludFinanciera.indice.toFixed(0)}% Endeudado</div>
-          <div className="text-[8px] text-slate-500 uppercase font-bold">Salud Financiera</div>
+          <div className="text-xs text-slate-400 uppercase font-bold">Salud Financiera</div>
         </div>
       </div>
 
@@ -73,8 +73,8 @@ export default function AsistenteGemini({ usuarioActual, gastos, ingresos, moned
       </div>
 
       <div className="relative">
-        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensaje()} placeholder="Preguntame lo que quieras, kape..." className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-5 pr-14 text-white outline-none focus:border-indigo-500 transition-all placeholder:text-slate-600 text-base" />
-        <button onClick={enviarMensaje} className="absolute right-2 top-2 w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-500 transition-all"><Send size={18} /></button>
+        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensaje()} placeholder="Preguntame lo que quieras, kape..." className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-5 pr-14 text-white outline-none focus:border-indigo-500 transition-all placeholder:text-slate-400 text-base" />
+        <button onClick={enviarMensaje} className="absolute right-2 top-2 w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-600 transition-all"><Send size={18} /></button>
       </div>
     </div>
   );

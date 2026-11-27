@@ -13,7 +13,7 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
 
             <form onSubmit={crearUsuarioDirecto} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre de Usuario o Email</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre de Usuario o Email</label>
                 <input 
                   type="text" 
                   placeholder="Ej: carlos o tu@email.com" 
@@ -22,10 +22,10 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
                   onChange={(e) => setUsuarioNombre(e.target.value)} 
                   required 
                 />
-                <p className="text-[9px] text-slate-500 mt-1 ml-1">Se autocompletará con @nandefinanza.com si no ingresás un email.</p>
+                <p className="text-xs text-slate-400 mt-1 ml-1">Se autocompletará con @nandefinanza.com si no ingresás un email.</p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Apodo en la aplicación</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Apodo en la aplicación</label>
                 <input 
                   type="text" 
                   placeholder="Ej: Carlos" 
@@ -36,7 +36,7 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Contraseña</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
                 <input 
                   type="password" 
                   placeholder="••••••••" 
@@ -47,7 +47,7 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Asociar a Hogar / Familia</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Asociar a Hogar / Familia</label>
                 <select 
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" 
                   value={usuarioEspacioId} 
@@ -61,7 +61,7 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rol del Usuario</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Rol del Usuario</label>
                 <select 
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-base" 
                   value={usuarioRol} 
@@ -74,7 +74,7 @@ export default function ModalCrearUsuario({ crearUsuarioDirecto, espacios, guard
 
               <div className="flex gap-2 pt-4">
                 <button type="button" onClick={() => setMostrarModalCrearUsuario(false)} className="flex-1 py-4 bg-white/5 text-slate-400 font-bold rounded-2xl hover:bg-white/10 transition-all text-xs">CANCELAR</button>
-                <button type="submit" disabled={guardando} className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all text-xs">
+                <button type="submit" disabled={guardando} className="flex-[2] bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 transition-all text-xs">
                   {guardando ? <Loader2 className="animate-spin mx-auto"/> : "CREAR Y VINCULAR USUARIO"}
                 </button>
               </div>

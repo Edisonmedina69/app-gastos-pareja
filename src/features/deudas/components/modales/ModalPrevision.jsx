@@ -64,12 +64,12 @@ export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, 
       </h2>
       <form onSubmit={guardarPrevision} className="space-y-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nombre de la Previsión / Sobre</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Nombre de la Previsión / Sobre</label>
           <input type="text" placeholder="Ej: Belleza, Ocio, Cine, Ropa..." value={previsionConcepto} onChange={(e) => setPrevisionConcepto(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50 text-base" required />
         </div>
-  
+
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Monto Límite Mensual</label>
+          <label className="text-xs font-bold text-slate-400 uppercase ml-1">Monto Límite Mensual</label>
           <div className="relative">
             <input 
               type="text" 
@@ -79,20 +79,20 @@ export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, 
               placeholder="0"
               required
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black uppercase text-xs">{previsionMoneda}</span>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black uppercase text-xs">{previsionMoneda}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Moneda</label>
+            <label className="text-xs font-bold text-slate-400 uppercase ml-1">Moneda</label>
             <select value={previsionMoneda} onChange={(e) => setPrevisionMoneda(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base" disabled={!!idPrevisionEditando}>
               <option value="PYG">PYG</option>
               <option value="BRL">BRL</option>
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Destinado A</label>
+            <label className="text-xs font-bold text-slate-400 uppercase ml-1">Destinado A</label>
             <select value={previsionParaQuien} onChange={(e) => setPrevisionParaQuien(e.target.value)} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white text-base">
               <option value="Ambos">Ambos (Compartido)</option>
               <option value="Yo">{usuarioActual?.nombre || 'Solo Yo'}</option>
@@ -103,7 +103,7 @@ export default function ModalPrevision({ prevision, usuarioActual, otroUsuario, 
           </div>
         </div>
 
-        <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 active:scale-95 transition-all mt-4">
+        <button type="submit" disabled={guardando} className="w-full py-4 font-black rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-900/20 transition-colors duration-150 mt-4">
           {guardando ? <Loader2 className="animate-spin mx-auto" /> : "GUARDAR PREVISIÓN"}
         </button>
       </form>

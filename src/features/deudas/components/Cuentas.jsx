@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { rutaFormulario, resolverFormulario } from '../lib/rutasFormulario';
 import { toast } from 'react-hot-toast';
-import { AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { formatearNumero } from '../../../shared/lib/formatters';
 import * as deudasService from '../../../services/deudas.service';
@@ -168,7 +167,7 @@ export default function Cuentas({
   async function cerrarCicloTarjeta(deuda, cuota) {
     if (!deuda || !cuota) return;
     const { saldoPendiente, interesGenerado } = calcularSaldoEInteres(deuda, cuota);
-      
+
     const confirmar = window.confirm(
       `¿Confirmas cerrar este ciclo de facturación de "${deuda.titulo}"?\n\n` +
       `• Saldo no pagado: ${formatearNumero(saldoPendiente, deuda.moneda)}\n` +
@@ -176,13 +175,13 @@ export default function Cuentas({
       `• Nuevo saldo inicial: ${formatearNumero(saldoPendiente + interesGenerado, deuda.moneda)}\n\n` +
       `Se generará la cuota del siguiente mes y se archivará este ciclo.`
     );
-    
+
     if (!confirmar) return;
-    
+
     const toastId = toast.loading("Cerrando ciclo de facturación...");
     try {
       await cerrarCicloTarjetaEnBase(deuda, cuota, datosHogar.espacio_id, usuarioActual.id);
-      
+
       toast.success("¡Periodo cerrado y nuevo ciclo iniciado! 💳✨", { id: toastId });
       obtenerDatos();
     } catch (e) {
@@ -192,7 +191,7 @@ export default function Cuentas({
 
   async function deshacerCierreTarjeta(deuda, cuotaCerrada) {
     if (!deuda || !cuotaCerrada) return;
-    
+
     const nextCuota = deuda.cuotas_detalle?.find(c => c.numero_cuota === cuotaCerrada.numero_cuota + 1 && c.estado === 'pendiente');
     if (!nextCuota) {
       toast.error("No se encontró el ciclo siguiente para deshacer.");
@@ -214,7 +213,7 @@ export default function Cuentas({
     try {
       const { saldoPendiente: saldoPendienteOriginal, interesGenerado } = calcularSaldoEInteres(deuda, cuotaCerrada);
       const initialMontoNextCuota = saldoPendienteOriginal + interesGenerado;
-      
+
       const comprasEnNuevoCiclo = Math.max(0, Number(nextCuota.monto_cuota) - initialMontoNextCuota);
 
       const nuevoMontoCuota = Number(cuotaCerrada.monto_cuota) + comprasEnNuevoCiclo;
@@ -224,7 +223,7 @@ export default function Cuentas({
         pagador_id: null,
         monto_cuota: nuevoMontoCuota
       });
-      
+
       if (errRevert) throw errRevert;
 
       const { error: errDel } = await deudasService.eliminarCuota(nextCuota.id);
@@ -368,21 +367,21 @@ export default function Cuentas({
       </div>
 
       </>}
-      <AnimatePresence>
+
         {modal?.tipo === 'deuda' && (
           <ModalDeuda key={`deuda-${modal.deuda?.id || "nueva"}`} deudaEditando={modal.deuda} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} saludFinanciera={saludFinanciera} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'abono' && (
-          <ModalAbono key="abono" pagoSeleccionado={modal.pago} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
+          <ModalAbono key={`abono-${modal.pago.cuota.id}`} pagoSeleccionado={modal.pago} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
         )}
         {modal?.tipo === 'compra' && (
-          <ModalCompra key="compra" compraSeleccionada={modal.tarjeta} usuarioActual={usuarioActual} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} />
+          <ModalCompra key={`compra-${modal.tarjeta.id}`} compraSeleccionada={modal.tarjeta} usuarioActual={usuarioActual} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'fijo' && (
           <ModalGastoFijo key={`fijo-${modal.fijo?.id || "nuevo"}`} fijo={modal.fijo} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'pagarFijo' && (
-          <ModalPagarFijo key="pagarFijo" gastoFijoAPagar={modal.fijo} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
+          <ModalPagarFijo key={`pagarFijo-${modal.fijo.id}`} gastoFijoAPagar={modal.fijo} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
         )}
         {modal?.tipo === 'prevision' && (
           <ModalPrevision key={`prevision-${modal.prevision?.id || "nueva"}`} prevision={modal.prevision} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />
@@ -390,7 +389,7 @@ export default function Cuentas({
         {modal?.tipo === 'medioPago' && (
           <ModalMedioPago key={`mp-${modal.item.id}`} item={modal.item} tipo={modal.tipoItem} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
-      </AnimatePresence>
+
     </div>
   );
 }

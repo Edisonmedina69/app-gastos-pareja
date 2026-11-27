@@ -1,7 +1,6 @@
 import { useState, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
 
 import { useHogar } from "../features/hogar/hooks/useHogar";
 import AccesoRestringido from "../features/hogar/components/AccesoRestringido";
@@ -69,24 +68,24 @@ function App() {
       ) : !datosHogar || !datosHogar.espacio_id ? (
         <AccesoRestringido />
       ) : (
-        <div className="max-w-[1536px] mx-auto flex flex-col lg:flex-row min-h-screen">
+        <div className="w-full flex flex-col lg:flex-row lg:pl-60 min-h-screen">
           <HeaderMovil datosHogar={datosHogar} usuarioActual={usuarioActual} />
 
           <Sidebar datosHogar={datosHogar} usuarioActual={usuarioActual} activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={esSuperadmin} />
 
           <main className="flex-1 min-w-0 px-3 pt-3 sm:px-6 sm:pt-6 lg:p-6 overflow-y-auto pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-8">
-            <div className="max-w-7xl mx-auto w-full">
+            <div className="w-full">
               <Suspense fallback={<div className="p-8 text-center text-slate-400 animate-pulse">Cargando vista... ⚡</div>}>
-                <AnimatePresence mode="wait">
-                  <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+
+                  <div key={`${activeTab}-${modoVista}`}>
                     {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
                     {activeTab === "cuentas" && <Cuentas esSuperadmin={esSuperadmin} usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
                     {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                     {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                     {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
                     {activeTab === "admin" && esSuperadmin && <SuperadminPanel datosHogar={datosHogar} />}
-                  </motion.div>
-                </AnimatePresence>
+                  </div>
+
               </Suspense>
             </div>
           </main>

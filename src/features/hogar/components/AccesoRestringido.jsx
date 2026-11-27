@@ -17,7 +17,7 @@ export default function AccesoRestringido() {
         <p className="text-slate-400 text-sm leading-relaxed">
           Tu usuario no está asociado a ningún Hogar activo en el sistema.
         </p>
-        <p className="text-slate-500 text-xs leading-relaxed">
+        <p className="text-slate-400 text-xs leading-relaxed">
           Por favor, contactá al Administrador para que vincule tu cuenta a un Hogar o verifique tu registro.
         </p>
         <Button variante="secondary" tamano="lg" onClick={() => cerrarSesion()} className="w-full text-destructive border-destructive/20 hover:text-destructive">

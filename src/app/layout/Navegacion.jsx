@@ -31,7 +31,7 @@ export default function Navegacion({ activeTab, setActiveTab, esSuperadmin, noti
             className={`relative flex flex-col items-center justify-center flex-1 min-w-0 min-h-[3.25rem] py-1.5 px-0.5 rounded-xl transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] ${isActive ? "text-indigo-300 bg-indigo-500/15" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"}`}
           >
             <Icon className="w-5 h-5 mb-1" aria-hidden="true" />
-            <span className="text-[10px] leading-none font-black tracking-tight uppercase truncate max-w-full">{tab.label}</span>
+            <span className="text-xs leading-none font-black tracking-tight uppercase truncate max-w-full">{tab.label}</span>
             {isActive && <div className="absolute -bottom-0.5 w-1 h-1 bg-indigo-400 rounded-full shadow-[0_0_8px_rgba(129,140,248,0.8)]" />}
           </button>
         );
@@ -48,7 +48,7 @@ export default function Navegacion({ activeTab, setActiveTab, esSuperadmin, noti
           <Bell className="w-5 h-5 mb-1" aria-hidden="true" />
           {noLeidas > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 border border-slate-900 rounded-full animate-bounce" />}
         </div>
-        <span className="text-[10px] leading-none font-black tracking-tight uppercase">SOS</span>
+        <span className="text-xs leading-none font-black tracking-tight uppercase">SOS</span>
       </button>
 
       <AnimatePresence>
@@ -62,13 +62,13 @@ export default function Navegacion({ activeTab, setActiveTab, esSuperadmin, noti
             className="absolute bottom-[calc(100%+0.75rem)] right-0 left-0 w-full max-h-[65dvh] surface-sheet rounded-3xl p-4 overflow-y-auto overscroll-contain z-[100]"
           >
             <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
-              <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Notificaciones</h4>
-              <span className="text-[9px] text-slate-500 font-bold">{notificaciones.length} total</span>
+              <h4 className="text-xs font-black text-white uppercase tracking-widest">Notificaciones</h4>
+              <span className="text-xs text-slate-400 font-bold">{notificaciones.length} total</span>
             </div>
             
             <div className="space-y-2">
               {notificaciones.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-[10px] font-black uppercase italic">No hay alertas nuevas</div>
+                <div className="text-center py-8 text-slate-400 text-xs font-black uppercase italic">No hay alertas nuevas</div>
               ) : (
                 notificaciones.map((n) => (
                   <div key={n.id} className={`p-3 rounded-xl border ${n.tipo === 'alerta' ? 'bg-amber-500/5 border-amber-500/10' : 'bg-white/5 border-white/5'}`}>
@@ -76,11 +76,11 @@ export default function Navegacion({ activeTab, setActiveTab, esSuperadmin, noti
                     <p className="text-xs text-slate-400 leading-snug mb-2">{n.mensaje}</p>
                     {n.metadata?.tipo === 'solicitud_ayuda' && (
                       <div className="flex gap-2 mt-3">
-                        <button type="button" onClick={() => responderSolicitud(n, true)} className="flex-1 min-h-touch bg-indigo-600 hover:bg-indigo-500 text-white text-micro font-black rounded-xl transition-colors active:scale-[0.98]">ACEPTAR</button>
+                        <button type="button" onClick={() => responderSolicitud(n, true)} className="flex-1 min-h-touch bg-indigo-600 hover:bg-indigo-600 text-white text-micro font-black rounded-xl transition-colors active:scale-[0.98]">ACEPTAR</button>
                         <button type="button" onClick={() => responderSolicitud(n, false)} className="flex-1 min-h-touch bg-white/5 hover:bg-white/10 text-slate-300 text-micro font-black rounded-xl transition-colors active:scale-[0.98]">RECHAZAR</button>
                       </div>
                     )}
-                    <div className="text-[8px] text-slate-600 font-bold mt-2 uppercase">{new Date(n.created_at).toLocaleTimeString()}</div>
+                    <div className="text-xs text-slate-400 font-bold mt-2 uppercase">{new Date(n.created_at).toLocaleTimeString()}</div>
                   </div>
                 ))
               )}

@@ -6,21 +6,21 @@ export default function ListaGastosFijos({ deudasFijas, verificarSiFuePagadoEste
   return (
     deudasFijas.length === 0 ? (
       <div className="glass-card py-12 text-center">
-        <Calendar size={40} className="mx-auto mb-3 text-slate-500 opacity-40" />
+        <Calendar size={40} className="mx-auto mb-3 text-slate-400 opacity-40" />
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Sin gastos fijos programados</p>
-        <p className="text-[10px] text-slate-500 mt-2 max-w-xs mx-auto px-4">
+        <p className="text-xs text-slate-400 mt-2 max-w-xs mx-auto px-4">
           Registrá tus servicios indispensables (agua, luz, internet) para tenerlos siempre a mano y simplificar tu control mensual.
         </p>
         <div className="flex flex-col gap-2 mt-6 max-w-xs mx-auto px-4">
           <button 
             onClick={preCargarPlantillas} 
-            className="py-3 px-4 bg-indigo-600 text-white text-[10px] font-black rounded-xl uppercase hover:bg-indigo-500 active:scale-95 transition-all shadow-lg"
+            className="py-3 px-4 bg-indigo-600 text-white text-xs font-black rounded-xl uppercase hover:bg-indigo-600 active:scale-95 transition-all shadow-lg"
           >
             Pre-cargar Plantilla de Supervivencia 🏠
           </button>
           <button 
             onClick={() => { abrirNuevoFijo(); }} 
-            className="py-3 px-4 bg-white/5 border border-white/10 text-white text-[10px] font-black rounded-xl uppercase hover:bg-white/10 active:scale-95 transition-all"
+            className="py-3 px-4 bg-white/5 border border-white/10 text-white text-xs font-black rounded-xl uppercase hover:bg-white/10 active:scale-95 transition-all"
           >
             Agregar Gasto Fijo Manual
           </button>
@@ -29,12 +29,12 @@ export default function ListaGastosFijos({ deudasFijas, verificarSiFuePagadoEste
     ) : (
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+          <span className="text-xs font-black text-slate-400 uppercase tracking-wider">
             Servicios y Compras Recurrentes ({deudasFijas.length})
           </span>
           <button 
             onClick={preCargarPlantillas} 
-            className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter hover:underline"
+            className="text-xs font-black text-indigo-400 uppercase tracking-tighter hover:underline"
           >
             + Recargar Plantilla Básica
           </button>
@@ -54,19 +54,19 @@ export default function ListaGastosFijos({ deudasFijas, verificarSiFuePagadoEste
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-white text-sm uppercase">{f.concepto}</h4>
                     {pagado && (
-                      <span className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase border border-emerald-500/20">
+                      <span className="bg-emerald-500/20 text-emerald-400 text-xs font-black px-1.5 py-0.5 rounded-full uppercase border border-emerald-500/20">
                         PAGADO ESTE MES
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-tighter">
+                  <p className="text-xs text-slate-400 font-bold uppercase mt-1 tracking-tighter">
                     Categoría: {f.categoria} • Vence el: {f.dia_recurrencia} de cada mes • {f.para_quien === 'Ambos' ? 'Familia' : `Para: ${f.para_quien}`}
                   </p>
                   {f.medio_pago === 'transferencia' ? (
                     <button
                       type="button"
                       onClick={() => abrirEdicionMedioPago(f, 'gasto_fijo')}
-                      className="text-[9px] text-indigo-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-indigo-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                      className="text-xs text-indigo-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-indigo-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
                     >
                       {f.tipo_cuenta === 'alias' && f.alias_cuenta && (
                         <><Hash size={10} /> Alias: {f.alias_cuenta} <Edit2 size={9} className="ml-0.5 opacity-60" /></>
@@ -82,7 +82,7 @@ export default function ListaGastosFijos({ deudasFijas, verificarSiFuePagadoEste
                     <button
                       type="button"
                       onClick={() => abrirEdicionMedioPago(f, 'gasto_fijo')}
-                      className="text-[9px] text-amber-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                      className="text-xs text-amber-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
                     >
                       💵 Pago en efectivo <Edit2 size={9} className="ml-0.5 opacity-60" />
                     </button>
@@ -90,7 +90,7 @@ export default function ListaGastosFijos({ deudasFijas, verificarSiFuePagadoEste
                     <button
                       type="button"
                       onClick={() => abrirEdicionMedioPago(f, 'gasto_fijo')}
-                      className="text-[9px] text-slate-500 font-bold mt-0.5 flex items-center gap-1 hover:text-slate-300 transition-colors cursor-pointer bg-transparent border-0 p-0 border border-dashed border-slate-600 rounded-full px-2 py-0.5"
+                      className="text-xs text-slate-400 font-bold mt-0.5 flex items-center gap-1 hover:text-slate-300 transition-colors cursor-pointer bg-transparent border-0 p-0 border border-dashed border-slate-600 rounded-full px-2 py-0.5"
                     >
                       ⚠️ Sin medio de pago <Edit2 size={9} />
                     </button>
@@ -98,15 +98,15 @@ export default function ListaGastosFijos({ deudasFijas, verificarSiFuePagadoEste
                 </div>
                 <div className="flex gap-1">
                   <button 
-                    onClick={() => abrirEdicionFijo(f)} 
-                    className="p-1.5 text-slate-500 hover:text-indigo-400 transition-colors"
+                    aria-label={`Editar ${f.concepto}`} onClick={() => abrirEdicionFijo(f)}
+                    className="p-1.5 text-slate-400 hover:text-indigo-400 transition-colors"
                     disabled={pagado}
                   >
                     <Edit2 size={15}/>
                   </button>
                   <button 
-                    onClick={() => eliminarGastoFijo(f.id, f.concepto)} 
-                    className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                    aria-label={`Eliminar ${f.concepto}`} onClick={() => eliminarGastoFijo(f.id, f.concepto)}
+                    className="p-1.5 text-slate-400 hover:text-red-400 transition-colors"
                   >
                     <Trash2 size={15}/>
                   </button>
@@ -121,12 +121,12 @@ export default function ListaGastosFijos({ deudasFijas, verificarSiFuePagadoEste
                 {!pagado ? (
                   <button 
                     onClick={() => abrirPagoFijo(f)} 
-                    className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg hover:bg-indigo-500"
+                    className="px-4 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg hover:bg-indigo-600"
                   >
                     <CheckCircle size={14}/> PAGAR / REGISTRAR
                   </button>
                 ) : (
-                  <div className="text-[9px] font-black text-emerald-400 flex items-center gap-1">
+                  <div className="text-xs font-black text-emerald-400 flex items-center gap-1">
                     <CheckCircle size={12}/> ABONADO EN EL MES
                   </div>
                 )}

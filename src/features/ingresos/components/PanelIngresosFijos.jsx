@@ -6,7 +6,7 @@ export default function PanelIngresosFijos({ abrirEdicion, confirmarRecepcion, d
     <>
       <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex gap-3 items-center">
         <Clock size={20} className="text-indigo-400 shrink-0" />
-        <p className="text-[10px] text-slate-400 font-bold leading-normal">
+        <p className="text-xs text-slate-400 font-bold leading-normal">
           Aquí podés configurar tus **sueldos y rentas recurrentes** con ajuste de días hábiles y débito automático de cuentas.
         </p>
       </div>
@@ -29,11 +29,11 @@ export default function PanelIngresosFijos({ abrirEdicion, confirmarRecepcion, d
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-black text-white text-sm uppercase">{p.descripcion}</h4>
-                    <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[9px] font-black rounded-md uppercase">
+                    <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs font-black rounded-md uppercase">
                       {p.categoria || "Sueldo"}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-400 font-bold mt-1">
+                  <p className="text-xs text-slate-400 font-bold mt-1">
                     Día programado: {p.dia_recurrencia} 
                     {calculoFecha.esAjustado && (
                       <span className="text-amber-400 ml-1">
@@ -43,7 +43,7 @@ export default function PanelIngresosFijos({ abrirEdicion, confirmarRecepcion, d
                     {!calculoFecha.esAjustado && ` • ${getNombreUsuario(p.usuario_id)}`}
                   </p>
                   {p.monto_descuento > 0 && (
-                    <p className="text-[9px] text-red-400 font-bold mt-0.5 flex items-center gap-1">
+                    <p className="text-xs text-red-400 font-bold mt-0.5 flex items-center gap-1">
                       <CreditCard size={11}/> Débito Automático: -{formatearNumero(p.monto_descuento, p.moneda)} ({p.concepto_descuento || 'Pago / Descuento'})
                     </p>
                   )}
@@ -51,8 +51,8 @@ export default function PanelIngresosFijos({ abrirEdicion, confirmarRecepcion, d
                 <div className="flex gap-1">
                   {(p.usuario_id === usuarioActual?.id || datosHogar?.rol === 'superadmin' || datosHogar?.rol === 'admin_hogar') && (
                     <>
-                      <button onClick={() => abrirEdicion(p)} className="p-2 text-slate-600 hover:text-indigo-400" disabled={cobrado}><Edit2 size={16}/></button>
-                      <button onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-600 hover:text-red-400"><Trash2 size={16}/></button>
+                      <button aria-label={`Editar ${p.descripcion}`} onClick={() => abrirEdicion(p)} className="p-2 text-slate-400 hover:text-indigo-400" disabled={cobrado}><Edit2 size={16}/></button>
+                      <button aria-label={`Eliminar ${p.descripcion}`} onClick={() => eliminarProgramado(p.id)} className="p-2 text-slate-400 hover:text-red-400"><Trash2 size={16}/></button>
                     </>
                   )}
                 </div>
@@ -61,17 +61,17 @@ export default function PanelIngresosFijos({ abrirEdicion, confirmarRecepcion, d
                 <div>
                   <div className="text-xl font-black text-white">{formatearNumero(p.monto, p.moneda)}</div>
                   {p.monto_descuento > 0 && (
-                    <div className="text-[10px] text-emerald-400 font-bold">
+                    <div className="text-xs text-emerald-400 font-bold">
                       Monto libre estimado: {formatearNumero(p.monto - p.monto_descuento, p.moneda)}
                     </div>
                   )}
                 </div>
                 {cobrado ? (
-                  <div className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-xl flex items-center gap-1.5 cursor-default">
+                  <div className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black rounded-xl flex items-center gap-1.5 cursor-default">
                     <CheckCircle size={14} /> COBRADO ✓
                   </div>
                 ) : (
-                  <button onClick={() => confirmarRecepcion(p)} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-emerald-900/20">
+                  <button onClick={() => confirmarRecepcion(p)} className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-700 text-white text-xs font-black rounded-xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-emerald-900/20">
                     <CheckCircle size={14}/> COBRAR
                   </button>
                 )}

@@ -15,7 +15,6 @@ import {
 } from "../../../services/ingresos.service";
 import { insertarGastos } from "../../../services/gastos.service";
 import { actualizarCuota } from "../../../services/deudas.service";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Wallet, TrendingUp, Calendar, User, ArrowUpRight, X, 
   Settings, Clock, CheckCircle, RefreshCcw, Landmark, Trash2, Edit2, History, Loader2,
@@ -54,19 +53,19 @@ export default function Ingresos({
   const [categoria, setCategoria] = useState("Salario Mensual");
   const [soloDiasHabiles, setSoloDiasHabiles] = useState(true);
   const [ajusteDiaHabil, setAjusteDiaHabil] = useState("anterior");
-  
+
   // Modo de descuento: 'ninguno' | 'manual' | 'vinculado'
   const [modoDescuento, setModoDescuento] = useState("ninguno");
   const [montoDescuentoFormateado, setMontoDescuentoFormateado] = useState("");
   const [conceptoDescuento, setConceptoDescuento] = useState("");
   const [deudaVinculadaId, setDeudaVinculadaId] = useState("");
-  
+
   const [fechaEfectiva, setFechaEfectiva] = useState(new Date().toISOString().split("T")[0]);
 
   const [tasaCambio, setTasaCambio] = useState(1);
   const [idEditando, setIdEditando] = useState(null);
   const [montoAnterior, setMontoAnterior] = useState(0);
-  
+
   // Data State
   const [programados, setProgramados] = useState([]);
   const [historialSalarios, setHistorialSalarios] = useState([]);
@@ -108,7 +107,7 @@ export default function Ingresos({
   async function cargarProgramados() {
     try {
       const { data, error } = await listarIngresosProgramadosActivos(datosHogar.espacio_id);
-      
+
       if (error) throw error;
       setProgramados(data || []);
     } catch (e) {
@@ -119,7 +118,7 @@ export default function Ingresos({
   async function cargarHistorialSalarios() {
     try {
       const { data, error } = await listarHistorialSalarios(datosHogar.espacio_id);
-      
+
       if (error) throw error;
       setHistorialSalarios(data || []);
     } catch (e) {
@@ -215,7 +214,7 @@ export default function Ingresos({
         cargarProgramados();
         cargarHistorialSalarios();
       }
-      
+
       setMostrarModal(false);
       resetForm();
       obtenerDatos();
@@ -343,7 +342,7 @@ export default function Ingresos({
       setMontoDescuentoFormateado("");
       setConceptoDescuento("");
     }
-    
+
     setPasoIngreso(1);
     if (!reponer) navigate(`/ingresos/${p.id}/editar`, { state: { desdeFormulario: true } });
   };
@@ -396,7 +395,7 @@ export default function Ingresos({
             <button 
               key={tab} 
               onClick={() => setActiveTab(tab)} 
-              className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'}`}
+              className={`px-3 py-2 rounded-lg text-xs font-black uppercase transition-colors duration-150 ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}
             >
               {tab === 'historial' ? 'Efectivos' : (tab === 'programados' ? 'Fijos' : <History size={14}/>)}
             </button>
@@ -405,35 +404,35 @@ export default function Ingresos({
       </header>
 
       <div className="grid grid-cols-2 gap-3">
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetForm(); navigate('/ingresos/nuevo', { state: { desdeFormulario: true } }); }} className="p-4 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl flex flex-col items-center gap-2 hover:bg-emerald-600/30 transition-all">
+        <button onClick={() => { resetForm(); navigate('/ingresos/nuevo', { state: { desdeFormulario: true } }); }} className="p-4 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl flex flex-col items-center gap-2 hover:bg-emerald-600/30 transition-colors duration-150">
           <Plus className="text-emerald-400" />
-          <span className="text-[10px] font-black text-white uppercase">Ingreso Rápido</span>
-        </motion.button>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetForm(); navigate('/ingresos/programar', { state: { desdeFormulario: true } }); }} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/10 transition-all">
+          <span className="text-xs font-black text-white uppercase">Ingreso Rápido</span>
+        </button>
+        <button onClick={() => { resetForm(); navigate('/ingresos/programar', { state: { desdeFormulario: true } }); }} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/10 transition-colors duration-150">
           <RefreshCcw className="text-indigo-400" />
-          <span className="text-[10px] font-black text-white uppercase">Programar Fijo</span>
-        </motion.button>
+          <span className="text-xs font-black text-white uppercase">Programar Fijo</span>
+        </button>
       </div>
 
-      <AnimatePresence mode="wait">
+
         {activeTab === 'historial' && (
-          <motion.div key="historial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+          <div key="historial" className="space-y-4">
             <PanelHistorialIngresos datosHogar={datosHogar} eliminarIngresoMensual={eliminarIngresoMensual} getNombreUsuario={getNombreUsuario} ingresos={ingresos} usuarioActual={usuarioActual} />
-          </motion.div>
+          </div>
         )}
 
         {activeTab === 'programados' && (
-          <motion.div key="programados" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+          <div key="programados" className="space-y-4">
             <PanelIngresosFijos abrirEdicion={abrirEdicion} confirmarRecepcion={confirmarRecepcion} datosHogar={datosHogar} eliminarProgramado={eliminarProgramado} getNombreUsuario={getNombreUsuario} programados={programados} usuarioActual={usuarioActual} verificarSiFueCobradoEsteMes={verificarSiFueCobradoEsteMes} />
-          </motion.div>
+          </div>
         )}
 
         {activeTab === 'historial_salarios' && (
-          <motion.div key="salarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+          <div key="salarios" className="space-y-4">
             <PanelHistorialSalarial historialSalarios={historialSalarios} />
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+
 
       </>}
       <ModalIngreso CATEGORIAS_INGRESO={CATEGORIAS_INGRESO} ajusteDiaHabil={ajusteDiaHabil} categoria={categoria} concepto={concepto} conceptoDescuento={conceptoDescuento} deudaVinculadaId={deudaVinculadaId} deudas={deudas} diaRecurrencia={diaRecurrencia} fechaEfectiva={fechaEfectiva} guardando={guardando} modoDescuento={modoDescuento} moneda={moneda} montoAnterior={montoAnterior} montoDescuentoFormateado={montoDescuentoFormateado} montoFormateado={montoFormateado} mostrarModal={mostrarModal} pasoIngreso={pasoIngreso} registrarIngreso={registrarIngreso} resetForm={resetForm} setAjusteDiaHabil={setAjusteDiaHabil} setCategoria={setCategoria} setConcepto={setConcepto} setConceptoDescuento={setConceptoDescuento} setDeudaVinculadaId={setDeudaVinculadaId} setDiaRecurrencia={setDiaRecurrencia} setFechaEfectiva={setFechaEfectiva} setModoDescuento={setModoDescuento} setMoneda={setMoneda} setMontoDescuentoFormateado={setMontoDescuentoFormateado} setMontoFormateado={setMontoFormateado} setMostrarModal={setMostrarModal} setPasoIngreso={setPasoIngreso} setSoloDiasHabiles={setSoloDiasHabiles} soloDiasHabiles={soloDiasHabiles} tipoRegistro={tipoRegistro} />

@@ -29,3 +29,7 @@ dist-ssr
 .env
 .env.*
 
+
+# Herramientas temporales de QA visual
+/qa/axe.min.cjs
+/qa/__pycache__/

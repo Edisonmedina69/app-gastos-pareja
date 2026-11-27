@@ -86,3 +86,18 @@ scroll; las acciones quedan al pie en móvil. Volver usa el historial cuando se
 abrió desde la app y una ruta del dominio cuando se accedió directamente.
 Las confirmaciones y las ediciones cortas conservan sus diálogos. El rewrite de
 Vercel ya envía las rutas internas a `index.html`.
+
+## Escritorio y verificación visual
+
+El shell ocupa todo el ancho: sidebar fija de 240 px desde `lg` y contenido
+fluido con padding, sin max-width en el contenedor principal. Los formularios
+conservan un máximo de 1280 px para facilitar la lectura. El inicio presenta
+grillas de dos columnas, tres desde `xl` y cuatro indicadores desde `2xl`, con
+paneles de vencimientos y movimientos recientes. El Libro Mayor comparte filtros,
+paginación y permisos entre una tabla desde `lg` y una lista en móvil. Las cifras
+de la tabla usan `tabular-nums`.
+
+Las microetiquetas tienen al menos 12 px (`text-xs` / `text-micro`) y los textos
+secundarios usan slate-400 en oscuro. La verificación visual aislada está descrita
+en [`qa/README.md`](../qa/README.md); no requiere credenciales ni hace operaciones
+en producción.

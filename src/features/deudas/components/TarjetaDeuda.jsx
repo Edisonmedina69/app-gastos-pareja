@@ -25,17 +25,17 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h4 className="font-bold text-white text-lg leading-tight break-words">{d.titulo}</h4>
             {d.alcance === 'individual' ? (
-              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-amber-500/20"><Lock size={10}/> {esMia ? 'Mía' : `De ${nombreCreador}`}</div>
+              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-md text-xs font-black uppercase border border-amber-500/20"><Lock size={10}/> {esMia ? 'Mía' : `De ${nombreCreador}`}</div>
             ) : (
-              <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-indigo-500/20"><Users size={10}/> Familiar</div>
+              <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-xs font-black uppercase border border-indigo-500/20"><Users size={10}/> Familiar</div>
             )}
             {pagadaEsteMes && (
-              <div className="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase border border-emerald-500/25">
+              <div className="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-md text-xs font-black uppercase border border-emerald-500/25">
                 ✓ Este mes pagado
               </div>
             )}
           </div>
-          <p className="text-[10px] text-slate-500 uppercase font-black tracking-tighter mt-1">
+          <p className="text-xs text-slate-400 uppercase font-black tracking-tighter mt-1">
             {d.tipo === 'tarjeta_credito' ? '💳 Tarjeta de Crédito' : (d.tipo === 'fija' ? '🏦 Préstamo Fijo' : '📈 Crédito Flexible')}
             {d.nro_tarjeta && ` • Term. ${d.nro_tarjeta}`}
             {d.tasa_interes > 0 && ` • Interés: ${d.tasa_interes}%`}
@@ -45,7 +45,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
             <button
               type="button"
               onClick={() => abrirEdicionMedioPago(d, 'deuda')}
-              className="text-[9px] text-indigo-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-indigo-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+              className="text-xs text-indigo-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-indigo-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
             >
               {d.tipo_cuenta === 'alias' && d.alias_cuenta && (
                 <><Hash size={10} /> Alias: {d.alias_cuenta} <Edit2 size={9} className="ml-0.5 opacity-60" /></>
@@ -61,7 +61,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
             <button
               type="button"
               onClick={() => abrirEdicionMedioPago(d, 'deuda')}
-              className="text-[9px] text-amber-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
+              className="text-xs text-amber-400/80 font-bold mt-0.5 flex items-center gap-1 hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-0 p-0"
             >
               💵 Pago en efectivo <Edit2 size={9} className="ml-0.5 opacity-60" />
             </button>
@@ -69,7 +69,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
             <button
               type="button"
               onClick={() => abrirEdicionMedioPago(d, 'deuda')}
-              className="text-[9px] text-slate-500 font-bold mt-0.5 flex items-center gap-1 hover:text-slate-300 transition-colors cursor-pointer bg-transparent border-0 p-0 border border-dashed border-slate-600 rounded-full px-2 py-0.5"
+              className="text-xs text-slate-400 font-bold mt-0.5 flex items-center gap-1 hover:text-slate-300 transition-colors cursor-pointer bg-transparent border-0 p-0 border border-dashed border-slate-600 rounded-full px-2 py-0.5"
             >
               ⚠️ Sin medio de pago <Edit2 size={9} />
             </button>
@@ -89,13 +89,13 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
             if (cuotasVencidas.length > 0) {
               const totalAtrasado = cuotasVencidas.reduce((acc, c) => acc + (Number(c.monto_cuota) - Number(c.monto_abonado)), 0);
               return (
-                <div className="bg-red-600/20 text-red-400 text-[9px] font-black px-2.5 py-1 rounded-md border border-red-500/40 animate-pulse flex items-center gap-1">
+                <div className="bg-red-600/20 text-red-400 text-xs font-black px-2.5 py-1 rounded-md border border-red-500/40 animate-pulse flex items-center gap-1">
                   <AlertTriangle size={11} /> {cuotasVencidas.length} {cuotasVencidas.length === 1 ? 'CUOTA ATRASADA' : 'CUOTAS ATRASADAS'} ({formatearNumero(totalAtrasado, d.moneda)})
                 </div>
               );
             }
             if (cuotaActual) {
-              return <div className="bg-red-500/10 text-red-400 text-[9px] font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</div>;
+              return <div className="bg-red-500/10 text-red-400 text-xs font-black px-2 py-1 rounded-md border border-red-500/20">VENCE {formatearFechaCorta(cuotaActual.fecha_vencimiento)}</div>;
             }
             return null;
           })()}
@@ -104,7 +104,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
               <button 
                 type="button"
                 onClick={() => iniciarEdicionDeuda(d)} 
-                className="p-1.5 inline-flex items-center justify-center text-slate-500 hover:text-indigo-400 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="p-1.5 inline-flex items-center justify-center text-slate-400 hover:text-indigo-400 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title="Editar compromiso"
                 aria-label={`Editar ${d.titulo}`}
               >
@@ -115,7 +115,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
               <button 
                 type="button"
                 onClick={() => eliminarDeuda(d)} 
-                className="p-1.5 inline-flex items-center justify-center text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="p-1.5 inline-flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title="Eliminar compromiso"
                 aria-label={`Eliminar ${d.titulo}`}
               >
@@ -131,16 +131,16 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
           {/* Resumen Principal (Siempre visible) */}
           <div className="flex justify-between items-center">
             <div>
-              <div className="text-[8px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Uso de Línea</div>
+              <div className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-0.5">Uso de Línea</div>
               <div className="text-sm font-black text-white">
                 {formatearNumero(Math.max(0, d.linea_credito_total - d.linea_credito_disponible), d.moneda)}
-                <span className="text-slate-500 font-bold text-xs"> / {formatearNumero(d.linea_credito_total, d.moneda)}</span>
+                <span className="text-slate-400 font-bold text-xs"> / {formatearNumero(d.linea_credito_total, d.moneda)}</span>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setDeudaExpandida(estaExpandida ? null : d.id)}
-              className="text-[9px] font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 bg-indigo-500/5 hover:bg-indigo-500/10 px-3.5 py-2 rounded-xl border border-indigo-500/15 transition-all active:scale-95 shadow-sm"
+              className="text-xs font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 bg-indigo-500/5 hover:bg-indigo-600/10 px-3.5 py-2 rounded-xl border border-indigo-500/15 transition-all active:scale-95 shadow-sm"
             >
               <span>{estaExpandida ? 'Ocultar Detalles' : 'Ver Detalles'}</span>
               {estaExpandida ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -258,7 +258,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                   return (
                     <div className="space-y-1.5">
                       {alertas.map(al => (
-                        <div key={al.id} className={`p-2 border rounded-xl flex items-center gap-2 text-[8px] font-bold uppercase ${al.clase}`}>
+                        <div key={al.id} className={`p-2 border rounded-xl flex items-center gap-2 text-xs font-bold uppercase ${al.clase}`}>
                           {al.icono}
                           <span>{al.texto}</span>
                         </div>
@@ -270,19 +270,19 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                 {/* DETALLE DE LÍNEA DE CRÉDITO */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-white/[0.02] border border-white/5 p-2 rounded-xl">
-                    <div className="text-[7px] text-slate-500 uppercase font-bold">Disponible</div>
+                    <div className="text-xs text-slate-400 uppercase font-bold">Disponible</div>
                     <div className={`text-xs font-black ${d.linea_credito_disponible < 0 ? 'text-red-400' : 'text-indigo-400'}`}>
                       {formatearNumero(d.linea_credito_disponible, d.moneda)}
                     </div>
                   </div>
                   <div className="bg-white/[0.02] border border-white/5 p-2 rounded-xl">
-                    <div className="text-[7px] text-slate-500 uppercase font-bold">Consumido</div>
+                    <div className="text-xs text-slate-400 uppercase font-bold">Consumido</div>
                     <div className="text-xs font-black text-slate-300">
                       {formatearNumero(Math.max(0, d.linea_credito_total - d.linea_credito_disponible), d.moneda)}
                     </div>
                   </div>
                   <div className="bg-white/[0.02] border border-white/5 p-2 rounded-xl text-right">
-                    <div className="text-[7px] text-slate-500 uppercase font-bold">Línea Total</div>
+                    <div className="text-xs text-slate-400 uppercase font-bold">Línea Total</div>
                     <div className="text-xs font-black text-slate-400">
                       {formatearNumero(d.linea_credito_total, d.moneda)}
                     </div>
@@ -314,10 +314,10 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                   const nextCierreStr = formatLocalYMD(nextCierre);
 
                   return (
-                    <div className="border-t border-white/5 pt-3 space-y-1.5 text-[8px] text-slate-400 font-bold uppercase tracking-tight">
+                    <div className="border-t border-white/5 pt-3 space-y-1.5 text-xs text-slate-400 font-bold uppercase tracking-tight">
                       <div className="flex justify-between">
                         <span>📅 Cierre Anterior:</span>
-                        <span className="text-slate-500">{formatearFechaCorta(prevCierreStr)}</span>
+                        <span className="text-slate-400">{formatearFechaCorta(prevCierreStr)}</span>
                       </div>
                       <div className="flex justify-between text-indigo-400 font-black">
                         <span>📅 Cierre Actual:</span>
@@ -325,7 +325,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                       </div>
                       <div className="flex justify-between">
                         <span>📅 Próximo Cierre:</span>
-                        <span className="text-slate-500">{formatearFechaCorta(nextCierreStr)}</span>
+                        <span className="text-slate-400">{formatearFechaCorta(nextCierreStr)}</span>
                       </div>
                       <div className="flex justify-between text-red-400 font-black border-t border-white/5 pt-1.5 mt-1">
                         <span>⏳ Vence el:</span>
@@ -342,7 +342,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                   const mesesProyeccion = 10;
                   const interesTotalEstimado = (saldoConsumido * (d.tasa_interes / 100)) * (mesesProyeccion / 12);
                   return (
-                    <div className="p-2.5 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-[8px] text-indigo-300/80 leading-relaxed normal-case">
+                    <div className="p-2.5 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-xs text-indigo-300/80 leading-relaxed normal-case">
                       💡 <strong>Proyección:</strong> Si pagás solo el pago mínimo ({formatearNumero(minPagoVal, d.moneda)}), te llevará aprox. <strong>{mesesProyeccion} meses</strong> liquidar el saldo total y pagarás un aproximado de <strong>{formatearNumero(interesTotalEstimado, d.moneda)}</strong> en intereses.
                     </div>
                   );
@@ -353,7 +353,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
         </div>
       ) : (
         <div className="mb-4">
-          <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-1">
+          <div className="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
             <span>Progreso ({cuotasPagadasCount}/{cuotasTotalesCount} cuotas)</span>
             <span>{porcProgreso.toFixed(0)}%</span>
           </div>
@@ -394,7 +394,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
         return (
           <div className="flex justify-between items-end">
             <div>
-              <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">{etiquetaMonto}</div>
+              <div className="text-xs text-slate-400 uppercase font-bold mb-1">{etiquetaMonto}</div>
               <div className="text-2xl font-black text-white">{formatearNumero(montoAPagar, d.moneda)}</div>
             </div>
             {pestana === 'activas' && cuotaActual && (d.alcance === 'familiar' || esMia) && (() => {
@@ -446,9 +446,9 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-6 pt-6 border-t border-white/5 space-y-4">
           {d.tipo === 'fija' && d.tasa_interes > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-[9px] text-slate-400">
+              <table className="w-full text-left text-xs text-slate-400">
                 <thead>
-                  <tr className="border-b border-white/5 uppercase text-[8px] text-slate-500 font-bold">
+                  <tr className="border-b border-white/5 uppercase text-xs text-slate-400 font-bold">
                     <th className="pb-2">Cuota</th>
                     <th className="pb-2">Vencimiento</th>
                     <th className="pb-2">Capital</th>
@@ -474,10 +474,10 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                           <td className="py-2.5">{formatearFechaCorta(c.fecha_vencimiento)}</td>
                           <td className="py-2.5 text-indigo-400 font-bold">{formatearNumero(amort.capital, d.moneda)}</td>
                           <td className="py-2.5 text-amber-500/95 font-bold">{formatearNumero(amort.interes, d.moneda)}</td>
-                          <td className="py-2.5 text-slate-500 font-bold">{formatearNumero(c.cargos || 0, d.moneda)}</td>
+                          <td className="py-2.5 text-slate-400 font-bold">{formatearNumero(c.cargos || 0, d.moneda)}</td>
                           <td className="py-2.5 text-right text-white font-black">{formatearNumero(c.monto_cuota, d.moneda)}</td>
                           <td className="py-2.5 text-right">
-                            <span className={`px-2 py-0.5 rounded-md font-black uppercase text-[7px] border ${c.estado === 'pagado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                            <span className={`px-2 py-0.5 rounded-md font-black uppercase text-xs border ${c.estado === 'pagado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                               {c.estado}
                             </span>
                           </td>
@@ -496,7 +496,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                 const nextPendiente = d.cuotas_detalle?.find(x => x.numero_cuota === c.numero_cuota + 1 && x.estado === 'pendiente');
               
                 return (
-                  <div key={c.id} className="flex justify-between items-center text-[10px] bg-white/5 p-2 rounded-xl">
+                  <div key={c.id} className="flex justify-between items-center text-xs bg-white/5 p-2 rounded-xl">
                     <div className="flex items-center">
                       <span className={c.estado==='pagado'?'text-emerald-400':'text-slate-400'}>
                         Cuota {c.numero_cuota} • {c.estado === 'pagado' ? 'Pagado' : `Vence: ${formatearFechaCorta(c.fecha_vencimiento)}`}
@@ -508,7 +508,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                             e.stopPropagation();
                             deshacerCierreTarjeta(d, c);
                           }}
-                          className="ml-2 text-[8px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-black px-2 py-0.5 rounded border border-rose-500/20 transition-all uppercase tracking-wider"
+                          className="ml-2 text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-black px-2 py-0.5 rounded border border-rose-500/20 transition-all uppercase tracking-wider"
                         >
                           Deshacer Cierre
                         </button>
@@ -523,7 +523,7 @@ export default function TarjetaDeuda({ d, pestana, datosHogar, deudaExpandida, s
                             e.stopPropagation();
                             onAbonar(c, d);
                           }}
-                          className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black px-2.5 py-1 rounded-lg uppercase shadow-sm transition-all active:scale-95"
+                          className="bg-indigo-600 hover:bg-indigo-600 text-white text-xs font-black px-2.5 py-1 rounded-lg uppercase shadow-sm transition-all active:scale-95"
                         >
                           ABONAR
                         </button>

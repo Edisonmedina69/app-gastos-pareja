@@ -1,0 +1,42 @@
+[
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/edisonubutun/orca/workspaces/app-gastos-pareja/alewife/src/features/historial/components/Historial.jsx",
+    "line": 211,
+    "snippet": "border-l-4"
+  },
+  {
+    "antipattern": "ai-color-palette",
+    "name": "AI color palette",
+    "description": "Purple/violet gradients and cyan-on-dark are the most recognizable tells of AI-generated UIs. A gradient in one of those hues is the tell on its own; flat neon ink on a dark ground is charged once a second tell hue joins it. Choose a distinctive, intentional palette.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/edisonubutun/orca/workspaces/app-gastos-pareja/alewife/src/features/deudas/components/modales/ModalCompra.jsx",
+    "line": 88,
+    "snippet": "text-indigo-400 on heading"
+  },
+  {
+    "antipattern": "ai-color-palette",
+    "name": "AI color palette",
+    "description": "Purple/violet gradients and cyan-on-dark are the most recognizable tells of AI-generated UIs. A gradient in one of those hues is the tell on its own; flat neon ink on a dark ground is charged once a second tell hue joins it. Choose a distinctive, intentional palette.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/edisonubutun/orca/workspaces/app-gastos-pareja/alewife/src/features/deudas/components/modales/ModalPrevision.jsx",
+    "line": 78,
+    "snippet": "text-indigo-400 on heading"
+  },
+  {
+    "antipattern": "overused-font",
+    "name": "Overused font",
+    "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/edisonubutun/orca/workspaces/app-gastos-pareja/alewife/src/index.css",
+    "line": 68,
+    "snippet": "font-family: Inter"
+  }
+]

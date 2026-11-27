@@ -70,7 +70,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
   return (
     <FormPage resumen={<><p className="font-bold">{maestra.titulo}</p><p className="text-2xl tabular-nums mt-3">{mFormateado || "0"} {mon}</p><p className="text-sm text-muted-foreground mt-2">{`Cuota ${pagoSeleccionado.cuota.numero_cuota}`}</p></>} onClose={onClose} ariaLabel={`Abonar a ${maestra.titulo}`}>
       <h3 className="text-white font-bold text-lg mb-1">Abonar a {maestra.titulo}</h3>
-      <p className="text-[10px] text-slate-400 font-bold mb-3 uppercase tracking-wider">
+      <p className="text-xs text-slate-400 font-bold mb-3 uppercase tracking-wider">
         Cuota {pagoSeleccionado.cuota.numero_cuota} • Vence: {formatearFechaCorta(pagoSeleccionado.cuota.fecha_vencimiento)}
       </p>
       <div className="space-y-4">
@@ -79,11 +79,11 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
             type="text" 
             value={mFormateado} 
             onChange={(e) => setMFormateado(formatarInput(e.target.value))} 
-            className={`w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black outline-none transition-all ${esFija ? 'text-slate-400 bg-slate-950/60' : 'text-white'}`} 
+            className={`w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-2xl font-black outline-none transition-colors duration-150 ${esFija ? 'text-slate-400 bg-slate-950/60' : 'text-white'}`}
             placeholder="0" 
           />
           {esFija && (
-            <p className="text-[9px] text-slate-500 italic mt-1.5 pl-1">
+            <p className="text-xs text-slate-400 italic mt-1.5 pl-1">
               Las deudas con cuota fija requieren el pago del monto exacto de la cuota.
             </p>
           )}
@@ -95,7 +95,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
                   const minPago = pagoSeleccionado.cuota.pago_minimo || pagoSeleccionado.cuota.monto_cuota;
                   setMFormateado(formatarInput(Math.max(0, minPago - Number(pagoSeleccionado.cuota.monto_abonado))));
                 }}
-                className="flex-1 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-[9px] font-black uppercase border border-indigo-500/20 transition-all"
+                className="flex-1 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-black uppercase border border-indigo-500/20 transition-colors duration-150"
               >
                 Mínimo: {formatearNumero(Math.max(0, (pagoSeleccionado.cuota.pago_minimo || pagoSeleccionado.cuota.monto_cuota) - Number(pagoSeleccionado.cuota.monto_abonado)), maestra.moneda)}
               </button>
@@ -104,14 +104,14 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
                 onClick={() => {
                   setMFormateado(formatarInput(Math.max(0, pagoSeleccionado.cuota.monto_cuota - Number(pagoSeleccionado.cuota.monto_abonado))));
                 }}
-                className="flex-1 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 rounded-xl text-[9px] font-black uppercase border border-emerald-500/20 transition-all"
+                className="flex-1 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 rounded-xl text-xs font-black uppercase border border-emerald-500/20 transition-colors duration-150"
               >
                 Total: {formatearNumero(Math.max(0, pagoSeleccionado.cuota.monto_cuota - Number(pagoSeleccionado.cuota.monto_abonado)), maestra.moneda)}
               </button>
             </div>
           )}
         </div>
-        
+
         <div className="grid grid-cols-3 gap-2">
           {['PYG', 'BRL', 'USD'].map(m => (
             <button 
@@ -119,7 +119,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
               type="button"
               disabled={esFija}
               onClick={() => setMon(m)} 
-              className={`py-2 rounded-xl text-xs font-black border transition-all ${mon === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-slate-500'} ${esFija && mon !== m ? 'opacity-30 cursor-not-allowed' : ''}`}
+              className={`py-2 rounded-xl text-xs font-black border transition-colors duration-150 ${mon === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-slate-400'} ${esFija && mon !== m ? 'opacity-30 cursor-not-allowed' : ''}`}
             >
               {m}
             </button>
@@ -132,7 +132,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
             {maestra.tipo_cuenta === 'alias' && maestra.alias_cuenta && (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Alias / CBU para transferir</p>
+                  <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Alias / CBU para transferir</p>
                   <p className="text-sm font-black text-white">{maestra.alias_cuenta}</p>
                 </div>
                 <button
@@ -141,7 +141,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
                     navigator.clipboard.writeText(maestra.alias_cuenta);
                     toast.success("¡Alias copiado al portapapeles! 📋", { icon: "✨" });
                   }}
-                  className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                  className="flex items-center gap-1 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-600/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
                 >
                   <Copy size={12} /> Copiar Alias
                 </button>
@@ -151,7 +151,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Nro. de Cuenta</p>
                     <p className="text-sm font-black text-white">{maestra.nro_cuenta}</p>
                   </div>
                   <button
@@ -160,20 +160,20 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
                       navigator.clipboard.writeText(maestra.nro_cuenta);
                       toast.success("¡Número de cuenta copiado! 📋", { icon: "✨" });
                     }}
-                    className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
+                    className="flex items-center gap-1 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-600/30 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition-colors"
                   >
                     <Copy size={12} /> Copiar Cuenta
                   </button>
                 </div>
                 {maestra.nombre_titular && (
                   <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Titular</p>
                     <p className="text-sm font-black text-white">{maestra.nombre_titular}</p>
                   </div>
                 )}
                 {maestra.ci_titular && (
                   <div>
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">CI / Documento</p>
                     <p className="text-sm font-black text-white">{maestra.ci_titular}</p>
                   </div>
                 )}
@@ -188,7 +188,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
                     onClose();
                     onEditarMedioPago(maestra, 'deuda');
                   }}
-                  className="text-[10px] text-indigo-400 font-bold underline cursor-pointer"
+                  className="text-xs text-indigo-400 font-bold underline cursor-pointer"
                 >
                   + Agregar datos
                 </button>
@@ -199,7 +199,7 @@ export default function ModalAbono({ pagoSeleccionado, usuarioActual, datosHogar
         {maestra.medio_pago === 'efectivo' && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
             <span className="text-lg">💵</span>
-            <p className="text-[10px] font-bold text-amber-400 uppercase">Pago en efectivo — no requiere datos de cuenta</p>
+            <p className="text-xs font-bold text-amber-400 uppercase">Pago en efectivo — no requiere datos de cuenta</p>
           </div>
         )}
 

@@ -8,7 +8,7 @@ export default function TabMantenimiento({ ejecutarVinculacionUsuarioExistente, 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h3 className="font-bold text-white text-base">Purgar Hogares Vacíos (Basura)</h3>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mt-1">
+            <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mt-1">
               Espacios creados que no tienen miembros activos ({espacios.filter(e => e.miembros_count === 0).length} hogares)
             </p>
           </div>
@@ -35,7 +35,7 @@ export default function TabMantenimiento({ ejecutarVinculacionUsuarioExistente, 
       {/* VACIAR MOVIMIENTOS DE UN HOGAR */}
       <div className="glass-card p-6 border-dashed border-white/10 relative overflow-hidden">
         <h3 className="font-bold text-white text-base mb-2">Vaciar Movimientos de un Hogar</h3>
-        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-4">
+        <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-4">
           Elimina todos los gastos, ingresos, deudas y alertas de un hogar específico (respetando RLS)
         </p>
 
@@ -55,7 +55,7 @@ export default function TabMantenimiento({ ejecutarVinculacionUsuarioExistente, 
           <button 
             onClick={vaciarTransaccionesHogar}
             disabled={limpiandoTransacciones || !limpiezaEspacioId}
-            className="bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:hover:bg-amber-600 text-white font-black text-xs px-6 py-3 rounded-xl shadow-lg shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap"
+            className="bg-amber-700 hover:bg-amber-500 disabled:opacity-30 disabled:hover:bg-amber-700 text-white font-black text-xs px-6 py-3 rounded-xl shadow-lg shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap"
           >
             {limpiandoTransacciones ? <Loader2 className="animate-spin w-4 h-4"/> : <Trash2 size={14}/>} VACIAR MOVIMIENTOS A CERO
           </button>
@@ -65,19 +65,19 @@ export default function TabMantenimiento({ ejecutarVinculacionUsuarioExistente, 
       {/* PERFILES HUÉRFANOS */}
       <div className="glass-card p-6 border-dashed border-white/10">
         <h3 className="font-bold text-white text-base mb-2">Perfiles de Usuarios Huérfanos</h3>
-        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-4">
+        <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-4">
           Perfiles creados que no se han vinculado a ningún hogar ({perfilesHuerfanos.length} perfiles)
         </p>
 
         {perfilesHuerfanos.length === 0 ? (
-          <div className="text-center py-6 text-slate-600 text-xs italic">No hay perfiles huérfanos registrados</div>
+          <div className="text-center py-6 text-slate-400 text-xs italic">No hay perfiles huérfanos registrados</div>
         ) : (
           <div className="bg-black/25 rounded-xl border border-white/5 p-3 space-y-2 max-h-60 overflow-y-auto">
             {perfilesHuerfanos.map(p => (
               <div key={p.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs py-3 border-b border-white/5 last:border-0 pr-1">
                 <div>
                   <span className="text-slate-200 font-bold">{p.nombre}</span>
-                  <span className="text-[9px] text-slate-500 block">ID: {p.id.substring(0, 8)}...</span>
+                  <span className="text-xs text-slate-400 block">ID: {p.id.substring(0, 8)}...</span>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <select 
@@ -97,13 +97,13 @@ export default function TabMantenimiento({ ejecutarVinculacionUsuarioExistente, 
                   <button 
                     onClick={() => ejecutarVinculacionUsuarioExistente(null, p.id, selectedOrphanSpaces[p.id])}
                     disabled={!selectedOrphanSpaces[p.id] || guardando}
-                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:hover:bg-emerald-600 text-white font-bold text-[9px] px-3 py-2 rounded-lg transition-all"
+                    className="bg-emerald-700 hover:bg-emerald-700 disabled:opacity-30 disabled:hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-lg transition-all"
                   >
                     VINCULAR
                   </button>
                   <button 
                     onClick={() => eliminarPerfil(p.id, p.nombre)}
-                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                     title="Eliminar Perfil"
                   >
                     <Trash2 size={14}/>
