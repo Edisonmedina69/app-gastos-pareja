@@ -39,7 +39,7 @@ RLS de la nueva tabla permite consultar únicamente membresías propias. `authen
 
 ## Verificación reproducible
 
-Requisitos: Docker operativo, Node/npm, Python 3, Bash y `rg`. Ejecutar desde el repositorio:
+Requisitos: Docker operativo, Node/npm, Python 3 y Bash. El filtrado de logs usa `rg` si está disponible y `grep` como alternativa. Ejecutar desde el repositorio:
 
 ```bash
 bash supabase/tests/run_etapa1.sh
