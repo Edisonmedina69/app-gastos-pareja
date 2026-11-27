@@ -18,6 +18,17 @@ export const TIPOS_OPERACION_ORG = {
   ajuste: 'Ajuste',
 };
 
+// La autorización final se repite en revertir_org; otros tipos se deniegan.
+export function puedeRevertirOperacionOrg(operacion, permisos) {
+  const recurso = {
+    transferencia: 'cuentas',
+    financiacion_socio: 'gastos',
+    reembolso_socio: 'socios',
+    retiro_socio: 'socios',
+  }[operacion?.tipo];
+  return Boolean(recurso && permisos.some(p => p.recurso === recurso && p.accion === 'anular' && p.permitido));
+}
+
 /**
  * Formatea un importe según las reglas de precisión de Etapa 3:
  * PYG: 0 decimales; USD y BRL: 2 decimales.

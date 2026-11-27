@@ -1,6 +1,7 @@
 -- Etapa 3 aprobada: Tesorería mínima (cuentas en cero, operaciones, apuntes,
 -- movimientos de socios, reporte por socio y reversión referenciada).
--- Requiere etapa 2 y correcciones de revisión (20261128120000).
+-- Requiere etapa 2, correcciones de revisión y M6 incremental (20261128130000).
+-- Preparación local: no habilitar flujos de socios sin comprobantes verificados.
 begin;
 set local lock_timeout = '5s';
 set local statement_timeout = '60s';
@@ -31,6 +32,7 @@ create table public.org_operaciones (
   fecha_efectiva date not null,
   registrado_por uuid not null references public.perfiles(id),
   idempotencia uuid not null,
+  solicitud_hash text not null check (solicitud_hash ~ '^[0-9a-f]{64}$'),
   reversa_de uuid,
   motivo text check (motivo is null or length(trim(motivo)) <= 300),
   comprobante_id uuid,
@@ -43,6 +45,23 @@ create table public.org_operaciones (
   constraint org_operaciones_reversion_check check ((tipo = 'reversion' and reversa_de is not null and nullif(trim(motivo),'') is not null) or (tipo <> 'reversion' and reversa_de is null))
 );
 create index org_operaciones_espacio_fecha_idx on public.org_operaciones(espacio_id, fecha_efectiva desc, created_at desc);
+
+-- Se llama con el lock de espacios tomado: serializa reintentos concurrentes.
+-- Una clave no confirma otra solicitud ni revela la operación de otro actor.
+create or replace function public.reintento_operacion_org(p_espacio uuid, p_clave uuid, p_hash text)
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare v_op public.org_operaciones%rowtype;
+begin
+  select * into v_op from public.org_operaciones
+    where espacio_id = p_espacio and idempotencia = p_clave;
+  if not found then return null; end if;
+  if v_op.registrado_por is distinct from auth.uid() or v_op.solicitud_hash is distinct from p_hash then
+    raise exception 'La clave de idempotencia ya pertenece a otra solicitud' using errcode = '22023';
+  end if;
+  return v_op.id;
+end $$;
+revoke all on function public.reintento_operacion_org(uuid,uuid,text) from public, anon, authenticated;
+grant execute on function public.reintento_operacion_org(uuid,uuid,text) to service_role;
 
 create table public.org_apuntes (
   id uuid primary key default gen_random_uuid(),
@@ -124,10 +143,10 @@ create or replace function public.validar_importe_tasa_org(
   p_moneda text, p_importe numeric, p_tasa numeric, p_fuente text
 ) returns void language plpgsql immutable security definer set search_path = '' as $$
 begin
-  if p_moneda not in ('PYG','USD','BRL') then
+  if p_moneda is null or p_moneda not in ('PYG','USD','BRL') then
     raise exception 'Moneda inválida: %', p_moneda using errcode = '22023';
   end if;
-  if p_importe is null or p_importe <= 0 then
+  if p_importe is null or p_importe::text in ('NaN','Infinity','-Infinity') or p_importe <= 0 then
     raise exception 'El importe debe ser mayor a cero' using errcode = '22023';
   end if;
   if p_moneda = 'PYG' and p_importe <> trunc(p_importe, 0) then
@@ -136,7 +155,7 @@ begin
   if p_moneda in ('USD','BRL') and p_importe <> trunc(p_importe, 2) then
     raise exception 'Los importes en % admiten hasta 2 decimales', p_moneda using errcode = '22023';
   end if;
-  if p_tasa is null or p_tasa <= 0 then
+  if p_tasa is null or p_tasa::text in ('NaN','Infinity','-Infinity') or p_tasa <= 0 or p_tasa <> trunc(p_tasa,10) then
     raise exception 'La tasa de cambio es obligatoria y debe ser mayor a cero' using errcode = '22023';
   end if;
   if p_moneda = 'PYG' and p_tasa <> 1 then
@@ -255,7 +274,7 @@ begin
   if p_tipo not in ('banco','billetera','efectivo','socio') then
     raise exception 'Tipo de cuenta inválido' using errcode = '22023';
   end if;
-  if p_moneda not in ('PYG','USD','BRL') then
+  if p_moneda is null or p_moneda not in ('PYG','USD','BRL') then
     raise exception 'Moneda inválida' using errcode = '22023';
   end if;
   if p_tipo = 'socio' then
@@ -327,11 +346,12 @@ create or replace function public.transferir_org(
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare
   v_op_id uuid;
+  v_hash text := encode(extensions.digest(jsonb_build_array('transferir_org',p_cuenta_origen_id,p_cuenta_destino_id,p_importe_origen,p_importe_destino,coalesce(p_fecha_efectiva,current_date),p_tasa_origen_base,p_tasa_destino_base,trim(p_fuente_tasa),nullif(trim(p_motivo),''),coalesce(p_confirmar_saldo_insuficiente,false))::text,'sha256'),'hex');
   v_origen public.org_cuentas%rowtype;
   v_destino public.org_cuentas%rowtype;
-  v_imp_dest numeric(20,6);
-  v_tasa_orig numeric(20,10);
-  v_tasa_dest numeric(20,10);
+  v_imp_dest numeric;
+  v_tasa_orig numeric;
+  v_tasa_dest numeric;
   v_base_orig numeric(20,6);
   v_base_dest numeric(20,6);
   v_saldo_actual numeric(20,6);
@@ -347,9 +367,8 @@ begin
     raise exception 'Se requieren los permisos cuentas.pagar y cuentas.cobrar para transferir' using errcode = '42501';
   end if;
 
-  select id into v_op_id from public.org_operaciones
-    where espacio_id = p_espacio_id_esperado and idempotencia = p_idempotencia;
-  if found then return v_op_id; end if;
+  v_op_id := public.reintento_operacion_org(p_espacio_id_esperado,p_idempotencia,v_hash);
+  if v_op_id is not null then return v_op_id; end if;
 
   if p_cuenta_origen_id is null or p_cuenta_destino_id is null or p_cuenta_origen_id = p_cuenta_destino_id then
     raise exception 'Elegí dos cuentas distintas para transferir' using errcode = '22023';
@@ -404,8 +423,8 @@ begin
   v_base_orig := round(p_importe_origen * v_tasa_orig, 6);
   v_base_dest := round(v_imp_dest * v_tasa_dest, 6);
 
-  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, motivo)
-    values(p_espacio_id_esperado, 'transferencia', coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, nullif(trim(p_motivo),''))
+  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, solicitud_hash, motivo)
+    values(p_espacio_id_esperado, 'transferencia', coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, v_hash, nullif(trim(p_motivo),''))
     returning id into v_op_id;
 
   insert into public.org_apuntes(espacio_id, operacion_id, cuenta_id, importe_firmado, tasa_base, importe_base_firmado, fuente_tasa)
@@ -439,9 +458,10 @@ create or replace function public.registrar_pago_personal_socio_org(
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare
   v_op_id uuid;
+  v_hash text := encode(extensions.digest(jsonb_build_array('registrar_pago_personal_socio_org',p_miembro_id,p_cuenta_socio_id,p_importe,p_tasa_base,trim(p_fuente_tasa),coalesce(p_fecha_efectiva,current_date),trim(p_motivo))::text,'sha256'),'hex');
   v_cuenta public.org_cuentas%rowtype;
   v_miembro public.espacio_miembros%rowtype;
-  v_tasa numeric(20,10);
+  v_tasa numeric;
   v_base numeric(20,6);
 begin
   perform public.validar_contexto(p_espacio_id_esperado);
@@ -453,9 +473,8 @@ begin
     raise exception 'No tenés permiso para registrar pagos' using errcode = '42501';
   end if;
 
-  select id into v_op_id from public.org_operaciones
-    where espacio_id = p_espacio_id_esperado and idempotencia = p_idempotencia;
-  if found then return v_op_id; end if;
+  v_op_id := public.reintento_operacion_org(p_espacio_id_esperado,p_idempotencia,v_hash);
+  if v_op_id is not null then return v_op_id; end if;
 
   select * into v_miembro from public.espacio_miembros
     where espacio_id = p_espacio_id_esperado and id = p_miembro_id and activo for update;
@@ -482,8 +501,8 @@ begin
   perform public.validar_importe_tasa_org(v_cuenta.moneda, p_importe, v_tasa, p_fuente_tasa);
   v_base := round(p_importe * v_tasa, 6);
 
-  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, motivo)
-    values(p_espacio_id_esperado, 'financiacion_socio', coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, trim(p_motivo))
+  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, solicitud_hash, motivo)
+    values(p_espacio_id_esperado, 'financiacion_socio', coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, v_hash, trim(p_motivo))
     returning id into v_op_id;
 
   -- Dos apuntes en la cuenta del socio (+financiación y −gasto) que dejan custodia neta sin cambio.
@@ -520,13 +539,17 @@ create or replace function public.registrar_movimiento_socio_org(
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare
   v_op_id uuid;
+  v_hash text := encode(extensions.digest(jsonb_build_array('registrar_movimiento_socio_org',p_tipo,p_miembro_id,p_cuenta_id,p_importe,p_tasa_base,trim(p_fuente_tasa),coalesce(p_fecha_efectiva,current_date),trim(p_motivo),coalesce(p_confirmar_saldo_insuficiente,false))::text,'sha256'),'hex');
   v_cuenta public.org_cuentas%rowtype;
   v_miembro public.espacio_miembros%rowtype;
   v_clase text;
-  v_tasa numeric(20,10);
+  v_tasa numeric;
   v_base numeric(20,6);
   v_saldo_actual numeric(20,6);
   v_deuda_a_favor numeric(20,6);
+  v_deuda_base numeric(20,6);
+  v_base_deuda numeric(20,6);
+  v_tasa_deuda numeric(20,10);
 begin
   perform public.validar_contexto(p_espacio_id_esperado);
   if p_idempotencia is null then raise exception 'Falta clave de idempotencia' using errcode = '22023'; end if;
@@ -543,9 +566,8 @@ begin
     raise exception 'Se requieren los permisos cuentas.pagar y socios.pagar' using errcode = '42501';
   end if;
 
-  select id into v_op_id from public.org_operaciones
-    where espacio_id = p_espacio_id_esperado and idempotencia = p_idempotencia;
-  if found then return v_op_id; end if;
+  v_op_id := public.reintento_operacion_org(p_espacio_id_esperado,p_idempotencia,v_hash);
+  if v_op_id is not null then return v_op_id; end if;
 
   select * into v_miembro from public.espacio_miembros
     where espacio_id = p_espacio_id_esperado and id = p_miembro_id and activo for update;
@@ -562,6 +584,8 @@ begin
   v_tasa := case when v_cuenta.moneda = 'PYG' then coalesce(p_tasa_base, 1) else p_tasa_base end;
   perform public.validar_importe_tasa_org(v_cuenta.moneda, p_importe, v_tasa, p_fuente_tasa);
   v_base := round(p_importe * v_tasa, 6);
+  v_base_deuda := v_base;
+  v_tasa_deuda := v_tasa;
 
   select coalesce(sum(importe_firmado), 0) into v_saldo_actual
     from public.org_apuntes where espacio_id = p_espacio_id_esperado and cuenta_id = v_cuenta.id;
@@ -572,30 +596,37 @@ begin
   end if;
 
   if p_tipo = 'reembolso_socio' then
-    select coalesce(sum(importe_deuda_firmado), 0) into v_deuda_a_favor
+    select coalesce(sum(importe_deuda_firmado), 0), coalesce(sum(importe_base_firmado), 0)
+      into v_deuda_a_favor, v_deuda_base
       from public.org_movimientos_socios
       where espacio_id = p_espacio_id_esperado and miembro_id = v_miembro.id and moneda = v_cuenta.moneda;
     if v_deuda_a_favor < p_importe then
       raise exception 'El reembolso (%) supera lo que la empresa le debe al socio en % (%)', p_importe, v_cuenta.moneda, greatest(v_deuda_a_favor, 0) using errcode = '22023';
     end if;
+    -- Cancela la valoración histórica de la deuda, no la de la caja de hoy.
+    -- El último reembolso absorbe el residuo de redondeo y salda ambas monedas.
+    v_base_deuda := case when p_importe = v_deuda_a_favor then v_deuda_base
+      else round(v_deuda_base * p_importe / v_deuda_a_favor,6) end;
+    v_tasa_deuda := round(v_base_deuda / p_importe,10);
     v_clase := 'reembolso';
   else
     v_clase := 'retiro';
   end if;
 
-  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, motivo)
-    values(p_espacio_id_esperado, p_tipo, coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, trim(p_motivo))
+  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, solicitud_hash, motivo)
+    values(p_espacio_id_esperado, p_tipo, coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, v_hash, trim(p_motivo))
     returning id into v_op_id;
 
   insert into public.org_apuntes(espacio_id, operacion_id, cuenta_id, importe_firmado, tasa_base, importe_base_firmado, fuente_tasa)
     values(p_espacio_id_esperado, v_op_id, v_cuenta.id, -p_importe, v_tasa, -v_base, trim(p_fuente_tasa));
 
   insert into public.org_movimientos_socios(espacio_id, operacion_id, miembro_id, clase, moneda, importe_deuda_firmado, tasa_base, importe_base_firmado)
-    values(p_espacio_id_esperado, v_op_id, v_miembro.id, v_clase, v_cuenta.moneda, -p_importe, v_tasa, -v_base);
+    values(p_espacio_id_esperado, v_op_id, v_miembro.id, v_clase, v_cuenta.moneda, -p_importe, v_tasa_deuda, -v_base_deuda);
 
   insert into public.org_auditoria(espacio_id, actor_id, entidad, entidad_id, accion, cambios)
     values(p_espacio_id_esperado, auth.uid(), 'operaciones', v_op_id, p_tipo,
-      jsonb_build_object('miembro_id', v_miembro.id, 'cuenta_id', v_cuenta.id, 'moneda', v_cuenta.moneda, 'importe', p_importe, 'tasa_base', v_tasa));
+      jsonb_build_object('miembro_id', v_miembro.id, 'cuenta_id', v_cuenta.id, 'moneda', v_cuenta.moneda, 'importe', p_importe, 'tasa_base', v_tasa,
+        'importe_base_deuda',v_base_deuda,'diferencia_cambio_base',v_base-v_base_deuda));
   return v_op_id;
 end $$;
 
@@ -609,6 +640,7 @@ create or replace function public.revertir_org(
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare
   v_op_id uuid;
+  v_hash text := encode(extensions.digest(jsonb_build_array('revertir_org',p_operacion_id,trim(p_motivo),coalesce(p_fecha_efectiva,current_date))::text,'sha256'),'hex');
   v_orig public.org_operaciones%rowtype;
 begin
   perform public.validar_contexto(p_espacio_id_esperado);
@@ -619,10 +651,6 @@ begin
     raise exception 'El motivo es obligatorio para revertir una operación' using errcode = '22023';
   end if;
 
-  select id into v_op_id from public.org_operaciones
-    where espacio_id = p_espacio_id_esperado and idempotencia = p_idempotencia;
-  if found then return v_op_id; end if;
-
   select * into v_orig from public.org_operaciones
     where espacio_id = p_espacio_id_esperado and id = p_operacion_id for update;
   if not found then
@@ -631,24 +659,25 @@ begin
   if v_orig.tipo = 'reversion' then
     raise exception 'No se puede revertir una reversión' using errcode = '22023';
   end if;
+
+
+  if not public.tiene_permiso(p_espacio_id_esperado,
+    case v_orig.tipo when 'transferencia' then 'cuentas'
+      when 'financiacion_socio' then 'gastos'
+      when 'reembolso_socio' then 'socios'
+      when 'retiro_socio' then 'socios' else '' end, 'anular') then
+    raise exception 'No tenés permiso para revertir esta operación' using errcode = '42501';
+  end if;
+
+  v_op_id := public.reintento_operacion_org(p_espacio_id_esperado,p_idempotencia,v_hash);
+  if v_op_id is not null then return v_op_id; end if;
+
   if exists (select 1 from public.org_operaciones where espacio_id = p_espacio_id_esperado and reversa_de = v_orig.id) then
     raise exception 'Esta operación ya fue revertida' using errcode = '23505';
   end if;
 
-  if (v_orig.tipo = 'transferencia' and not public.tiene_permiso(p_espacio_id_esperado, 'cuentas', 'anular'))
-     or (v_orig.tipo in ('financiacion_socio','reembolso_socio','retiro_socio') and not (
-       public.tiene_permiso(p_espacio_id_esperado, 'socios', 'anular')
-       or public.tiene_permiso(p_espacio_id_esperado, 'gastos', 'anular')
-     ))
-     or (v_orig.tipo not in ('transferencia','financiacion_socio','reembolso_socio','retiro_socio') and not (
-       public.tiene_permiso(p_espacio_id_esperado, 'finanzas', 'anular')
-       or public.tiene_permiso(p_espacio_id_esperado, 'cuentas', 'anular')
-     )) then
-    raise exception 'No tenés permiso para anular o revertir esta operación' using errcode = '42501';
-  end if;
-
-  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, reversa_de, motivo)
-    values(p_espacio_id_esperado, 'reversion', coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, v_orig.id, trim(p_motivo))
+  insert into public.org_operaciones(espacio_id, tipo, fecha_efectiva, registrado_por, idempotencia, solicitud_hash, reversa_de, motivo)
+    values(p_espacio_id_esperado, 'reversion', coalesce(p_fecha_efectiva, current_date), auth.uid(), p_idempotencia, v_hash, v_orig.id, trim(p_motivo))
     returning id into v_op_id;
 
   insert into public.org_apuntes(espacio_id, operacion_id, cuenta_id, importe_firmado, tasa_base, importe_base_firmado, fuente_tasa, fecha_tasa)

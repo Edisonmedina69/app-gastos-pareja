@@ -116,7 +116,7 @@ select public.transferir_org(
 select public.transferir_org(
  :'org_a','11111111-1111-4111-8111-111111111111',
  :'c_ana',:'c_pyg',400000,400000,current_date,1,1,'manual_confirmada',
- 'Reintento duplicado',true
+ 'Adelanto de custodia a caja con confirmación de descubierto temporal',true
 ) as op_transf_retry \gset
 select pg_temp.check(:'op_transf_1' = :'op_transf_retry','doble envío devuelve el mismo ID de operación');
 select pg_temp.check((select count(*) from public.org_operaciones where espacio_id=:'org_a' and idempotencia='11111111-1111-4111-8111-111111111111') = 1,'doble envío crea una sola operación');
@@ -177,7 +177,7 @@ select public.registrar_pago_personal_socio_org(
 select pg_temp.check(
  public.registrar_pago_personal_socio_org(
   :'org_a','44444444-4444-4444-8444-444444444444',
-  :'m_bruno_id',:'c_bruno',100000,1,'manual_confirmada',current_date,'Reintento'
+  :'m_bruno_id',:'c_bruno',100000,1,'manual_confirmada',current_date,'Multa DNIT pagada con bolsillo personal de Bruno'
  ) = :'op_pago_bruno',
  'doble envío en pago personal de socio es idempotente'
 );
@@ -331,4 +331,123 @@ select pg_temp.check(not has_table_privilege('anon','public.org_cuentas','select
 select pg_temp.check(not has_table_privilege('authenticated','public.org_apuntes','insert'),'authenticated no inserta directo en org_apuntes');
 select pg_temp.check(not has_table_privilege('authenticated','public.org_operaciones','insert'),'authenticated no inserta directo en org_operaciones');
 
+-- Regresiones de revisión: reintentos, permisos efectivos y validación numérica.
+reset role;
+select pg_temp.como(1);
+select set_config('vars.org_a', :'org_a', true),
+       set_config('vars.c_ana', :'c_ana', true),
+       set_config('vars.c_pyg', :'c_pyg', true),
+       set_config('vars.op_reemb', :'op_reemb_bruno', true),
+       set_config('vars.op_pago', :'op_pago_bruno', true),
+       set_config('vars.op_fx', :'op_fx_usd', true);
+reset role;
+create function pg_temp.rechaza(consulta text, codigo text, mensaje text)
+returns void language plpgsql as $$
+begin
+  begin
+    execute consulta;
+  exception when others then
+    if sqlstate = codigo then raise notice 'OK %', mensaje; return; end if;
+    raise;
+  end;
+  raise exception 'FALLO %', mensaje;
+end $$;
+grant execute on function pg_temp.rechaza(text,text,text) to authenticated;
+select pg_temp.como(1);
+
+select pg_temp.rechaza(format(
+ 'select public.transferir_org(%L,%L,%L,%L,400001,400001,current_date,1,1,%L,%L,true)',
+ :'org_a','11111111-1111-4111-8111-111111111111',:'c_ana',:'c_pyg','manual_confirmada',
+ 'Adelanto de custodia a caja con confirmación de descubierto temporal'),
+ '22023','misma clave con otro importe no confirma una transferencia anterior');
+
+select pg_temp.rechaza(format(
+ 'select public.registrar_pago_personal_socio_org(%L,%L,%L,%L,100000,1,%L,current_date,%L)',
+ :'org_a','11111111-1111-4111-8111-111111111111',:'m_ana_id',:'c_ana','manual_confirmada','Otro flujo'),
+ '22023','clave de transferencia no sirve como reintento de un pago personal');
+
+-- Reversión idéntica reintenta; cambio de destino con la misma clave se rechaza.
+select pg_temp.check(public.revertir_org(:'org_a','77777777-7777-4777-8777-777777777777',
+ :'op_retiro_ana','Carga por error, se revierte el retiro') = :'op_rev_retiro',
+ 'reintento de reversión devuelve el mismo ID');
+select pg_temp.rechaza(format('select public.revertir_org(%L,%L,%L,%L)',
+ :'org_a','77777777-7777-4777-8777-777777777777',:'op_fx_usd','Carga por error, se revierte el retiro'),
+ '22023','clave de reversión no confirma otro destino');
+
+-- Un contador autorizado a transferir no puede reutilizar la clave de otra persona.
+reset role;
+select id as revisor_id from public.espacio_miembros
+ where espacio_id=:'org_a' and usuario_id <> '00000000-0000-0000-0000-000000000000'
+   and rol_plantilla='contador' \gset
+select pg_temp.como(1);
+select public.actualizar_permisos_miembro(:'org_a',:'revisor_id',
+ '[{"recurso":"cuentas","accion":"pagar","permitido":true},{"recurso":"cuentas","accion":"cobrar","permitido":true},{"recurso":"gastos","accion":"anular","permitido":true},{"recurso":"socios","accion":"anular","permitido":false},{"recurso":"cuentas","accion":"anular","permitido":false}]');
+reset role; select pg_temp.como(3);
+select pg_temp.rechaza(format(
+ 'select public.transferir_org(%L,%L,%L,%L,400000,400000,current_date,1,1,%L,%L,true)',
+ :'org_a','11111111-1111-4111-8111-111111111111',:'c_ana',:'c_pyg','manual_confirmada',
+ 'Adelanto de custodia a caja con confirmación de descubierto temporal'),
+ '22023','otro actor no reutiliza una clave conocida');
+select pg_temp.rechaza(format('select public.revertir_org(%L,gen_random_uuid(),%L,%L)',
+ :'org_a',:'op_reemb_bruno','Anulación con permiso de gastos'),
+ '42501','gastos.anular no permite revertir reembolsos de socios');
+select pg_temp.rechaza(format('select public.revertir_org(%L,%L,%L,%L)',
+ :'org_a','77777777-7777-4777-8777-777777777777',:'op_retiro_ana','Carga por error, se revierte el retiro'),
+ '42501','un reintento conocido también revalida permiso de socios');
+select pg_temp.rechaza(format('select public.revertir_org(%L,gen_random_uuid(),%L,%L)',
+ :'org_a',:'op_fx_usd','Anulación con permiso de gastos'),
+ '42501','gastos.anular no permite revertir transferencias');
+select public.revertir_org(:'org_a',gen_random_uuid(),:'op_pago_bruno','Revertir pago personal con gastos.anular');
+select pg_temp.check(true,'gastos.anular permite revertir pago personal');
+
+reset role; select pg_temp.como(1);
+select public.actualizar_permisos_miembro(:'org_a',:'revisor_id',
+ '[{"recurso":"socios","accion":"anular","permitido":true},{"recurso":"gastos","accion":"anular","permitido":false}]');
+reset role; select pg_temp.como(3);
+select public.revertir_org(:'org_a',gen_random_uuid(),:'op_reemb_bruno','Reversión autorizada de reembolso');
+select pg_temp.check(true,'socios.anular permite revertir reembolso');
+
+-- La validación debe rechazar no finitos y precisión excesiva antes de redondear.
+reset role;
+select pg_temp.rechaza('select public.validar_importe_tasa_org(''USD'',''NaN''::numeric,7500,''manual'')',
+ '22023','rechaza importes NaN');
+select pg_temp.rechaza('select public.validar_importe_tasa_org(''USD'',1,''Infinity''::numeric,''manual'')',
+ '22023','rechaza tasas infinitas');
+select pg_temp.rechaza('select public.validar_importe_tasa_org(''USD'',1,7500.00000000001,''manual'')',
+ '22023','rechaza tasa con más precisión que el libro');
+select pg_temp.como(1);
+select pg_temp.rechaza(format(
+ 'select public.transferir_org(%L,gen_random_uuid(),%L,%L,100,0.0000004,current_date,1,7500,%L,%L)',
+ :'org_a',:'c_pyg',:'c_usd','manual_confirmada','Fracción no permitida'),
+ '22023','rechaza importe destino antes de redondearlo a seis decimales');
+
+-- Un reembolso USD a otra tasa no deja una deuda fantasma en PYG.
+reset role; select pg_temp.como(1);
+select public.crear_cuenta_org(:'org_a','Custodia Ana USD','socio','USD',:'m_ana_id') as c_ana_usd \gset
+select public.registrar_pago_personal_socio_org(:'org_a',gen_random_uuid(),:'m_ana_id',:'c_ana_usd',
+ 10,7500,'manual_confirmada',current_date,'Pago USD histórico') as op_usd_personal \gset
+select public.registrar_movimiento_socio_org(:'org_a',gen_random_uuid(),'reembolso_socio',:'m_ana_id',:'c_usd',
+ 10,8000,'manual_confirmada',current_date,'Reembolso USD a tasa nueva') as op_usd_reemb \gset
+select pg_temp.check((select empresa_debe_al_socio=0 and socio_debe_a_empresa=0
+ and empresa_debe_al_socio_base=0 and socio_debe_a_empresa_base=0
+ from public.org_reporte_socios where miembro_id=:'m_ana_id' and moneda='USD'),
+ 'reembolso USD salda deuda original y base histórica sin deuda residual');
+select pg_temp.check((select importe_base_firmado=-80000 from public.org_apuntes where operacion_id=:'op_usd_reemb')
+ and (select importe_base_firmado=-75000 from public.org_movimientos_socios where operacion_id=:'op_usd_reemb'),
+ 'reembolso conserva tasa efectiva de caja y valoración histórica de deuda');
+select pg_temp.check((select (cambios->>'diferencia_cambio_base')::numeric=5000
+ from public.org_auditoria where entidad_id=:'op_usd_reemb'),
+ 'diferencia de cambio del reembolso queda explícita en auditoría');
+
+-- Sin finanzas.ver no se filtra el libro ni sus vistas calculadas.
+select public.actualizar_permisos_miembro(:'org_a',:'revisor_id',
+ '[{"recurso":"finanzas","accion":"ver","permitido":false}]');
+reset role; select pg_temp.como(3);
+select pg_temp.check(not exists(select from public.org_cuentas)
+ and not exists(select from public.org_operaciones)
+ and not exists(select from public.org_apuntes)
+ and not exists(select from public.org_movimientos_socios)
+ and not exists(select from public.org_saldos_cuentas)
+ and not exists(select from public.org_reporte_socios),
+ 'finanzas.ver revocado oculta tablas y reportes sin renovar JWT');
 rollback;

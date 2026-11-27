@@ -407,10 +407,11 @@ export function PantallaDetalleCuenta({
   apuntes,
   operacionesPorId,
   puedeTransferir,
-  puedeAnular,
+  puedeRevertir,
   alRevertir,
 }) {
   const navigate = useNavigate();
+  const puedeAnular = [...operacionesPorId.values()].some(puedeRevertir);
   const [revertirOp, setRevertirOp] = useState(null);
   const [motivoReversion, setMotivoReversion] = useState('');
   const [idempotenciaRev, setIdempotenciaRev] = useState(() => generarUuid());
@@ -543,7 +544,7 @@ export function PantallaDetalleCuenta({
                         {yaRevertida && <Badge tono="warning">Revertida</Badge>}
                         {op?.reversa_de && <Badge tono="neutral">Reversa #{String(op.reversa_de).slice(0, 8)}</Badge>}
                       </div>
-                      {puedeAnular && op && op.tipo !== 'reversion' && !yaRevertida && (
+                      {puedeRevertir(op) && op && op.tipo !== 'reversion' && !yaRevertida && (
                         <Button
                           variante="secondary"
                           tamano="sm"
@@ -619,7 +620,7 @@ export function PantallaDetalleCuenta({
                         </td>
                         {puedeAnular && (
                           <td className="py-4 px-4 text-right">
-                            {op && op.tipo !== 'reversion' && !yaRevertida && (
+                            {puedeRevertir(op) && op && op.tipo !== 'reversion' && !yaRevertida && (
                               <Button
                                 variante="secondary"
                                 tamano="sm"
@@ -988,11 +989,12 @@ export function VistaSocios({
   miembroActualId,
   puedePagarGasto,
   puedeOperarSocios,
-  puedeAnular,
+  puedeRevertir,
   alRegistrarPagoPersonal,
   alRegistrarMovimientoSocio,
   alRevertir,
 }) {
+  const puedeAnular = operaciones.some(puedeRevertir);
   const [modoFormulario, setModoFormulario] = useState(null); // 'pago_personal' | 'reembolso_socio' | 'retiro_socio'
   const [miembroId, setMiembroId] = useState(miembroActualId || '');
   const [cuentaId, setCuentaId] = useState('');
@@ -1436,7 +1438,7 @@ export function VistaSocios({
                       <span className="text-xs text-muted-foreground">
                         {aFavorSocio ? 'Empresa debe al socio' : 'Reduce deuda / Socio debe'}
                       </span>
-                      {puedeAnular && op && op.tipo !== 'reversion' && !yaRevertida && (
+                      {puedeRevertir(op) && op && op.tipo !== 'reversion' && !yaRevertida && (
                         <Button
                           variante="secondary"
                           tamano="sm"
@@ -1495,7 +1497,7 @@ export function VistaSocios({
                         </td>
                         {puedeAnular && (
                           <td className="py-4 px-4 text-right">
-                            {op && op.tipo !== 'reversion' && !yaRevertida && (
+                            {puedeRevertir(op) && op && op.tipo !== 'reversion' && !yaRevertida && (
                               <Button
                                 variante="secondary"
                                 tamano="sm"

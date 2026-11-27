@@ -24,7 +24,7 @@ import {
   revertirOperacionOrg,
   transferirOrg,
 } from '../../../services/tesoreria.service';
-import { formatearMonedaOrg } from '../lib/tesoreria';
+import { formatearMonedaOrg, puedeRevertirOperacionOrg } from '../lib/tesoreria';
 import {
   PantallaDetalleCuenta,
   PantallaNuevaCuenta,
@@ -76,7 +76,7 @@ export default function Organizacion({ activo, refrescarEspacios }) {
   const puedeVerCuentas = puedeVerFinanzas && tiene('cuentas', 'ver');
   const puedeCrearCuenta = tiene('cuentas', 'crear');
   const puedeTransferir = tiene('cuentas', 'pagar') && tiene('cuentas', 'cobrar');
-  const puedeAnularCuenta = tiene('cuentas', 'anular') || tiene('socios', 'anular') || tiene('gastos', 'anular');
+  const puedeRevertir = operacion => puedeRevertirOperacionOrg(operacion, propios);
   const puedeVerSocios = puedeVerFinanzas && tiene('socios', 'ver');
   const puedePagarGasto = tiene('gastos', 'pagar');
   const puedeOperarSocios = tiene('cuentas', 'pagar') && tiene('socios', 'pagar');
@@ -322,7 +322,7 @@ export default function Organizacion({ activo, refrescarEspacios }) {
           apuntes={datos.apuntesCuenta}
           operacionesPorId={operacionesPorId}
           puedeTransferir={puedeTransferir}
-          puedeAnular={puedeAnularCuenta}
+          puedeRevertir={puedeRevertir}
           alRevertir={payload =>
             ejecutar(() => revertirOperacionOrg(activo.id, payload), 'Operación revertida.')
           }
@@ -350,7 +350,7 @@ export default function Organizacion({ activo, refrescarEspacios }) {
           miembroActualId={activo.membresia.id}
           puedePagarGasto={puedePagarGasto}
           puedeOperarSocios={puedeOperarSocios}
-          puedeAnular={puedeAnularCuenta}
+          puedeRevertir={puedeRevertir}
           alRegistrarPagoPersonal={payload =>
             ejecutar(
               () => registrarPagoPersonalSocioOrg(activo.id, payload),

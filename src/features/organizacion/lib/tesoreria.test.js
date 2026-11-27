@@ -5,7 +5,22 @@ import {
   parsearImporteOrg,
   validarTasaBaseOrg,
   validarTransferenciaOrg,
+  puedeRevertirOperacionOrg,
 } from './tesoreria.js';
+
+test('reversión exige el permiso propio de la operación y deniega tipos desconocidos', () => {
+  const gastos = [{ recurso: 'gastos', accion: 'anular', permitido: true }];
+  const socios = [{ recurso: 'socios', accion: 'anular', permitido: true }];
+  const cuentas = [{ recurso: 'cuentas', accion: 'anular', permitido: true }];
+  assert.equal(puedeRevertirOperacionOrg({ tipo: 'financiacion_socio' }, gastos), true);
+  assert.equal(puedeRevertirOperacionOrg({ tipo: 'reembolso_socio' }, gastos), false);
+  assert.equal(puedeRevertirOperacionOrg({ tipo: 'retiro_socio' }, gastos), false);
+  assert.equal(puedeRevertirOperacionOrg({ tipo: 'retiro_socio' }, socios), true);
+  assert.equal(puedeRevertirOperacionOrg({ tipo: 'transferencia' }, socios), false);
+  assert.equal(puedeRevertirOperacionOrg({ tipo: 'transferencia' }, cuentas), true);
+  assert.equal(puedeRevertirOperacionOrg({ tipo: 'cobro' }, [...gastos, ...socios, ...cuentas]), false);
+  assert.equal(puedeRevertirOperacionOrg(null, cuentas), false);
+});
 
 test('formatearMonedaOrg redondea PYG a 0 decimales y USD/BRL a 2 decimales', () => {
   assert.equal(formatearMonedaOrg(1000000, 'PYG'), '1.000.000 Gs.');

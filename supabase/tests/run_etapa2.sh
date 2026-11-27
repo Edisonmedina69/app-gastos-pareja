@@ -56,7 +56,10 @@ python3 supabase/tests/etapa2_p0.py | sql >"$local_dir/p0-rollback.log" 2>&1 || 
 echo 'OK: rollback funcional conserva acceso familiar y contexto.'
 # Reconstrucción en este único contenedor local. Nunca destinos parametrizables.
 printf 'drop schema public cascade; create schema public; grant usage on schema public to public;\n' | sql >/dev/null 2>&1
-sql < supabase/schema.sql >"$local_dir/schema.log" 2>&1 || { cat "$local_dir/schema.log"; exit 1; }
+# Esta suite compara solo etapa 2; el schema consolidado ya puede incluir etapa 3.
+# La sección posterior tiene su propia suite, run_etapa3.sh.
+python3 -c 'from pathlib import Path; print(Path("supabase/schema.sql").read_text().split("-- Etapa 3 aprobada:",1)[0])' |
+  sql >"$local_dir/schema.log" 2>&1 || { cat "$local_dir/schema.log"; exit 1; }
 python3 supabase/tests/catalogo_local.py "$container" >"$local_dir/catalogo-schema.json"
 diff -u "$local_dir/catalogo-migrado.json" "$local_dir/catalogo-schema.json"
 python3 supabase/tests/etapa2_p0.py | sql >"$local_dir/p0-schema.log" 2>&1 || { cat "$local_dir/p0-schema.log"; exit 1; }
