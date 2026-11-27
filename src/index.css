@@ -166,3 +166,31 @@
     display: none;
   }
 }
+
+/* Formularios con scroll de página y acciones siempre a mano en móvil. */
+.form-page { padding-bottom: 5rem; }
+.form-page-fields input, .form-page-fields select, .form-page-fields textarea { min-width: 0; font-size: 1rem; }
+@media (max-width: 1023px) {
+  .form-page .form-actions,
+  .form-page-fields form > button[type="submit"],
+  .form-page-fields form > div:last-child:has(> button[type="submit"]) {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+    width: auto; margin: 0; border-radius: 0;
+    padding: .75rem 1rem max(.75rem, env(safe-area-inset-bottom));
+    background-color: oklch(var(--card)); border-top: 1px solid oklch(var(--border));
+  }
+  .form-page-fields form > button[type="submit"],
+  .form-page button.form-actions { background-color: oklch(var(--primary)); }
+}
+@media (min-width: 1280px) {
+  .form-page-fields form > .space-y-4,
+  .form-page-fields form:has(> div.space-y-1) {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;
+  }
+  .form-page-fields form > .space-y-4 > *,
+  .form-page-fields form:has(> div.space-y-1) > * { margin-top: 0; }
+  .form-page-fields form > .space-y-4 > :last-child,
+  .form-page-fields form > .space-y-4 > .grid,
+  .form-page-fields form > .space-y-4 > .pt-1,
+  .form-page-fields form:has(> div.space-y-1) > button { grid-column: 1 / -1; }
+}

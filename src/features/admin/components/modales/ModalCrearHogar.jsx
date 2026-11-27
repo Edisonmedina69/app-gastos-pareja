@@ -1,3 +1,4 @@
+import { FormPage } from '../../../../shared/ui/FormPage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Plus, Loader2, X } from 'lucide-react';
 
@@ -5,19 +6,12 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
   return (
     <AnimatePresence>
       {mostrarModalCrear && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }} 
-            animate={{ opacity: 1, scale: 1 }} 
-            exit={{ opacity: 0, scale: 0.95 }} 
-            className="w-full max-w-md glass-panel p-6 rounded-3xl relative"
-          >
-            <button onClick={() => setMostrarModalCrear(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><X size={24} /></button>
+        <FormPage ariaLabel="Crear hogar" onClose={() => setMostrarModalCrear(false)}>
             <h2 className="text-xl font-black text-white mb-6 uppercase flex items-center gap-2">
               <Plus className="w-5 h-5 text-indigo-400" /> Nuevo Espacio Compartido
             </h2>
 
-            <form onSubmit={crearEspacio} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+            <form onSubmit={crearEspacio} className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre de la Familia / Cliente</label>
                 <input 
@@ -102,8 +96,7 @@ export default function ModalCrearHogar({ crearEspacio, guardando, limiteUsuario
                 </button>
               </div>
             </form>
-          </motion.div>
-        </div>
+        </FormPage>
       )}
     </AnimatePresence>
   );

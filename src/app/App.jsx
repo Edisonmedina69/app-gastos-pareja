@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,7 +19,13 @@ const AsistenteGemini = lazy(() => import("../features/asistente/components/Asis
 const SuperadminPanel = lazy(() => import("../features/admin/components/SuperadminPanel"));
 
 function App() {
-  const [activeTab, setActiveTab] = useState("inicio");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const secciones = { inicio: '/', cuentas: '/deudas', ingresos: '/ingresos', historial: '/historial', asistente: '/asistente', admin: '/admin' };
+  const raiz = location.pathname.split('/')[1];
+  const activeTab = ({ deudas: 'cuentas', fijos: 'cuentas', previsiones: 'cuentas', ingresos: 'ingresos', historial: 'historial', asistente: 'asistente', admin: 'admin' })[raiz] || 'inicio';
+  const setActiveTab = (tab) => navigate(secciones[tab]);
+  const formularioAbierto = location.pathname.split('/').filter(Boolean).length > 1;
   const [monedaGlobal, setMonedaGlobal] = useState("PYG");
   const modoVista = "familiar";
 
@@ -62,18 +69,18 @@ function App() {
       ) : !datosHogar || !datosHogar.espacio_id ? (
         <AccesoRestringido />
       ) : (
-        <div className="max-w-5xl mx-auto flex flex-col lg:flex-row min-h-screen">
+        <div className="max-w-[1536px] mx-auto flex flex-col lg:flex-row min-h-screen">
           <HeaderMovil datosHogar={datosHogar} usuarioActual={usuarioActual} />
 
           <Sidebar datosHogar={datosHogar} usuarioActual={usuarioActual} activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={esSuperadmin} />
 
-          <main className="flex-1 min-w-0 px-3 pt-3 sm:px-6 sm:pt-6 lg:p-8 overflow-y-auto pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-8">
-            <div className="max-w-5xl xl:max-w-6xl mx-auto w-full">
+          <main className="flex-1 min-w-0 px-3 pt-3 sm:px-6 sm:pt-6 lg:p-6 overflow-y-auto pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-8">
+            <div className="max-w-7xl mx-auto w-full">
               <Suspense fallback={<div className="p-8 text-center text-slate-400 animate-pulse">Cargando vista... ⚡</div>}>
                 <AnimatePresence mode="wait">
                   <motion.div key={`${activeTab}-${modoVista}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
                     {activeTab === "inicio" && <Inicio usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} gastos={gastos} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} setMonedaGlobal={setMonedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} modoVista={modoVista} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
-                    {activeTab === "cuentas" && <Cuentas usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
+                    {activeTab === "cuentas" && <Cuentas esSuperadmin={esSuperadmin} usuarioActual={usuarioActual} otroUsuario={otroUsuario} usuarios={usuarios} deudas={deudas} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} saludFinanciera={saludFinanciera} gastosProgramados={gastosProgramados} />}
                     {activeTab === "ingresos" && <Ingresos usuarioActual={usuarioActual} ingresos={ingresos} deudas={deudas} monedaGlobal={monedaGlobal} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                     {activeTab === "historial" && <Historial gastos={gastos} ingresos={ingresos} usuarios={usuarios} obtenerDatos={obtenerDatos} datosHogar={datosHogar} getNombreUsuario={getNombreUsuario} />}
                     {activeTab === "asistente" && <AsistenteGemini usuarioActual={usuarioActual} gastos={gastos} ingresos={ingresos} monedaGlobal={monedaGlobal} datosHogar={datosHogar} saludFinanciera={saludFinanciera} />}
@@ -84,7 +91,7 @@ function App() {
             </div>
           </main>
 
-          <nav aria-label="Navegación principal" className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 lg:hidden">
+          <nav hidden={formularioAbierto} aria-label="Navegación principal" className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 lg:hidden">
             <Navegacion activeTab={activeTab} setActiveTab={setActiveTab} esSuperadmin={esSuperadmin} notificaciones={notificaciones} markAsRead={markNotisAsRead} responderSolicitud={responderSolicitud} />
           </nav>
         </div>

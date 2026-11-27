@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { rutaFormulario, resolverFormulario } from '../lib/rutasFormulario';
 import { toast } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
@@ -33,6 +35,7 @@ const PESTANAS = [
  * Cada modal maneja su propio formulario (ver ./modales).
  */
 export default function Cuentas({
+  esSuperadmin,
   usuarioActual,
   otroUsuario,
   usuarios,
@@ -45,12 +48,20 @@ export default function Cuentas({
   gastosProgramados
 }) {
   const [deudaExpandida, setDeudaExpandida] = useState(null);
-  const [pestana, setPestana] = useState('activas'); // activas | archivadas | fijos | presupuestos
-  const [filtroPersona, setFiltroPersona] = useState('todos'); // todos | yo | pareja
+  const [pestanaLocal, actualizarPestana] = useState('activas');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const base = location.pathname.startsWith('/fijos') ? '/fijos' : location.pathname.startsWith('/previsiones') ? '/previsiones' : '/deudas';
+  const setPestana = (valor) => {
+    actualizarPestana(valor);
+    navigate(valor === 'fijos' ? '/fijos' : valor === 'presupuestos' ? '/previsiones' : '/deudas');
+  };
+  const pestana = base === '/fijos' ? 'fijos' : base === '/previsiones' ? 'presupuestos' : pestanaLocal; // activas | archivadas | fijos | presupuestos
   // Modal abierto: { tipo: 'deuda' | 'abono' | 'compra' | 'fijo' | 'pagarFijo' | 'prevision' | 'medioPago', ...datos }
-  const [modal, setModal] = useState(null);
+  const modal = resolverFormulario(location.pathname, deudas, gastosProgramados);
+  const setModal = (valor) => navigate(valor ? rutaFormulario(valor) : base, { state: valor ? { desdeFormulario: true } : null });
 
-  const cerrarModal = () => setModal(null);
+  const cerrarModal = () => location.state?.desdeFormulario ? navigate(-1) : navigate(base);
   const alGuardar = () => { setModal(null); obtenerDatos(); };
 
   // Apertura de modales (mismos nombres que usaban las tarjetas y listas)
@@ -248,12 +259,6 @@ export default function Cuentas({
       : d.estado === 'cerrada';
     if (!coincideEstado) return false;
 
-    if (filtroPersona === 'yo') {
-      return d.creador_id === usuarioActual?.id;
-    }
-    if (filtroPersona === 'pareja') {
-      return otroUsuario && d.creador_id === otroUsuario.id;
-    }
     return true;
   }) || [];
 
@@ -261,12 +266,6 @@ export default function Cuentas({
     const esFijo = !g.concepto.startsWith("[PRESUPUESTO] ");
     if (!esFijo) return false;
 
-    if (filtroPersona === 'yo') {
-      return g.usuario_id === usuarioActual?.id;
-    }
-    if (filtroPersona === 'pareja') {
-      return otroUsuario && g.usuario_id === otroUsuario.id;
-    }
     return true;
   }) || [];
 
@@ -274,26 +273,23 @@ export default function Cuentas({
     const esPrevision = g.concepto.startsWith("[PRESUPUESTO] ");
     if (!esPrevision) return false;
 
-    if (filtroPersona === 'yo') {
-      return g.usuario_id === usuarioActual?.id;
-    }
-    if (filtroPersona === 'pareja') {
-      return otroUsuario && g.usuario_id === otroUsuario.id;
-    }
     return true;
   }) || [];
 
-  const nombrePareja = otroUsuario ? (otroUsuario.nombre || otroUsuario.email?.split('@')[0]) : 'Pareja';
+
 
   return (
     <div className="space-y-6 pb-20">
+      {!modal && location.pathname.split('/').filter(Boolean).length > 1 && <div role="status" className="glass-card"><p>No se encontró el registro.</p><button onClick={() => navigate(base)} className="mt-3 text-indigo-300 underline">Volver a deudas</button></div>}
+      {!modal && location.pathname.split('/').filter(Boolean).length === 1 && <>
       <header className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
         <SegmentedControl etiqueta="Secciones de deudas" opciones={PESTANAS} valor={pestana} onChange={setPestana} estirar className="w-full sm:w-auto min-w-0" />
         <div className="flex gap-2 shrink-0 justify-end">
-          {pestana === 'activas' && (
+          {pestana === 'activas' && esSuperadmin && (
             <button
               type="button"
               onClick={async () => {
+                if (!esSuperadmin) return;
                 const toastId = toast.loading("Generando deudas demo...");
                 try {
                   await sembrarDeudasDemo(datosHogar.espacio_id, usuarioActual.id, { incluirTarjeta: false });
@@ -322,19 +318,6 @@ export default function Cuentas({
           </IconButton>
         </div>
       </header>
-
-      {/* FILTROS POR PERSONA */}
-      <div className="flex justify-between items-center gap-2 bg-white/[0.02] border border-white/5 p-2 rounded-2xl">
-        <span className="text-micro text-slate-500 font-bold uppercase ml-2 flex items-center gap-1 shrink-0">👤 Filtrar:</span>
-        <SegmentedControl
-          etiqueta="Filtrar por persona"
-          tamano="sm"
-          opciones={[{ valor: 'todos', etiqueta: 'Todos' }, { valor: 'yo', etiqueta: 'Míos' }, { valor: 'pareja', etiqueta: nombrePareja }]}
-          valor={filtroPersona}
-          onChange={setFiltroPersona}
-          className="min-w-0"
-        />
-      </div>
 
       <div className="space-y-4">
         {(pestana === 'activas' || pestana === 'archivadas') &&
@@ -384,9 +367,10 @@ export default function Cuentas({
         )}
       </div>
 
+      </>}
       <AnimatePresence>
         {modal?.tipo === 'deuda' && (
-          <ModalDeuda key="deuda" deudaEditando={modal.deuda} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} saludFinanciera={saludFinanciera} onClose={cerrarModal} onGuardado={alGuardar} />
+          <ModalDeuda key={`deuda-${modal.deuda?.id || "nueva"}`} deudaEditando={modal.deuda} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} saludFinanciera={saludFinanciera} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'abono' && (
           <ModalAbono key="abono" pagoSeleccionado={modal.pago} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
@@ -395,13 +379,13 @@ export default function Cuentas({
           <ModalCompra key="compra" compraSeleccionada={modal.tarjeta} usuarioActual={usuarioActual} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'fijo' && (
-          <ModalGastoFijo key="fijo" fijo={modal.fijo} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />
+          <ModalGastoFijo key={`fijo-${modal.fijo?.id || "nuevo"}`} fijo={modal.fijo} usuarioActual={usuarioActual} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'pagarFijo' && (
           <ModalPagarFijo key="pagarFijo" gastoFijoAPagar={modal.fijo} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} onClose={cerrarModal} onGuardado={alGuardar} onEditarMedioPago={abrirEdicionMedioPago} />
         )}
         {modal?.tipo === 'prevision' && (
-          <ModalPrevision key="prevision" prevision={modal.prevision} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />
+          <ModalPrevision key={`prevision-${modal.prevision?.id || "nueva"}`} prevision={modal.prevision} usuarioActual={usuarioActual} otroUsuario={otroUsuario} datosHogar={datosHogar} monedaGlobal={monedaGlobal} onClose={cerrarModal} onGuardado={alGuardar} />
         )}
         {modal?.tipo === 'medioPago' && (
           <ModalMedioPago key={`mp-${modal.item.id}`} item={modal.item} tipo={modal.tipoItem} onClose={cerrarModal} onGuardado={alGuardar} />

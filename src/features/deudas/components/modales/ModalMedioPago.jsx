@@ -4,7 +4,7 @@ import { Loader2, Hash } from 'lucide-react';
 import * as deudasService from '../../../../services/deudas.service';
 import * as gastosProgramadosService from '../../../../services/gastosProgramados.service';
 import { valoresInicialesMedioPago } from '../../lib/formularios';
-import { Modal } from '../../../../shared/ui/Modal';
+import { FormPage } from '../../../../shared/ui/FormPage';
 
 /** Edición rápida del medio de pago y los datos de cuenta de un gasto fijo o deuda. */
 export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
@@ -46,7 +46,7 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
   };
 
   return (
-    <Modal onClose={onClose} ancho="sm" capa="z-[110]" ariaLabel="Medio de pago">
+    <FormPage resumen={<><p className="font-bold">{item.titulo || item.concepto}</p><p className="text-2xl tabular-nums mt-3">{""} {""}</p><p className="text-sm text-muted-foreground mt-2">{mpEditMedioPago}</p></>} onClose={onClose} ariaLabel="Medio de pago">
       <h2 className="text-lg font-black text-white mb-4 uppercase">Medio de Pago</h2>
       <form onSubmit={guardarMedioPago} className="space-y-4">
         <div className="space-y-1">
@@ -157,6 +157,6 @@ export default function ModalMedioPago({ item, tipo, onClose, onGuardado }) {
           {mpGuardando ? <Loader2 className="animate-spin mx-auto" size={18} /> : "GUARDAR"}
         </button>
       </form>
-    </Modal>
+    </FormPage>
   );
 }

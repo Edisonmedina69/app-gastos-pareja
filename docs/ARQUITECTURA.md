@@ -66,3 +66,23 @@ npm run build   # build de producción
 ### Deudas Pro
 
 `Cuentas.jsx` solo orquesta pestañas, filtros y qué modal está abierto. Cada modal de `features/deudas/components/modales/` maneja su propio formulario: sus valores iniciales salen de `lib/formularios.js`, que tiene tests. Las tarjetas y las listas son componentes aparte.
+
+## Navegación y formularios
+
+`main.jsx` monta `BrowserRouter`. El shell deriva la sección de la URL y conserva
+la misma instancia de cada dominio entre su listado y sus formularios. Las URLs
+se resuelven con los datos del hogar cargado, sin depender de objetos efímeros en
+`history.state`: `/deudas/nueva`, `/deudas/:id/editar`,
+`/deudas/:id/abonos/:cuotaId`, `/deudas/:id/compras/nueva`,
+`/deudas/:id/medio-pago`, `/gastos/nuevo`, `/fijos/nuevo`,
+`/fijos/:id/editar`, `/fijos/:id/pagar`, `/fijos/:id/medio-pago`,
+`/previsiones/nueva`, `/previsiones/:id/editar`, `/ingresos/nuevo`,
+`/ingresos/programar` y `/ingresos/:id/editar`. También son pantallas las altas
+administrativas de hogares y usuarios (`/admin/hogares/nuevo` y
+`/admin/usuarios/nuevo`). Los permisos de administración se mantienen en el shell.
+
+`FormPage` presenta el editor y su resumen, sin fondo modal ni bloqueo del
+scroll; las acciones quedan al pie en móvil. Volver usa el historial cuando se
+abrió desde la app y una ruta del dominio cuando se accedió directamente.
+Las confirmaciones y las ediciones cortas conservan sus diálogos. El rewrite de
+Vercel ya envía las rutas internas a `index.html`.
