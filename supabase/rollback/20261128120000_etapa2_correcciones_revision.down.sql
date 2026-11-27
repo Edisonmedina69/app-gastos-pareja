@@ -77,4 +77,9 @@ begin
   if tg_op = 'DELETE' then return old; else return new; end if;
 end $$;
 drop function public.invitacion_vigente(uuid);
+drop trigger tr_sellar_baja_membresia on public.espacio_miembros;
+drop function public.sellar_baja_membresia();
+-- El sello solo sirve a la regla M6; sin ella no tiene consumidores.
+alter table public.espacio_miembros drop column desactivado_at;
+alter table public.org_invitaciones alter column created_at set default now();
 commit

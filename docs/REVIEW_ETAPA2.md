@@ -20,8 +20,8 @@ Revisión independiente de la Etapa 2 (PR #33 DB, PR #34 UI), aplicada en produc
 | M2 | Medio | Paso de `autoUpdate` a `prompt`: las PWA familiares quedan en el bundle viejo hasta cerrar todas sus ventanas | Corregido en este PR |
 | M3 | Medio | Tras `salir_de_espacio`, el hogar que se crea o al que se une después no entra directo: la sesión queda sin espacio | Corregido en este PR |
 | M4 | Medio | No se puede borrar un hogar con datos o con contexto de sesión (falla `SuperadminPanel`, incluso para service_role en el caso de la FK) | Corregido en este PR |
-| M5 | Medio (preexistente) | El superadmin puede meterse en cualquier hogar y leer sus finanzas | Recomendación |
-| M6 | Medio | Un integrante dado de baja vuelve a entrar con un link multiuso vigente emitido por otro admin | Recomendación |
+| M5 | Medio (preexistente) | El superadmin puede meterse en cualquier hogar y leer sus finanzas | **Aceptado por el dueño** (sin cambios) |
+| M6 | Medio | Un integrante dado de baja vuelve a entrar con un link multiuso vigente emitido por otro admin | Corregido en este PR (decisión del dueño) |
 | B1–B10 | Bajo | Ver la sección Bajo | Recomendaciones |
 
 ---
@@ -102,17 +102,19 @@ Las restrictivas de Etapa 2 sí impiden la lectura directa: el superadmin ve 0 g
 
 **Reproducido:** el superadmin hace `update perfiles set espacio_id = <hogar ajeno>` y pasa a leer sus gastos. Esto contradice el plan («superadmin no se convierte en admin de espacios ajenos»), aunque requiere un acto deliberado.
 
-**Recomendación (decisión del dueño):** quitar al superadmin la escritura de `perfiles.espacio_id` y de `codigo_invitacion`, y reemplazarla por una RPC auditada de soporte que sea break-glass, con motivo y registro.
+**Decisión del dueño (2026-11-27):** el superadmin **sí** puede seguir entrando a cualquier espacio; se deja como está. Queda documentado como capacidad de soporte de la plataforma, no como defecto.
 
 ### M6. Un integrante dado de baja vuelve a entrar con un link multiuso ajeno vigente
 
 Un link de `lectura` con 10 usos que otro admin compartió en un grupo sigue sirviendo después de dar de baja a alguien: el `on conflict` reactiva su membresía. Funciona como un token al portador.
 
-**Recomendación:**
-- Al dar de baja desde `/org/integrantes`, ofrecer «revocar links activos».
-- O registrar `desactivado_at` en `espacio_miembros` y rechazar invitaciones con `created_at` anterior a la baja.
+**Decisión del dueño:** bloquear el reingreso. Para volver, un admin reactiva la membresía o envía una invitación nueva.
 
-No lo cambié: requiere decidir el comportamiento esperado.
+**Corrección** (en la misma migración `20261128120000`):
+- Columna `espacio_miembros.desactivado_at`, sellada en el servidor por el trigger `tr_sellar_baja_membresia` cada vez que una membresía pasa de activa a inactiva. El cliente no puede escribirla.
+- `aceptar_invitacion_org` rechaza, como dato y sin consumir usos, las invitaciones con `created_at <= desactivado_at`. Una invitación emitida después de la baja sigue funcionando, y la reactivación por `actualizar_permisos_miembro(..., p_activo => true)` no cambia.
+- Backfill: las bajas que ya existían en organizaciones quedan selladas con la hora de la migración. En prod hay 0 (1 organización de prueba con 1 admin activo y 0 invitaciones), así que no cambia ninguna fila.
+- Test: `etapa2_correcciones_test.sql` (bloque M6). Además, `etapa2_correcciones_fixture.sql` y `etapa2_correcciones_existente_test.sql` replican una organización «CaninDevs (prueba)» creada **antes** de la migración y verifican que, después de aplicarla, el dueño sigue admin, conserva su contexto y sus permisos, y puede invitar.
 
 ## Bajo
 
@@ -147,7 +149,7 @@ No lo cambié: requiere decidir el comportamiento esperado.
 
 ## Verificación de las correcciones
 
-- `supabase/tests/etapa2_correcciones_test.sql` tiene 12 comprobaciones: toma de control bloqueada, permiso delegado retirado, degradación de admin, salir y crear, aislamiento entre hogares y borrado en cascada por superadmin.
+- `supabase/tests/etapa2_correcciones_test.sql` (12 comprobaciones de las correcciones originales más el bloque M6): toma de control bloqueada, permiso delegado retirado, degradación de admin, salir y crear, aislamiento entre hogares y borrado en cascada por superadmin.
 - `run_etapa2.sh` ahora aplica la corrección y su test, hace rollback de la corrección y luego el de Etapa 2, y compara el catálogo contra `schema.sql` (actualizado).
 - Front: `npm test`, lint de los archivos tocados y `vite build`.
 
@@ -155,5 +157,5 @@ No lo cambié: requiere decidir el comportamiento esperado.
 
 1. Desplegar el front. El fix PWA no depende de la base.
 2. Aplicar solo `supabase/migrations/20261128120000_etapa2_correcciones_revision.sql`, que es transaccional, con `lock_timeout` de 5 s.
-3. **No habilitar `org_piloto_usuarios` antes del paso 2** (A1).
+3. **No sumar usuarios a `org_piloto_usuarios` ni invitar integrantes a «CaninDevs (prueba)» antes del paso 2** (A1 y M6). La organización existente no se modifica: la migración solo agrega una columna nula y redefine funciones.
 4. Rollback: `supabase/rollback/20261128120000_etapa2_correcciones_revision.down.sql`. Vuelve a las definiciones de Etapa 2 y las invitaciones ya revocadas quedan revocadas.

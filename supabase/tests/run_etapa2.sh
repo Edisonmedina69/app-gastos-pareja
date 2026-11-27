@@ -28,12 +28,15 @@ fi
 sql() { docker exec -i "$container" psql -U postgres -v ON_ERROR_STOP=1 "$@"; }
 sql < supabase/baseline/schema_pre_etapa2.sql >"$local_dir/baseline.log" 2>&1 || { cat "$local_dir/baseline.log"; exit 1; }
 sql < supabase/migrations/20261127180000_etapa2_multi_espacio.sql >"$local_dir/migracion.log" 2>&1 || { cat "$local_dir/migracion.log"; exit 1; }
+sql < supabase/tests/etapa2_correcciones_fixture.sql >"$local_dir/fixture-correcciones.log" 2>&1 || { cat "$local_dir/fixture-correcciones.log"; exit 1; }
 sql < supabase/migrations/20261128120000_etapa2_correcciones_revision.sql >"$local_dir/correcciones.log" 2>&1 || { cat "$local_dir/correcciones.log"; exit 1; }
 echo 'OK: migración etapa 2 y correcciones de revisión sobre baseline de etapa 1.'
 if [[ -f supabase/tests/etapa2_multi_test.sql ]]; then
   sql < supabase/tests/etapa2_multi_test.sql >"$local_dir/sql.log" 2>&1 || { cat "$local_dir/sql.log"; exit 1; }
   "${log_filter[@]}" 'NOTICE:  OK' "$local_dir/sql.log" || true
 fi
+sql < supabase/tests/etapa2_correcciones_existente_test.sql >"$local_dir/existente-test.log" 2>&1 || { cat "$local_dir/existente-test.log"; exit 1; }
+"${log_filter[@]}" 'NOTICE:  OK' "$local_dir/existente-test.log" || true
 sql < supabase/tests/etapa2_correcciones_test.sql >"$local_dir/correcciones-test.log" 2>&1 || { cat "$local_dir/correcciones-test.log"; exit 1; }
 "${log_filter[@]}" 'NOTICE:  OK' "$local_dir/correcciones-test.log" || true
 if [[ -f supabase/tests/etapa2_p0.py ]]; then
