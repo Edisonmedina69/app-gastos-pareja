@@ -27,7 +27,7 @@ export const listarApuntesCuentaOrg = (espacioId, cuentaId, limite = 50) =>
 export const listarOperacionesOrg = (espacioId, limite = 50) =>
   supabase
     .from('org_operaciones')
-    .select('id,tipo,fecha_efectiva,registrado_por,idempotencia,reversa_de,motivo,created_at')
+    .select('id,tipo,fecha_efectiva,registrado_por,idempotencia,reversa_de,motivo,comprobante_id,created_at')
     .eq('espacio_id', espacioId)
     .order('fecha_efectiva', { ascending: false })
     .order('created_at', { ascending: false })
@@ -110,6 +110,7 @@ export const registrarPagoPersonalSocioOrg = (
   espacioId,
   {
     idempotencia,
+    comprobanteId,
     miembroId,
     cuentaSocioId,
     importe,
@@ -122,6 +123,7 @@ export const registrarPagoPersonalSocioOrg = (
   supabase.rpc('registrar_pago_personal_socio_org', {
     p_espacio_id_esperado: espacioId,
     p_idempotencia: idempotencia,
+    p_comprobante_id: comprobanteId,
     p_miembro_id: miembroId,
     p_cuenta_socio_id: cuentaSocioId,
     p_importe: importe,
@@ -135,6 +137,7 @@ export const registrarMovimientoSocioOrg = (
   espacioId,
   {
     idempotencia,
+    comprobanteId,
     tipo,
     miembroId,
     cuentaId,
@@ -149,6 +152,7 @@ export const registrarMovimientoSocioOrg = (
   supabase.rpc('registrar_movimiento_socio_org', {
     p_espacio_id_esperado: espacioId,
     p_idempotencia: idempotencia,
+    p_comprobante_id: comprobanteId,
     p_tipo: tipo,
     p_miembro_id: miembroId,
     p_cuenta_id: cuentaId,
