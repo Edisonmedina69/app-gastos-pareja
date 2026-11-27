@@ -24,7 +24,7 @@ export const eliminarPerfil = (usuarioId) => supabase.from("perfiles").delete().
 
 /** Miembros (perfiles) de un hogar. */
 export const listarMiembros = (espacioId) =>
-  supabase.from("perfiles").select("*").eq("espacio_id", espacioId);
+  supabase.rpc("listar_miembros_hogar", { p_espacio_id: espacioId });
 
 /** Perfiles sin hogar asignado. */
 export const listarPerfilesSinEspacio = () =>
